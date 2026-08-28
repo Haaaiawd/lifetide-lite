@@ -43,7 +43,7 @@
 
 - `visual-art-direction.md` 固定 paper/ink/cobalt token、2px 边框、3-4px 阴影、0-4px radius、方格规格和字体角色。
 - `platform-and-assets.md` 以 `neobrutalism.com/r/radix/{name}.json` 为唯一主 registry；每个组件先 view、审计，再逐个 add，并记录来源、版本、许可证和本地修改。
-- MVP 不安装 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js 或第二套组件系统。Motion 只用于纸条顺序显露、状态反馈和有限 layout transition。
+- MVP 不安装 React Bits、Magic UI、Aceternity、Rive、Phaser 或第二套组件系统。landing 页可引入一个受控的 Three.js 3D voxel 装饰；Motion 只用于纸条顺序显露、状态反馈和有限 layout transition。
 - 背景方格使用静态 CSS，不做动画，不承担测量、进度或人格坐标含义。
 - 高对比和 forced-colors 模式隐藏无语义方格与硬阴影，保留边框、焦点和内容层级。
 - 视觉回归至少覆盖 360×800、390×844、768×1024、1440×900，并在真实手机上连续走完两波检查疲劳。

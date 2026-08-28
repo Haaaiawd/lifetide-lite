@@ -2,6 +2,15 @@
 
 Current truth belongs in PROJECT.md and linked design documents. This file preserves consequential superseding decisions.
 
+## D-00?: Allow a bounded Three.js voxel mascot on the landing page
+
+- Current decision: The landing page may use a single, self-contained Three.js 3D voxel character with a pixel-style HTML speech bubble. It is loaded with `ssr: false`, has a paper-colored background, and does not block the title, sample card, or CTA if it fails to render.
+- Rationale: A 2D sprite did not match the desired colorful, blocky look; a small, controlled 3D decoration on the marketing homepage is a bounded exception to the previous "no WebGL" rule. It must not appear in the interview, upload, or route views.
+- Source: user override in conversation
+- Supersedes: the blanket "MVP 不使用 Three.js" boundary in PROJECT.md
+- Affects: visual-art-direction.md, platform-and-assets.md, landing page
+- Recorded: 2026-08-28T09:45:00.000Z
+
 ## D-001: Hide the persona product, retain working memory
 
 - Current decision: The interface will not expose a persona dashboard or coverage model. The system retains evidence-linked working memory for adaptive questions, immediate insights and plan generation.

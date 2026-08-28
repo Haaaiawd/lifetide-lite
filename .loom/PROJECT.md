@@ -49,7 +49,7 @@ MVP 使用 guest-first 临时会话：服务端通过 opaque HttpOnly token 保�
 - 三条路线不排名、不推荐、不预测命运；每条都必须说明普通一天、得到、失去、依据、未知、风险和三天试验。
 - 来源方法是 Stanford Designing Your Life 的三个五年 Odyssey Plans；本产品明确改编为三个三年版本和三天试验，不伪称这是原方法。
 - 不做用户可见画像、职业匹配测评、心理诊断、通用助手、无限聊天、社交广场或不可逆自动执行。
-- MVP 不使用 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js、WebGL 场景或自由操控；装饰层失败不得阻止作答。
+- MVP 不在访谈、路线或上传流程中使用 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js、WebGL 场景或自由操控。landing 页允许一个受控的 3D voxel 装饰，且装饰层失败不得阻止主流程或作答。
 - 技术基线是 Next.js + TypeScript + Tailwind v4 + neobrutalism.com／RetroUI 的 Radix registry + Motion + Phosphor Icons；neobrutalism.dev 仅作次要实现参考。组件源码必须按人生试运行的柔和编辑 token 和移动密度定制。
 - 原 Lifetide 用户提供的 sky 图片和未授权 pixel-frame 不进入 MVP。仅 registry 证明为 CC0 的 water/boat/landmark 可携带许可证与 checksum 作为次要、可替换点缀。
 - “人生试运行”为已确认产品名；三年/三天时间尺度仍是需通过用户研究验证的可逆产品判断。

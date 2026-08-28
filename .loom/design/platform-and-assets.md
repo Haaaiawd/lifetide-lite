@@ -43,7 +43,7 @@
 - 不在 UI 暴露 persona dashboard、覆盖率、置信度仪表、人格评分或内部工作记忆字段。
 - 不复制 registry 的整页模板、营销 blocks、dashboard blocks 或默认主题作为成品。
 - 不使用 generic shadcn 组件加效果库拼装品牌；选定 registry 的 Radix 源码是统一起点。
-- MVP 不使用 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js 或任何 effect library。
+- MVP 不在访谈、路线或上传流程中使用 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js 或 effect library。landing 页允许一个受控的 3D voxel 装饰，且该装饰失败时主流程仍可继续。
 - 装饰层不驱动业务状态；关闭 JavaScript 增强、Motion 或图片时，内容仍可读且主流程有恢复路径。
 - 外部素材不得成为 Logo、商标或不可替换的品牌核心。
 
