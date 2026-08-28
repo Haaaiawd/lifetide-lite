@@ -1,0 +1,23 @@
+{
+  "confirmed": [
+    "The previously documented Digital Tide / Nocturnal Editorial / Chromatic Ocean visual direction is incorrect.",
+    "The screenshot reference is neo-brutalist: visible grid, heavy ink outlines, hard offset shadows, high-contrast paper surfaces, editorial type and tactile press states.",
+    "The final style should remain modern, attractive to young adults and not become visually hostile or exhausting.",
+    "Green, blue or another color may be used as an accent rather than the entire interface palette.",
+    "The product should prefer a coherent ready-made UI library/style registry over inventing every visual primitive from scratch."
+  ],
+  "decisions": [
+    {
+      "title": "Soft editorial neo-brutalism as the visual foundation",
+      "decision": "Use a softened Swiss-editorial neo-brutalist language: off-white graph paper, ink-black 2px outlines, 3-4px hard shadows, square or lightly cut corners, restrained cobalt-blue accent, large Chinese editorial serif moments and neutral sans UI text. Use neobrutalism.com/RetroUI's current shadcn registry as the primary component source, with neobrutalism.dev as an additional reference, rather than generic shadcn plus effect libraries.",
+      "rationale": "This matches the provided reference and provides an existing, accessible, source-owned React/Next.js component system. Softening border weight, color count and card density keeps the style youthful and tactile without making a long interview tiring or confrontational.",
+      "supersedes": ["D-004"]
+    },
+    {
+      "title": "Reject adjacent style libraries for the MVP foundation",
+      "decision": "Do not use Memphis, Bauhaus, Y2K, claymorphism, glassmorphism or pure Swiss minimalism as the base system. Their useful traits may inform composition, but the implementation foundation remains editorial neo-brutalism.",
+      "rationale": "Memphis and Y2K skew decorative or juvenile, Bauhaus is rigid and primary-color coded, clay/glass reduce clarity or age quickly, and pure Swiss minimalism lacks the tactile playful signature requested. Neo-brutalism best balances existing library coverage, youth appeal and product-form compatibility.",
+      "supersedes": []
+    }
+  ]
+}

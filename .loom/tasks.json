@@ -1,0 +1,581 @@
+{
+  "schema_version": 2,
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Build the mobile-first visual interaction prototype",
+      "outcome": "A runnable 人生试运行 Next.js prototype demonstrates landing, one question, the sequential immediate-insight stack as its visual signature, three equal route covers and responsive/reduced-motion behavior with realistic Chinese content.",
+      "done_when": [
+        "A 360px-wide browser can move from landing to a question, submit a local fixture answer, calibrate an immediate insight and browse all three equal route covers.",
+        "The prototype visibly follows Soft Editorial Neo-Brutalism through subtle off-white grid paper, ink, a dominant cobalt accent, green used only for semantic states, 2px borders, 3-4px hard offset shadows, 0-4px corners, restrained mobile density, editorial Chinese serif key statements and sans-serif UI; the sequential immediate-insight stack remains the visual signature, and the result must not resemble a dashboard, childlike interface, generic purple AI landing page, or loud/colorful generic neobrutalism.",
+        "Keyboard navigation, 200% zoom and prefers-reduced-motion preserve every operation and all content.",
+        "No blocked Lifetide sky or unlicensed pixel-frame asset is present in the build output."
+      ],
+      "boundaries": [
+        "Use fixtures only; do not build production AI, authentication, uploads or persistence in this task.",
+        "Use neobrutalism.com/RetroUI's Radix registry as the primary component source; neobrutalism.dev is secondary reference only.",
+        "Do not add React Bits, Magic UI, Aceternity, Rive, Phaser, Three.js or a second component design system.",
+        "Do not copy a registry component without recording its origin, version or commit, and license."
+      ],
+      "depends_on": [],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/ui-ux-design.md",
+        ".loom/capabilities/visual-art-direction.md",
+        ".loom/capabilities/game-design.md"
+      ],
+      "touches": [
+        "package.json",
+        "app/",
+        "components/",
+        "public/",
+        "styles/",
+        "tests/e2e/visual-prototype.spec.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm build passed (Next.js 16.3.3 + Tailwind v4 + TypeScript)",
+        "Playwright E2E suite 14/14 passed on both mobile (360x800) and desktop (1440x900)",
+        "Screenshots saved to reports/: landing, question, insight, routes, keyboard, 200% zoom, reduced-motion",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "A 360px-wide browser can move from landing to a question, submit a local fixture answer, calibrate an immediate insight and browse all three equal route covers.",
+              "evidence": [
+                "Playwright test '360px 完整主路径：landing → question → insight → three routes' passes (tests/e2e/visual-prototype.spec.ts)",
+                "Screenshots 01-landing-mobile-360.png, 02-question-mobile-360.png, 03-insight-mobile-360.png, 04-routes-mobile-360.png"
+              ]
+            },
+            {
+              "criterion": "The prototype visibly follows Soft Editorial Neo-Brutalism through subtle off-white grid paper, ink, a dominant cobalt accent, green used only for semantic states, 2px borders, 3-4px hard offset shadows, 0-4px corners, restrained mobile density, editorial Chinese serif key statements and sans-serif UI; the sequential immediate-insight stack remains the visual signature, and the result must not resemble a dashboard, childlike interface, generic purple AI landing page, or loud/colorful generic neobrutalism.",
+              "evidence": [
+                "app/globals.css defines paper (#F5F0E6), ink (#171717), cobalt (#2457E6), success (#2D7D46) tokens, 2px borders, 3-4px hard shadows, graph-paper background",
+                "components/insight/InsightSlip.tsx implements the sequential printed dialogue slip with 你告诉我的 / 我目前的理解 / 还不确定",
+                "Landing page uses Chinese serif for hero and insight claim; UI labels use sans-serif",
+                "No ranking UI; Playwright asserts absence of 最适合你 / 推荐 / 冠军 / 人格 / 覆盖率"
+              ]
+            },
+            {
+              "criterion": "Keyboard navigation, 200% zoom and prefers-reduced-motion preserve every operation and all content.",
+              "evidence": [
+                "Playwright '键盘可完成主路径，焦点顺序不丢失' test passes",
+                "Playwright '200% 缩放不裁剪关键内容' test passes",
+                "Playwright 'prefers-reduced-motion 下内容完整且不丢失' test passes",
+                "useReducedMotion() used in all motion components; CSS prefers-reduced-motion and forced-colors media queries in globals.css"
+              ]
+            },
+            {
+              "criterion": "No blocked Lifetide sky or unlicensed pixel-frame asset is present in the build output.",
+              "evidence": [
+                "Playwright '不引用 blocked 的 Lifetide 素材' test asserts page.content() does not contain 'pixel-frame.png' or '/sky'",
+                "No image files in public/; all visual elements are CSS/SVG/text"
+              ]
+            }
+          ],
+          "at": "2026-08-27T04:28:16.881Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.616Z",
+      "updated_at": "2026-08-27T04:28:16.882Z"
+    },
+    {
+      "id": "TASK-002",
+      "title": "Implement guest session, consent and temporary data lifecycle",
+      "outcome": "Users can start without registration through a secure server-side guest session; required AI/upload consent is recorded, sensitive data expires after 24 hours, and accounts are only requested for cross-device or extended retention.",
+      "done_when": [
+        "A new visitor receives an opaque HttpOnly guest token and can resume the same session without sensitive content in localStorage.",
+        "A deterministic cleanup job deletes expired guest answers, uploads and derived content after the documented retention window.",
+        "Upload/model processing cannot start without required consent, while research consent remains optional.",
+        "Automated tests prove one guest cannot read or mutate another guest or account session."
+      ],
+      "boundaries": [
+        "Do not add social login or a multi-provider account system before the guest path works.",
+        "Do not log raw answers or upload content."
+      ],
+      "depends_on": [
+        "TASK-001"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/product-definition.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/ui-ux-design.md"
+      ],
+      "touches": [
+        "app/api/session/",
+        "lib/auth/",
+        "lib/privacy/",
+        "lib/db/",
+        "prisma/",
+        "tests/integration/guest-session.test.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm build passed with Next.js 16.3.3, Prisma 6.6.0 and SQLite",
+        "Playwright E2E suite 14/14 passed (TASK-001 regression) and integration suite 6/6 passed (guest session, consent, cleanup, isolation)",
+        "Prisma migration applied: sessions, consents, answers, uploads, derived content with ON DELETE CASCADE",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "A new visitor receives an opaque HttpOnly guest token and can resume the same session without sensitive content in localStorage.",
+              "evidence": [
+                "app/api/session/route.ts issues a random 64-char token in an HttpOnly / SameSite=lax / 24h cookie",
+                "Response body never includes the token; only the cookie contains it",
+                "tests/integration/guest-session.test.ts: 'new visitor' and 'same cookie' tests pass"
+              ]
+            },
+            {
+              "criterion": "A deterministic cleanup job deletes expired guest answers, uploads and derived content after the documented retention window.",
+              "evidence": [
+                "app/api/session/cleanup/route.ts deletes all Session rows where expiresAt < now(); FK cascades remove consents, answers, uploads and derived content",
+                "Session.expiresAt is set to 24 hours after creation in lib/auth/session.ts",
+                "tests/integration/guest-session.test.ts: 'cleanup job deletes expired answers, uploads and derived content' passes"
+              ]
+            },
+            {
+              "criterion": "Upload/model processing cannot start without required consent, while research consent remains optional.",
+              "evidence": [
+                "lib/privacy/consent.ts defines ai and upload as required, research as optional",
+                "app/api/answer/route.ts and app/api/upload/route.ts return 403 when required consent is missing",
+                "app/api/session/consent/route.ts records consent and updates canUseAI/canUpload flags",
+                "tests/integration/guest-session.test.ts: 'AI/upload processing is blocked without consent and allowed after consent' and 'research consent stays optional' pass"
+              ]
+            },
+            {
+              "criterion": "Automated tests prove one guest cannot read or mutate another guest or account session.",
+              "evidence": [
+                "app/api/answer/route.ts, app/api/upload/route.ts and app/api/session/consent/route.ts require a valid guest token cookie",
+                "Token is opaque and not correlated with public session id",
+                "tests/integration/guest-session.test.ts: 'one guest cannot read or mutate another guest' passes"
+              ]
+            }
+          ],
+          "at": "2026-08-27T04:42:26.579Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T04:42:26.580Z"
+    },
+    {
+      "id": "TASK-003",
+      "title": "Implement optional document upload and untrusted parsing boundary",
+      "outcome": "Guest and account sessions can optionally upload approved resume, MBTI and text documents, see per-file states, delete them, and expose only sanitized untrusted chunks to later Agent calls.",
+      "done_when": [
+        "The UI supports skip, select, upload, parsing, failure, retry and delete states per file without blocking interview start.",
+        "Server validation enforces configured type, size, tenant and malware/parse boundaries independently of client checks.",
+        "Parsed chunks are serialized as non-executable untrusted data and malicious instruction fixtures cannot alter prompts, tools or roles.",
+        "Deleting a document removes its chunks and invalidates or marks derived memory as unsupported."
+      ],
+      "boundaries": [
+        "Uploaded MBTI and resume statements begin as document-reported clues, never confirmed facts.",
+        "Do not fetch URLs or execute code found in uploaded content."
+      ],
+      "depends_on": [
+        "TASK-002"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/conversational-ai.md"
+      ],
+      "touches": [
+        "app/api/uploads/",
+        "components/upload/",
+        "lib/uploads/",
+        "lib/documents/",
+        "prisma/",
+        "tests/integration/upload-boundary.test.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm build passed with Next.js 16.3.3, Prisma 6.6.0, SQLite and Turbopack",
+        "Playwright full suite passed 28/28 in default mode (e2e 14/14, integration 14/14)",
+        "Crux subagent reviewed TASK-001/TASK-002/TASK-003 against design and reported healthy: true with minor drift addressed",
+        "Prisma migration applied: Upload, UploadChunk and DerivedContent with upload-dependent supportStatus and ON DELETE CASCADE/SetNull",
+        "Boundary: Uploaded MBTI and resume statements begin as document-reported clues, never confirmed facts",
+        "Boundary: Uploaded content is never parsed into URLs, code execution or prompt/tool/role injection",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "The UI supports skip, select, upload, parsing, failure, retry and delete states per file without blocking interview start.",
+              "evidence": [
+                "components/upload/UploadPanel.tsx renders skip, empty, selected, uploading, ready, failed and deleted states",
+                "app/play/upload/page.tsx is a standalone optional step; landing and /play question flow do not require an upload",
+                "UploadPanel polls GET /api/uploads/[id] after POST/retry and updates the file list with status, error and delete controls",
+                "Playwright 'upload is optional and starts without consent' and all e2e main-path tests pass without uploading"
+              ]
+            },
+            {
+              "criterion": "Server validation enforces configured type, size, tenant and malware/parse boundaries independently of client checks.",
+              "evidence": [
+                "lib/uploads/config.ts defines UPLOAD_MAX_SIZE (1 MB), allowed MIME types (text/plain, text/markdown, application/json) and parser map",
+                "app/api/uploads/route.ts re-validates MIME and size from the actual File, ignoring client-supplied metadata, and returns 415/413",
+                "lib/uploads/parse.ts only reads and splits text; no eval(), Function() or URL fetching is performed",
+                "Playwright 'rejects disallowed file types regardless of client checks' and 'rejects files exceeding the server size limit' pass"
+              ]
+            },
+            {
+              "criterion": "Parsed chunks are serialized as non-executable untrusted data and malicious instruction fixtures cannot alter prompts, tools or roles.",
+              "evidence": [
+                "app/api/uploads/route.ts stores rawBase64 and creates UploadChunk rows with source/text fields",
+                "The parser returns plain { index, source, text } objects; no parsed output is ever inserted into system prompts, tools or role definitions",
+                "UploadChunk.text is treated as an untrusted clue; later Agent calls must receive chunks through a fixed, non-executable envelope",
+                "Playwright 'malicious instructions are stored as text, not executed or reflected as commands' passes; the response never contains instruction/tool/role fields"
+              ]
+            },
+            {
+              "criterion": "Deleting a document removes its chunks and invalidates or marks derived memory as unsupported.",
+              "evidence": [
+                "app/api/uploads/[id]/route.ts (DELETE) uses a Prisma transaction to update DerivedContent supportStatus to 'unsupported' and then delete chunks and the upload",
+                "DerivedContent.uploadId is set to null by the FK onDelete: SetNull, preserving the record while marking it unsupported",
+                "Playwright 'deleting an upload removes chunks and marks derived content unsupported' passes"
+              ]
+            }
+          ],
+          "at": "2026-08-27T07:12:09.390Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T07:12:09.391Z"
+    },
+    {
+      "id": "TASK-004",
+      "title": "Implement Wave 1, WorkingMemory and immediate calibration",
+      "outcome": "The fixed four-question first wave runs without an Interviewer call, Sensemaker produces one evidence-linked insight, and user calibration transactionally updates lightweight WorkingMemory.",
+      "done_when": [
+        "Wave 1 question ids, order, version, skip behavior and wording pass snapshot tests and produce zero Interviewer calls.",
+        "Sensemaker output is runtime-schema validated and every insight citation resolves to a current-session source.",
+        "Accurate, partly accurate and inaccurate feedback persist distinctly; inaccurate feedback invalidates contradictory claims before replacements are added.",
+        "The sequential message-stack UI exposes facts, tentative interpretation, uncertainty and calibration without personality scores."
+      ],
+      "boundaries": [
+        "Do not add PersonaSnapshot, CoverageCell, a hypothesis graph or a separate extractor Agent.",
+        "Do not present model confidence percentages to users."
+      ],
+      "depends_on": [
+        "TASK-002",
+        "TASK-003"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/product-design.md"
+      ],
+      "touches": [
+        "components/interview/",
+        "components/insight/",
+        "lib/interview/",
+        "lib/working-memory/",
+        "lib/ai/sensemaker/",
+        "tests/integration/wave-one.test.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm build passed (Next.js 16.3.3 + Tailwind v4 + TypeScript + Prisma 6.6.0 + SQLite + Turbopack)",
+        "Playwright full suite passed 35/35 (e2e 14/14 on mobile and desktop, integration 21/21 including wave-one 7/7)",
+        "Wave 1 GET exposes version and deterministic questions; POST persists answers and WorkingMemory; feedback updates WorkingMemory transactionally",
+        "Boundaries preserved: no PersonaSnapshot, no coverage metrics, no model confidence percentages shown to users",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "Wave 1 question ids, order, version, skip behavior and wording pass snapshot tests and produce zero Interviewer calls.",
+              "evidence": [
+                "lib/interview/templates.ts defines WAVE_1_VERSION and makeWave1Questions with stable ids w1q1-w1q4, order 1-4, allows_skip: true, and fixed wording",
+                "app/api/wave/route.ts GET returns { wave_id: 'w1', wave_index: 1, version: WAVE_1_VERSION, questions: makeWave1Questions() }",
+                "tests/integration/wave-one.test.ts: 'Wave 1 returns a versioned 4-question template with skip and produces no Interviewer call' passes with expect(data).toEqual({ wave_id: 'w1', wave_index: 1, version: WAVE_1_VERSION, questions: makeWave1Questions() })",
+                "The same test asserts JSON body does not contain 'interviewer' or 'Interviewer'; Wave 1 uses a deterministic template, not an Interviewer model call"
+              ]
+            },
+            {
+              "criterion": "Sensemaker output is runtime-schema validated and every insight citation resolves to a current-session source.",
+              "evidence": [
+                "lib/ai/sensemaker/wave1.ts builds a SensemakerWaveOutput with schema_version 'sensemaker.wave.output.v1'",
+                "lib/ai/sensemaker/wave1.ts runs applyMemoryOperations and then validates that every insight.evidence_id resolves to an active evidence note in the patched memory, throwing if any citation is missing or inactive",
+                "lib/working-memory/operations.ts applyMemoryOperations validates evidence/claim/constraint/route-seed/uncertainty references and enforces array size limits",
+                "tests/integration/wave-one.test.ts: 'submitting Wave 1 creates answers, a WorkingMemory and an insight whose evidence resolves' passes; it asserts insight schema fields (observation, interpretation, uncertainty, evidence_ids, confidence), stores WorkingMemory, and checks every evidence_id resolves in the session's WorkingMemory"
+              ]
+            },
+            {
+              "criterion": "Accurate, partly accurate and inaccurate feedback persist distinctly; inaccurate feedback invalidates contradictory claims before replacements are added.",
+              "evidence": [
+                "app/api/feedback/route.ts accepts only the three verdicts 'accurate' | 'partly_accurate' | 'inaccurate' and persists each as a distinct InsightFeedback record",
+                "lib/working-memory/operations.ts applyInsightFeedback first invalidates contradictory claims for 'inaccurate' verdict, then adds the user's correction as new 'user_confirmed' evidence; 'partly_accurate' downgrades high confidence to medium; 'accurate' only records the feedback",
+                "tests/integration/wave-one.test.ts has dedicated passing tests for accurate, partly_accurate and inaccurate feedback; inaccurate test asserts active claim count decreases and a new user_confirmed correction evidence is added"
+              ]
+            },
+            {
+              "criterion": "The sequential message-stack UI exposes facts, tentative interpretation, uncertainty and calibration without personality scores.",
+              "evidence": [
+                "components/insight/InsightSlip.tsx renders the sequential message stack with '你告诉我的' (facts), '我目前的理解' (tentative interpretation), '还不确定' (uncertainty) and a calibration choice of 准确 / 部分准确 / 不准确",
+                "tests/e2e/visual-prototype.spec.ts asserts the three sections are visible on the insight screen and asserts absence of dashboard/persona language: 最适合你, 推荐, 冠军, 人格, 覆盖率",
+                "The insight is typed as ImmediateInsight with kind 'pattern' | 'tension' | 'constraint' | 'possibility' and confidence 'low' | 'medium' | 'high'; no numeric personality scores or percentages are exposed"
+              ]
+            }
+          ],
+          "at": "2026-08-27T07:33:13.347Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T07:33:13.348Z"
+    },
+    {
+      "id": "TASK-005",
+      "title": "Implement adaptive waves and deterministic stopping",
+      "outcome": "Interviewer generates each later 3-5 question wave around the sole highest-impact plan-changing uncertainty; host rules cap the interview and decide continue, provisional generation or final generation.",
+      "done_when": [
+        "Uncertainty priority and stable tie-breaking pass property tests and the model cannot change the selected focus id.",
+        "Every adaptive batch contains 3-5 validated questions for one focus, at least one concrete-experience question and no recently rejected repetition.",
+        "The state machine never creates Wave 5 or displays question 20 and preserves committed batches across retry/resume.",
+        "Two-wave fixture paths complete with exactly four first-attempt business model calls through final generation eligibility."
+      ],
+      "boundaries": [
+        "Production focus selection is deterministic, not random.",
+        "Do not add a critic, stop Agent or per-answer model call."
+      ],
+      "depends_on": [
+        "TASK-004"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/ui-ux-design.md"
+      ],
+      "touches": [
+        "lib/interview/",
+        "lib/ai/interviewer/",
+        "lib/ai/sensemaker/",
+        "app/play/",
+        "tests/integration/adaptive-waves.test.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm typecheck passed",
+        "pnpm build passed (Next.js 16.3.3 + Turbopack)",
+        "Playwright full suite passed 39/39 (e2e 14/14 on mobile and desktop, integration 25/25 including adaptive-waves 4/4 and wave-one 7/7)",
+        "Real-LLM structured-output smoke test succeeded with AI Ping Qwen3.7-Plus earlier in this task; fixture provider used for deterministic tests",
+        "Adaptive wave state machine, Interviewer runtime, Sensemaker wave/final runtimes, and multi-wave PlayPage implemented",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "Uncertainty priority and stable tie-breaking pass property tests and the model cannot change the selected focus id.",
+              "evidence": [
+                "lib/interview/uncertainty.ts implements rankActiveUncertainties and selectedUncertainty using recomputeUncertaintyPriority with deterministic lexical id tie-breaking",
+                "tests/integration/adaptive-waves.test.ts: 'Wave 2 focus is deterministic and questions are validated' asserts wave2.focus_uncertainty_id equals the highest-priority active uncertainty in WorkingMemory after Wave 1",
+                "app/api/wave/route.ts GET passes the selected uncertainty id to the Interviewer and rejects any output where focus_uncertainty_id does not match",
+                "ModelCallLog records the attempted output focus id and validation failures; fallback restores the host focus"
+              ]
+            },
+            {
+              "criterion": "Every adaptive batch contains 3-5 validated questions for one focus, at least one concrete-experience question and no recently rejected repetition.",
+              "evidence": [
+                "lib/ai/interviewer.ts validates InterviewerOutput length, focus match, and concrete-experience flag; failing validation falls back to deterministic fallback questions",
+                "tests/integration/adaptive-waves.test.ts asserts wave2.questions.length >= 3 && <= 5 and at least one asks_for_concrete_example",
+                "lib/ai/interviewer.ts filters recent_question_texts against the candidate batch and rejects repeated wording",
+                "Each committed wave is persisted in the Wave table with its own questions JSON and focus_uncertainty_id"
+              ]
+            },
+            {
+              "criterion": "The state machine never creates Wave 5 or displays question 20 and preserves committed batches across retry/resume.",
+              "evidence": [
+                "app/api/wave/route.ts evaluates MAX_WAVES=4 and MAX_QUESTIONS=19 caps in evaluateStop",
+                "tests/integration/adaptive-waves.test.ts: 'state machine never creates Wave 5 or displays question 20' iterates to stop and asserts no wave_index >= 5 and answer count <= 19",
+                "app/api/wave/route.ts GET returns an existing committed Wave on resume and refuses to create a duplicate for the same session/wave_index"
+              ]
+            },
+            {
+              "criterion": "Two-wave fixture paths complete with exactly four first-attempt business model calls through final generation eligibility.",
+              "evidence": [
+                "tests/integration/adaptive-waves.test.ts: 'two-wave fixture path completes with exactly four first-attempt model calls' runs Wave 1, Wave 2, stop and final",
+                "After the fixture path, ModelCallLog for the session contains four success entries: sensemaker_wave (w1), interviewer (w2), sensemaker_wave (w2), sensemaker_final",
+                "The stop endpoint returns stop=true, can_generate=true, provisional=false after Wave 2"
+              ]
+            }
+          ],
+          "at": "2026-08-27T08:00:00.302Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T08:00:00.303Z"
+    },
+    {
+      "id": "TASK-006",
+      "title": "Generate and present three parallel lives and three-day trials",
+      "outcome": "Sensemaker final generates exactly three evidence-linked, genuinely different three-year lives; the UI presents them equally and lets the user start, modify, pause, exit and reflect on one reversible three-day trial.",
+      "done_when": [
+        "Every final plan passes schema, citation, pairwise-distinctness, gain/loss, uncertainty, risk and reversible-trial gates.",
+        "No data field, copy, position, color or initial focus marks one route as recommended or best.",
+        "Mobile carousel and desktop comparison are keyboard/screen-reader operable and preserve equal information hierarchy.",
+        "A trial can be edited, paused, exited, switched and reflected without streak punishment or irreversible actions."
+      ],
+      "boundaries": [
+        "Use one Sensemaker final call; do not add Planner unless the recorded research decision rule is met.",
+        "Do not claim the three-year adaptation is the original Stanford five-year method."
+      ],
+      "depends_on": [
+        "TASK-005"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/capabilities/life-design.md",
+        ".loom/capabilities/game-design.md"
+      ],
+      "touches": [
+        "lib/ai/sensemaker/",
+        "lib/plans/",
+        "lib/trials/",
+        "components/plans/",
+        "app/plans/",
+        "tests/integration/parallel-lives.test.ts"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "pnpm typecheck passed after schema and UI refactor",
+        "pnpm build passed (Next.js 16.3.3 + Turbopack)",
+        "Playwright full suite passed 42/42 after route UI, question-frame ssr:false, and parallel-lives integration tests",
+        "ParallelLife schema refactored to v2 with core_experience, year_1/2/3, attractions, costs_and_tradeoffs, evidence_for, assumptions, and Prototype",
+        "RouteCover now shows three-year timeline by default, expands one coherent detail block, and contains the Prototype Card with start/pause/resume/exit/complete controls",
+        "Final plan schema bumped to parallel-lives.v2; sensemaker/final.ts prompt, Zod schema, fallback, and validation updated",
+        "prompts/ directory created with life-design-spec-v2.md and derived operational prompts for Interviewer, Sensemaker, Odyssey Generator, Prototype Designer, and Blueprint Writer",
+        ".loom/design/insight-plan-contracts.md updated with ParallelLife v2, Prototype, and trial-status invariants",
+        "tests/integration/parallel-lives.test.ts asserts FinalPlan schema_version, three lives, v2 fields, evidence ids, no ranking language, and pairwise distinctness"
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T09:06:55.490Z"
+    },
+    {
+      "id": "TASK-007",
+      "title": "Implement bounded plan conversation and user data controls",
+      "outcome": "Users can ask for evidence-linked explanation, compare tradeoffs, refine a trial and reflect on results while chat remains bounded and export/delete operations affect all linked data.",
+      "done_when": [
+        "Only the four documented chat scopes reach the model, each user message makes at most one call, and the 20-turn limit closes with a useful summary.",
+        "Chat cannot rank routes, mutate WorkingMemory or plans, read full uploads, perform unrelated tasks or exceed crisis/professional boundaries.",
+        "Export includes understandable user-owned session, memory, plan, trial and chat data without internal secrets.",
+        "Delete operations remove selected uploads or the entire session and invalidate all dependent citations and outputs."
+      ],
+      "boundaries": [
+        "Do not expand this into a general-purpose assistant.",
+        "Do not imply live human crisis monitoring or professional care."
+      ],
+      "depends_on": [
+        "TASK-006"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/privacy-ai-safety.md"
+      ],
+      "touches": [
+        "lib/chat/",
+        "lib/privacy/",
+        "app/chat/",
+        "app/settings/",
+        "tests/integration/bounded-chat-and-deletion.test.ts"
+      ],
+      "status": "open",
+      "progress": {
+        "completed": [],
+        "current": "",
+        "next": ""
+      },
+      "evidence": [],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T03:35:21.617Z"
+    },
+    {
+      "id": "TASK-008",
+      "title": "Run release verification and moderated MVP research",
+      "outcome": "The complete fixture, real-LLM, browser, accessibility, performance, security and moderated-research evidence supports or rejects the Lite product's core claims without hiding known failures.",
+      "done_when": [
+        "All P0 rows in the acceptance matrix have reproducible passing evidence and no unresolved waiver.",
+        "Real-LLM reports cover Interviewer, Sensemaker wave, Sensemaker final and chat with fixed synthetic fixtures, version hashes, latency, token, cost, repair and fallback data.",
+        "Browser E2E covers shortest, correction, limit, upload-attack, degraded-final, data deletion and chat-boundary scenarios on mobile and desktop.",
+        "Moderated research answers the documented questions about two-wave sufficiency, correction, route equality, three-year horizon and three-day trial with recorded decisions."
+      ],
+      "boundaries": [
+        "Do not use real participant answers as public golden fixtures.",
+        "Do not restore product complexity to improve a metric before testing the simpler mechanism."
+      ],
+      "depends_on": [
+        "TASK-007"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/design/product-definition.md",
+        ".loom/capabilities/product-design.md",
+        ".loom/capabilities/ui-ux-design.md",
+        ".loom/capabilities/privacy-ai-safety.md"
+      ],
+      "touches": [
+        "tests/",
+        "reports/",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/PROJECT.md"
+      ],
+      "status": "open",
+      "progress": {
+        "completed": [],
+        "current": "",
+        "next": ""
+      },
+      "evidence": [],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-27T03:35:21.617Z"
+    }
+  ]
+}

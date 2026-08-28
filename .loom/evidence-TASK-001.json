@@ -1,0 +1,41 @@
+{
+  "evidence": [
+    "pnpm build passed (Next.js 16.3.3 + Tailwind v4 + TypeScript)",
+    "Playwright E2E suite 14/14 passed on both mobile (360x800) and desktop (1440x900)",
+    "Screenshots saved to reports/: landing, question, insight, routes, keyboard, 200% zoom, reduced-motion"
+  ],
+  "checks": [
+    {
+      "criterion": "A 360px-wide browser can move from landing to a question, submit a local fixture answer, calibrate an immediate insight and browse all three equal route covers.",
+      "evidence": [
+        "Playwright test '360px 完整主路径：landing → question → insight → three routes' passes (tests/e2e/visual-prototype.spec.ts)",
+        "Screenshots 01-landing-mobile-360.png, 02-question-mobile-360.png, 03-insight-mobile-360.png, 04-routes-mobile-360.png"
+      ]
+    },
+    {
+      "criterion": "The prototype visibly follows Soft Editorial Neo-Brutalism through subtle off-white grid paper, ink, a dominant cobalt accent, green used only for semantic states, 2px borders, 3-4px hard offset shadows, 0-4px corners, restrained mobile density, editorial Chinese serif key statements and sans-serif UI; the sequential immediate-insight stack remains the visual signature, and the result must not resemble a dashboard, childlike interface, generic purple AI landing page, or loud/colorful generic neobrutalism.",
+      "evidence": [
+        "app/globals.css defines paper (#F5F0E6), ink (#171717), cobalt (#2457E6), success (#2D7D46) tokens, 2px borders, 3-4px hard shadows, graph-paper background",
+        "components/insight/InsightSlip.tsx implements the sequential printed dialogue slip with 你告诉我的 / 我目前的理解 / 还不确定",
+        "Landing page uses Chinese serif for hero and insight claim; UI labels use sans-serif",
+        "No ranking UI; Playwright asserts absence of 最适合你 / 推荐 / 冠军 / 人格 / 覆盖率"
+      ]
+    },
+    {
+      "criterion": "Keyboard navigation, 200% zoom and prefers-reduced-motion preserve every operation and all content.",
+      "evidence": [
+        "Playwright '键盘可完成主路径，焦点顺序不丢失' test passes",
+        "Playwright '200% 缩放不裁剪关键内容' test passes",
+        "Playwright 'prefers-reduced-motion 下内容完整且不丢失' test passes",
+        "useReducedMotion() used in all motion components; CSS prefers-reduced-motion and forced-colors media queries in globals.css"
+      ]
+    },
+    {
+      "criterion": "No blocked Lifetide sky or unlicensed pixel-frame asset is present in the build output.",
+      "evidence": [
+        "Playwright '不引用 blocked 的 Lifetide 素材' test asserts page.content() does not contain 'pixel-frame.png' or '/sky'",
+        "No image files in public/; all visual elements are CSS/SVG/text"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+{
+  "schema_version": 2,
+  "project": {
+    "name": "Lifetide-Lite",
+    "status": "building",
+    "created_at": "2026-08-27T03:22:20.304Z",
+    "updated_at": "2026-08-27T08:58:02.974Z"
+  },
+  "understanding": {
+    "confirmed": [
+      {
+        "id": "F-001",
+        "text": "The new product is a smaller, standalone Lifetide experience rather than another feature inside the current full product.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.996Z"
+      },
+      {
+        "id": "F-002",
+        "text": "The core loop is short interview waves followed by immediate user-facing understanding, ending in three alternative life plans and continued conversation.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-003",
+        "text": "Resume, MBTI report and related material upload must remain available but optional.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-004",
+        "text": "The user-facing persona dashboard and full six-layer persona product are removed; a lightweight internal working memory remains for continuity and planning.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-005",
+        "text": "The intended audience is young adults, and the visual experience should feel fashionable, cool, modern, playful and less serious.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-006",
+        "text": "The implementation may be a full Next.js web product rather than a constrained H5 page.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-007",
+        "text": "Existing Lifetide visual assets may be reused when their provenance and license permit it.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-008",
+        "text": "Loom is the continuity and design-document infrastructure for this new workspace.",
+        "source": "conversation",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "F-009",
+        "text": "The previously documented Digital Tide / Nocturnal Editorial / Chromatic Ocean visual direction is incorrect.",
+        "source": "conversation",
+        "at": "2026-08-27T03:43:45.896Z"
+      },
+      {
+        "id": "F-010",
+        "text": "The screenshot reference is neo-brutalist: visible grid, heavy ink outlines, hard offset shadows, high-contrast paper surfaces, editorial type and tactile press states.",
+        "source": "conversation",
+        "at": "2026-08-27T03:43:45.898Z"
+      },
+      {
+        "id": "F-011",
+        "text": "The final style should remain modern, attractive to young adults and not become visually hostile or exhausting.",
+        "source": "conversation",
+        "at": "2026-08-27T03:43:45.898Z"
+      },
+      {
+        "id": "F-012",
+        "text": "Green, blue or another color may be used as an accent rather than the entire interface palette.",
+        "source": "conversation",
+        "at": "2026-08-27T03:43:45.898Z"
+      },
+      {
+        "id": "F-013",
+        "text": "The product should prefer a coherent ready-made UI library/style registry over inventing every visual primitive from scratch.",
+        "source": "conversation",
+        "at": "2026-08-27T03:43:45.898Z"
+      },
+      {
+        "id": "F-014",
+        "text": "The product name is 人生试运行. It does not reuse the 潮生 or Lifetide product name.",
+        "source": "conversation",
+        "at": "2026-08-27T03:46:27.009Z"
+      }
+    ],
+    "assumptions": [
+      {
+        "id": "A-001",
+        "text": "The working product name is 潮生｜人生试玩 until naming is revisited after concept validation.",
+        "status": "retired",
+        "source": "agent",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "A-002",
+        "text": "The first implementation will reuse infrastructure and licensed assets conceptually but will not share runtime code with the existing Lifetide repository until an explicit engineering decision is made.",
+        "status": "active",
+        "source": "agent",
+        "at": "2026-08-27T03:24:21.998Z"
+      },
+      {
+        "id": "A-003",
+        "text": "Three-year alternative lives are a better consumer horizon than the source method's five-year Odyssey Plans; each route ends in a three-day reversible trial.",
+        "status": "active",
+        "source": "agent",
+        "at": "2026-08-27T03:24:21.998Z"
+      }
+    ],
+    "unresolved": [
+      {
+        "id": "Q-001",
+        "question": "Should anonymous progress persist only on-device, or should account creation be requested when users save plans or upload files?",
+        "impact": "medium",
+        "status": "resolved",
+        "at": "2026-08-27T03:24:21.998Z",
+        "resolution": "MVP starts without registration. A guest session uses an opaque HttpOnly session token and server-side temporary storage. Uploads are allowed after explicit model-processing consent and are automatically purged with the guest session after 24 hours. Account creation is requested only when the user wants cross-device continuation or retention beyond the guest window.",
+        "resolved_at": "2026-08-27T03:31:46.377Z"
+      },
+      {
+        "id": "Q-002",
+        "question": "Which exact existing sky backgrounds are user-owned and publishable outside the original Lifetide repository?",
+        "impact": "high",
+        "status": "resolved",
+        "at": "2026-08-27T03:24:21.998Z",
+        "resolution": "Original user-provided sky backgrounds are excluded from Lifetide-Lite MVP. Only registry-backed CC0 water, boat and landmark assets may be copied with their license snapshot and checksum. Sky assets remain blocked unless written cross-project publication rights are later recorded.",
+        "resolved_at": "2026-08-27T03:31:46.380Z"
+      }
+    ]
+  },
+  "keeper": {
+    "status": "passed",
+    "attempts": [
+      {
+        "run_id": "keeper-lite-001",
+        "prepared_digest": "c3abc0f4c4db7ca223c550bed64b91144fe8329e986f11b6170feca9fb6b2d80",
+        "verdict": "passed",
+        "summary": "A fresh Agent can responsibly begin TASK-001. The disk handoff defines the intended mobile-first guest-first product, its users and boundaries, the Digital Tide visual signature, the fixture-only prototype slice, responsive/accessibility and asset-license constraints, and observable completion. TASK-001 is the only dependency-free open task; all seven declared reads are accessible. Because the workspace intentionally has no implementation scaffold yet, the concrete first edit is package.json to pin the documented Next.js/TypeScript/Tailwind v4/Motion/Phosphor stack and add build plus Playwright commands, followed by the app shell. The proving artifact is a runnable fixture-driven Next.js prototype plus tests/e2e/visual-prototype.spec.ts; reproducible evidence is a production build and browser tests at 360px, keyboard, 200% zoom and reduced motion, together with a build-output asset audit showing zero blocked sky or pixel-frame references.",
+        "evidence": [
+          ".loom/PROJECT.md:7-16 defines the result; :18-24 defines users and guest operating reality; :46-55 defines product/technical/asset boundaries; :81-91 defines observable MVP completion and failure.",
+          ".loom/PROJECT.md:57-65 maps product, experience, visual, system, contract, platform/operations and verification documents; all seven mapped design files were opened successfully.",
+          ".loom/PROJECT.md:67-77 identifies seven distinct fields—product design, UI/UX, visual art direction, game design, conversational AI, life design, and privacy/AI safety—and each corresponding dossier states a project-specific boundary, rejected defaults, implementation consequences and proof signals.",
+          ".loom/tasks.json:5-45 defines TASK-001 as open with depends_on=[]; :20-27 names the seven files loaded for the task; :29-35 names package.json, app/, components/, public/, styles/ and tests/e2e/visual-prototype.spec.ts as its implementation surface.",
+          ".loom/tasks.json:7-17 scopes a fixture-only landing→question→calibration→three-route prototype and forbids production AI/auth/upload/persistence, game engines, a second component system, and unaudited copied effects.",
+          ".loom/design/journey-and-interaction.md:55-101 specifies landing, question, sequential insight/calibration and equal-route interactions; :137-159 specifies content, responsive and accessibility behavior.",
+          ".loom/design/visual-art-direction.md:6-29 gives an executable Digital Tide / Nocturnal Editorial / Chromatic Ocean stance and five-second communication goal; :51-72 specifies the insight stack and equal three-route carousel; :87-98 specifies reduced-motion and component states; :102-142 supplies color, surface, typography and responsive seeds.",
+          ".loom/design/platform-and-assets.md:8-12 and :100-120 lock the MVP stack and exclusions; :148-165 blocks Lifetide sky and pixel-frame assets; :181-216 supplies performance, accessibility, dependency and verification budgets.",
+          ".loom/capabilities/ui-ux-design.md:15-19 requires visible evidence/tentativeness/correction and content-first mobile behavior; :28-44 defines concrete interaction and accessibility consequences.",
+          ".loom/capabilities/visual-art-direction.md:15-19 distinguishes mature digital tide from pixel nostalgia and encodes the anti-manipulation stance; :27-42 defines asset/style/motion consequences.",
+          ".loom/capabilities/game-design.md:15-19 rejects rewarding disclosure depth; :28-45 limits the prototype's game layer to progress feedback without XP, ranking, coercion or business-state dependency.",
+          "Workspace inspection found README.md, AGENTS.md and .loom documentation/state only—no package.json or implementation tree—so TASK-001 correctly starts with the declared scaffold surface rather than modifying legacy runtime code.",
+          "Exact completion evidence for TASK-001: a successful production build; Playwright coverage in tests/e2e/visual-prototype.spec.ts for 360px traversal, keyboard operation, 200% zoom and prefers-reduced-motion; visual review against the named direction; and a build-output scan with zero blocked sky/pixel-frame assets."
+        ],
+        "gaps": [],
+        "at": "2026-08-27T03:37:15.294Z"
+      },
+      {
+        "run_id": "keeper-life-preview-002",
+        "prepared_digest": "ebc367bc01ccb026673e9d379f760e080b7d96a8cb0e1fd9ed2731a6e7a9089e",
+        "verdict": "passed",
+        "summary": "A fresh Agent can responsibly begin TASK-001 from disk. PROJECT.md gives a coherent renamed product, operating reality, boundaries and observable MVP completion; its map reaches product, experience, system, contract, platform/operations and verification truth. TASK-001 is dependency-free, names every required design/capability input, constrains the prototype to fixtures, and supplies observable mobile, visual, accessibility and asset gates. The superseding Soft Editorial Neo-Brutalism decision is consistently propagated into current truth, and the live neobrutalism.com Radix registry namespace and button endpoint are reachable. The first implementation action is to establish the absent greenfield Next.js package manifest/toolchain after explicitly selecting and recording a package manager and pinned versions, then preview the registry Button before adding it; the completion artifact is the runnable prototype plus tests/e2e/visual-prototype.spec.ts and reproducible build/E2E/accessibility/asset-audit evidence.",
+        "evidence": [
+          ".loom/PROJECT.md:1-24 confirms the name 人生试运行, intended result, target users, guest-first operating reality and 24-hour temporary session boundary.",
+          ".loom/PROJECT.md:26-55 defines the complete short-wave flow, exactly two runtime Agent roles, Soft Editorial Neo-Brutalism, excluded systems/assets and the neobrutalism.com Radix technical baseline.",
+          ".loom/PROJECT.md:57-77 maps all seven design documents and seven distinct professional capability dossiers; .loom/PROJECT.md:79-95 states observable completion and directs work to TASK-001.",
+          ".loom/DECISIONS.md:59-66 records D-007 as superseding D-004 and selects neobrutalism.com/RetroUI Radix as primary with neobrutalism.dev only as reference; .loom/DECISIONS.md:77-84 records the confirmed 人生试运行 rename.",
+          ".loom/state.json:89-103 preserves F-014 as confirmed and the old 潮生｜人生试玩 assumption A-001 as retired; README.md:1-50 uses the new name and current visual/registry decision.",
+          ".loom/design/product-definition.md:7-51 and 53-160 distinguish confirmed facts, product judgments, MVP/non-goals, evidence-linked working memory, route contract, stop rules and known open decisions.",
+          ".loom/design/journey-and-interaction.md:42-175 specifies information architecture, end-to-end flow, interaction states, recovery, accessibility, equal-route presentation and local safety boundaries.",
+          ".loom/design/visual-art-direction.md:7-106 specifies the visual intent, exact paper/ink/cobalt/success tokens, 2px borders, 3-4px shadows, 0-4px corners, typography roles and printed-dialogue-slip signature; lines 186-195 give visual proof criteria.",
+          ".loom/design/adaptive-interview-system.md:6-165 defines the two-Agent architecture, fixed Wave 1, deterministic uncertainty selection, stop limits, call counts and context budgets; lines 167-235 define injection, fallback, observability and verification boundaries.",
+          ".loom/design/insight-plan-contracts.md:17-393 provides source, question, WorkingMemory, Interviewer, Sensemaker, final-plan and bounded-chat contracts with invariants and errors; lines 395-450 provide fixtures and contract tests.",
+          ".loom/design/platform-and-assets.md:11-19 sets the stack; lines 82-162 compare sources and prescribe the exact Radix registry/view-before-add/provenance policy; lines 209-323 cover guest state, uploads, asset/font rights, performance, accessibility, recovery and dependency governance.",
+          ".loom/design/acceptance-and-research.md:6-80 defines falsifiable claims and P0/P1 acceptance; lines 82-166 define deterministic, fault, real-LLM, E2E and reproducible release evidence; lines 187-254 define moderated research, decision rules and blind spots.",
+          "All capability dossiers were inspected: product-design.md:3-68, ui-ux-design.md:3-64, visual-art-direction.md:3-68, game-design.md:3-68, conversational-ai.md:3-63, life-design.md:3-67 and privacy-ai-safety.md:3-76 keep field boundaries distinct and state project-specific decisions, rejected defaults, failure modes and proof signals.",
+          ".loom/tasks.json:5-47 makes TASK-001 the open, dependency-free first vertical slice; it names all seven required reads, exact touched areas, fixture-only boundary, primary/secondary registry policy, forbidden libraries, provenance duty and four done_when gates.",
+          "Workspace path scan found only governance/documentation files plus README.md and AGENTS.md, with no package.json or implementation tree. This is a greenfield scaffold condition rather than hidden legacy code; platform-and-assets.md:133-149 requires package-manager/version inspection and explicit source review before installation.",
+          "Live check 2026-08-27: https://neobrutalism.com/docs/installation documents shadcn CLI source copying, Tailwind v4, both Base and Radix URL forms, preview-before-install and the alias https://neobrutalism.com/r/radix/{name}.json; https://neobrutalism.com/r/radix/button.json returned a registry:ui Button targeting components/ui/button.tsx with declared dependencies.",
+          "GitHub API check for neobrutalism/neobrutalism returned public default branch main, MIT SPDX license and commit d5fbc0e823bb66575f5372c3df03ee43be45c91b, providing a reproducible upstream point that TASK-001 can record before importing source.",
+          "Concrete first action: because no package manager exists on disk, explicitly select and record one and pinned Next.js/React/Tailwind versions, create the minimal package.json/App Router/TypeScript scaffold without overwriting README.md, AGENTS.md or .loom, then run the matching shadcn view command against https://neobrutalism.com/r/radix/button.json before any add.",
+          "TASK-001 proof artifact: a runnable 人生试运行 Next.js fixture prototype and tests/e2e/visual-prototype.spec.ts, with reproducible production build, 360px path test, three-route traversal, keyboard and 200% zoom checks, full/reduced-motion screenshots at the specified viewports, registry provenance record, dependency audit and build-output scan proving blocked sky/pixel-frame assets are absent.",
+          "Non-blocking consistency note: capabilities/conversational-ai.md:31 retains broader wording of 1-3 insights, while the executable system/contract/acceptance truth requires exactly one per wave (adaptive-interview-system.md:13,46,73; insight-plan-contracts.md:244-249; acceptance-and-research.md:60). TASK-001 itself asks to calibrate an immediate insight, so the stricter executable contract removes implementation guesswork for the first slice."
+        ],
+        "gaps": [],
+        "at": "2026-08-27T03:53:38.427Z"
+      },
+      {
+        "run_id": "keeper-life-preview-003",
+        "prepared_digest": "83e80ff344b9c3a5379db568aa20e3ca945a53763e5ddb5eaf0a5bcfb8901f51",
+        "verdict": "needs_revision",
+        "summary": "The handoff is otherwise coherent and navigable: 人生试运行 is the confirmed current name; Soft Editorial Neo-Brutalism is consistently specified; neobrutalism.com's live Radix registry is the sole primary component source; and dependency-free TASK-001 has a concrete greenfield start and observable prototype evidence. I would not begin its signature insight UI, however, because TASK-001 loads experience and visual documents that still specify multiple sequential understanding items/slips per wave, while the buildable system, contract, acceptance matrix, README and AI capability require exactly one composite insight per wave. The first slice therefore leaves a fresh implementer to guess the central interaction cardinality.",
+        "evidence": [
+          ".loom/PROJECT.md:1-24 confirms 人生试运行, intended result, users, guest-first reality and 24-hour boundary; lines 26-55 define the flow, two-Agent boundary, Soft Editorial Neo-Brutalism, Radix baseline and excluded assets/systems; lines 79-91 define observable MVP completion and failure.",
+          ".loom/PROJECT.md:57-77 provides a usable map across product, experience, system, contract, platform/operations, verification and seven distinct professional capability dossiers.",
+          ".loom/DECISIONS.md:59-66 makes D-007 supersede the obsolete generic-shadcn/effect-library D-004; lines 77-84 records 人生试运行 and retires 潮生｜人生试玩. README.md:1-50 uses the current name, one insight per wave, current visual direction and Radix source.",
+          ".loom/tasks.json:5-46 makes TASK-001 dependency-free, fixture-only and bounded to a runnable 360px landing-to-question-to-calibration-to-three-routes prototype; it names all design/capability reads, touched paths, visual/accessibility/asset gates and tests/e2e/visual-prototype.spec.ts.",
+          "Repository observation: the workspace currently contains only .loom, AGENTS.md and README.md; package.json, app/, components/, public/, styles/ and tests/ do not yet exist. The concrete first action after selecting and recording a package manager and pinned stack versions is to create the minimal Next.js App Router/TypeScript/Tailwind v4 scaffold without overwriting existing truth, then run the matching shadcn view command for https://neobrutalism.com/r/radix/button.json before any add.",
+          ".loom/design/platform-and-assets.md:11-19 fixes Next.js/React/TypeScript/Tailwind v4, neobrutalism.com Radix, Motion and Phosphor; lines 106-149 prescribe the exact https://neobrutalism.com/r/radix/{name}.json namespace, view-before-add, one-at-a-time installation and provenance; lines 325-337 define reproducible build, accessibility, asset and visual evidence.",
+          "Live check during keeper run: https://neobrutalism.com/docs/installation documents separate Base UI and Radix URLs, source copying through shadcn, preview-before-install and the Radix namespace; https://neobrutalism.com/r/radix/button.json returned a registry:ui Button targeting components/ui/button.tsx with dependencies.",
+          ".loom/design/visual-art-direction.md:7-18 and 28-68, .loom/capabilities/visual-art-direction.md:15-49, and TASK-001 done_when consistently require warm paper/grid, ink, dominant cobalt, semantic-only green, 2px borders, 3-4px hard shadows, 0-4px corners, restrained mobile density and editorial Chinese serif statements, while rejecting dashboard, childlike, purple-AI and loud multicolor defaults.",
+          ".loom/design/adaptive-interview-system.md:10-15,44-50,62-73,96-107 requires exactly one insight after each wave; .loom/design/insight-plan-contracts.md:222-249 encodes a singular ImmediateInsight field marked exactly one; .loom/design/acceptance-and-research.md:52-60 makes this P0 A07 and lines 226-232 explicitly fail two insights.",
+          ".loom/design/product-definition.md:31-38 and .loom/design/journey-and-interaction.md:75-85 describe plural messages/items with item-by-item calibration; .loom/design/visual-art-direction.md:86-106 defines multiple slips and per-slip calibration, and these latter two contradictory files are mandatory TASK-001 reads."
+        ],
+        "gaps": [
+          {
+            "gap": "Current product/experience/visual truth contradicts the exactly-one-insight-per-wave contract: product-definition.md describes understanding messages shown and calibrated item-by-item; journey-and-interaction.md says understanding items appear sequentially and each receives calibration; visual-art-direction.md defines the signature as a group of slips with per-slip calibration. In contrast, adaptive-interview-system.md and insight-plan-contracts.md require one ImmediateInsight, acceptance A07 rejects any second insight, conversational-ai.md says the one insight contains interpretation, evidence and unknown in the same slip, and README.md says one understanding per wave. TASK-001 reads the contradictory journey and visual files but not the stricter contract/acceptance files, while calling for a sequential immediate-insight stack.",
+            "why_it_blocks_start": "The visual interaction prototype's defining artifact is the insight stack. A fresh Agent cannot determine whether to implement several independently calibrated slips inside one wave or one composite slip per wave with the stack accumulating across waves. That changes fixture shape, DOM structure, animation sequence, calibration controls and the central E2E assertion, so beginning TASK-001 would encode an arbitrary interpretation of a P0 contract.",
+            "evidence_to_close": "Make all current product, journey, visual and TASK-001 wording explicitly state that each completed wave yields exactly one composite ImmediateInsight/printed dialogue slip containing the tentative interpretation, evidence and unknown boundary, with one calibration control set; define the visual stack as one slip accumulated per completed wave (or record a different explicit cardinality and update system contract, A07 and negative tests consistently). Then ensure TASK-001's reads include the authoritative cardinality contract or state it directly, and require E2E evidence that one submitted fixture wave renders exactly one calibratable insight object."
+          }
+        ],
+        "at": "2026-08-27T03:56:27.130Z"
+      },
+      {
+        "run_id": "keeper-life-preview-004",
+        "prepared_digest": "af9323e61eadf0080b6bb4f2298456d76d98677e5e45244744093ee8e963b362",
+        "verdict": "passed",
+        "summary": "A fresh Agent can responsibly begin TASK-001 from disk. The handoff consistently names the product 人生试运行, fixes Soft Editorial Neo-Brutalism as the visual foundation, and selects neobrutalism.com/RetroUI's Radix registry as the sole primary component source. PROJECT.md maps the product, experience, system, contract, platform/operations, verification, and seven distinct professional fields. TASK-001 is the dependency-free, fixture-only first vertical slice and names every required read, implementation surface, boundary, and observable completion gate. The wave contract is unambiguous: every completed wave returns exactly one composite ImmediateInsight rendered as one slip with observation, interpretation, and uncertainty sections and one whole-slip calibration; a new slip is added after each later wave so slips accumulate across waves. Because the workspace is intentionally greenfield with no package.json or implementation files, the concrete first edit is to create a minimal pinned package.json and Next.js App Router scaffold for the documented stack, after selecting and recording the package manager; before importing any UI source, preview the needed component at https://neobrutalism.com/r/radix/button.json and record its origin, upstream version/commit, license, and local modifications. Completion is a runnable fixture prototype plus tests/e2e/visual-prototype.spec.ts, proven by production build, 360px landing-to-question-to-calibration-to-all-three-routes E2E, keyboard/200%-zoom/reduced-motion checks, visual regression, dependency/provenance audit, and a build-output scan with zero blocked sky or pixel-frame assets.",
+        "evidence": [
+          ".loom/PROJECT.md:1-24 confirms the final name 人生试运行, intended mobile-first result, young-adult operating reality, guest-first behavior, and 24-hour temporary-session boundary; lines 26-55 define the two-Agent flow, Soft Editorial Neo-Brutalism, registry baseline, exclusions, and confirmed name.",
+          ".loom/PROJECT.md:57-77 provides a navigable map to seven product/experience/system/contract/platform/verification documents and seven distinct professional capability dossiers; lines 79-95 define observable MVP completion and direct execution to the work map.",
+          ".loom/DECISIONS.md:59-66 records D-007, which supersedes D-004 and establishes Soft Editorial Neo-Brutalism plus neobrutalism.com/RetroUI as primary; lines 77-84 records 人生试运行 as the final name and retires 潮生｜人生试玩. README.md:1-50 reflects both decisions.",
+          ".loom/design/platform-and-assets.md:82-104 compares component sources and selects only the neobrutalism.com Radix path; lines 106-149 specify the canonical https://neobrutalism.com/r/radix/{name}.json namespace, view-before-add sequence, provenance/version/license requirements, and no automatic or mixed primitive import.",
+          ".loom/design/journey-and-interaction.md:11-17 states that each wave creates one complete insight slip, its evidence/current interpretation/uncertainty sections reveal in order, one whole-slip calibration follows, and slips from different waves accumulate; lines 75-92 specify the interaction and subsequent-wave repetition.",
+          ".loom/design/visual-art-direction.md:86-105 defines printed dialogue slips as the product signature: one complete slip per wave, one ImmediateInsight with observation, interpretation, uncertainty, one shared calibration group, and later-wave slips accumulated in DOM/document order; lines 185-195 define reproducible visual and accessibility checks.",
+          ".loom/design/insight-plan-contracts.md:209-251 defines ImmediateInsight fields observation, interpretation, uncertainty, evidence, internal confidence, kind, and one feedback_prompt, with SensemakerWaveOutput.insight exactly one; lines 254-255 explicitly state this is one composite insight whose three sections are not separately persisted or calibrated.",
+          ".loom/design/adaptive-interview-system.md:6-15 and 33-50 define the two-Agent architecture and exactly one insight per wave; lines 62-108 define Wave 1 and adaptive-wave execution; lines 140-165 make call counts and context limits testable.",
+          ".loom/design/acceptance-and-research.md:6-19 defines falsifiable product claims; lines 48-80 make one insight per wave, visual direction, safety, evidence, equality, and call limits acceptance gates; lines 137-166 specify E2E scenarios and reproducible release evidence.",
+          "All seven professional dossiers were inspected: .loom/capabilities/product-design.md:3-68, ui-ux-design.md:3-64, visual-art-direction.md:3-68, game-design.md:3-68, conversational-ai.md:3-63, life-design.md:3-67, and privacy-ai-safety.md:3-76. Each identifies a recognizable field, its project-specific authority and boundaries, rejected defaults, implementation consequences, failure modes, and proof signals without merging fields.",
+          ".loom/tasks.json:5-47 makes TASK-001 open and dependency-free, names all seven required reads, constrains it to fixtures without production AI/auth/uploads/persistence, selects neobrutalism.com Radix as primary, prohibits a second system/effect libraries, identifies exact touched paths, and supplies four done_when gates.",
+          "Workspace scan found README.md, AGENTS.md, and LOOM governance/design files only; no package.json, components.json, TypeScript/JavaScript/CSS implementation, or application tree exists. This is a declared greenfield starting condition, and .loom/design/platform-and-assets.md:133-149 gives the required inspect-select-preview-record-add sequence rather than requiring guesswork.",
+          "TASK-001 proof artifact is the runnable 人生试运行 fixture-driven Next.js prototype plus tests/e2e/visual-prototype.spec.ts. Reproducible evidence consists of a production build; 360px interaction path through one question, whole-slip calibration, and all three equal route covers; keyboard, 200% zoom, reduced-motion and viewport visual checks; registry provenance/dependency audit; and build-output inspection excluding blocked sky and pixel-frame assets."
+        ],
+        "gaps": [],
+        "at": "2026-08-27T03:59:26.326Z"
+      }
+    ],
+    "prepared_digest": "af9323e61eadf0080b6bb4f2298456d76d98677e5e45244744093ee8e963b362",
+    "prepared_attempt": 4
+  },
+  "decision_ids": [
+    "D-001",
+    "D-002",
+    "D-003",
+    "D-004",
+    "D-005",
+    "D-006",
+    "D-007",
+    "D-008",
+    "D-009"
+  ]
+}

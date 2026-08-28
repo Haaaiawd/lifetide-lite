@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+.pnpm
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+*.tsbuildinfo
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Runtime / cache
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Test / temporary outputs
+test-results
+reports
+playwright-report
+coverage
+
+# Project temp / generated artifacts
+tmp
+*.tmp
+resp*.json
+*.db
+*.db-journal
+
+# Local dev databases
+prisma/dev.db
+prisma/prisma/dev.db

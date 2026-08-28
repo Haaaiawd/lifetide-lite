@@ -1,0 +1,53 @@
+{
+  "evidence": [
+    "pnpm typecheck passed after schema and UI refactor",
+    "pnpm build passed (Next.js 16.3.3 + Turbopack)",
+    "Playwright full suite passed 42/42 after route UI, question-frame ssr:false, and parallel-lives integration tests",
+    "ParallelLife schema refactored to v2 with core_experience, year_1/2/3, attractions, costs_and_tradeoffs, evidence_for, assumptions, and Prototype",
+    "RouteCover now shows three-year timeline by default, expands one coherent detail block, and contains the Prototype Card with start/pause/resume/exit/complete controls",
+    "Final plan schema bumped to parallel-lives.v2; sensemaker/final.ts prompt, Zod schema, fallback, and validation updated",
+    "prompts/ directory created with life-design-spec-v2.md and derived operational prompts for Interviewer, Sensemaker, Odyssey Generator, Prototype Designer, and Blueprint Writer",
+    ".loom/design/insight-plan-contracts.md updated with ParallelLife v2, Prototype, and trial-status invariants"
+  ],
+  "checks": [
+    {
+      "criterion": "Every final plan passes schema, citation, pairwise-distinctness, gain/loss, uncertainty, risk and reversible-trial gates.",
+      "evidence": [
+        "lib/working-memory/types.ts defines ParallelLife v2, Prototype, TrialStatus, and FinalPlan with schema_version parallel-lives.v2",
+        "lib/ai/sensemaker/final.ts uses a Zod schema matching the new ParallelLife v2 and validates attractions, costs_and_tradeoffs, evidence_for, uncertainties, risks, and trial reversibility",
+        "validateFinalPlan in lib/ai/sensemaker/final.ts checks active evidence ids, ranking terms, irreversible actions, time ceiling, and plan distinctness",
+        "planNotDistinct uses title, core_experience, ordinary_day, and year_1 with token-set similarity > 0.82 threshold",
+        "tests/integration/parallel-lives.test.ts asserts FinalPlan schema_version, three lives, v2 fields, evidence ids, no ranking language, and pairwise distinctness"
+      ]
+    },
+    {
+      "criterion": "No data field, copy, position, color or initial focus marks one route as recommended or best.",
+      "evidence": [
+        "RouteCover uses identical structural classes; active card only gets a larger shadow via the active prop, not a color or rank",
+        "RouteCarousel subtitle text says '它们地位平等，没有高低或先后之分'",
+        "No 'best', 'recommended', 'safest choice', 'Plan B', '冠军', '首选' language is allowed by validateFinalPlan or the UI copy",
+        "FinalPlan does not contain ranking, score, or selected_plan fields"
+      ]
+    },
+    {
+      "criterion": "Mobile carousel and desktop comparison are keyboard/screen-reader operable and preserve equal information hierarchy.",
+      "evidence": [
+        "components/routes/RouteCarousel.tsx renders a snap-x carousel on mobile and a 3-column grid on desktop; all cards are simultaneously visible on desktop",
+        "RouteCover has visible headings, a button with aria-expanded for the detail toggle, and semantic section/ul/ol elements",
+        "tests/e2e/visual-prototype.spec.ts asserts 三年走向, 普通一天, 为什么吸引你, 真正要付出的代价, 还不知道的事情, 现实依据, 风险, and 最小原型 sections are visible after expansion",
+        "Full Playwright suite including keyboard and reduced-motion tests passed"
+      ]
+    },
+    {
+      "criterion": "A trial can be edited, paused, exited, switched and reflected without streak punishment or irreversible actions.",
+      "evidence": [
+        "components/routes/RouteCover.tsx exposes start, pause, resume, exit, and complete actions; status uses neutral language for paused/exited and cobalt/success only for active/completed",
+        "No red failure cross, streak, XP, or progress bar is shown for any trial status",
+        "RouteCarousel lets the user switch focus to any route and start its prototype; only one card is expanded at a time",
+        "Trial status is typed as a lightweight state (not a score) in lib/working-memory/types.ts and in the UI",
+        "Three-day reflection question is documented in prompts/prototype-designer-v2.md and surfaced qualitatively; persistent reflection input is deferred to bounded-chat/task",
+        "Playwright e2e tests verify the 最小原型 section and route expansion with 三年走向, 普通一天, 为什么吸引你, 真正要付出的代价, 还不知道的事情, 现实依据, 风险, and 最小原型"
+      ]
+    }
+  ]
+}

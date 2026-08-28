@@ -1,0 +1,47 @@
+{
+  "evidence": [
+    "pnpm build passed with Next.js 16.3.3, Prisma 6.6.0, SQLite and Turbopack",
+    "Playwright full suite passed 28/28 in default mode (e2e 14/14, integration 14/14)",
+    "Crux subagent reviewed TASK-001/TASK-002/TASK-003 against design and reported healthy: true with minor drift addressed",
+    "Prisma migration applied: Upload, UploadChunk and DerivedContent with upload-dependent supportStatus and ON DELETE CASCADE/SetNull",
+    "Boundary: Uploaded MBTI and resume statements begin as document-reported clues, never confirmed facts",
+    "Boundary: Uploaded content is never parsed into URLs, code execution or prompt/tool/role injection"
+  ],
+  "checks": [
+    {
+      "criterion": "The UI supports skip, select, upload, parsing, failure, retry and delete states per file without blocking interview start.",
+      "evidence": [
+        "components/upload/UploadPanel.tsx renders skip, empty, selected, uploading, ready, failed and deleted states",
+        "app/play/upload/page.tsx is a standalone optional step; landing and /play question flow do not require an upload",
+        "UploadPanel polls GET /api/uploads/[id] after POST/retry and updates the file list with status, error and delete controls",
+        "Playwright 'upload is optional and starts without consent' and all e2e main-path tests pass without uploading"
+      ]
+    },
+    {
+      "criterion": "Server validation enforces configured type, size, tenant and malware/parse boundaries independently of client checks.",
+      "evidence": [
+        "lib/uploads/config.ts defines UPLOAD_MAX_SIZE (1 MB), allowed MIME types (text/plain, text/markdown, application/json) and parser map",
+        "app/api/uploads/route.ts re-validates MIME and size from the actual File, ignoring client-supplied metadata, and returns 415/413",
+        "lib/uploads/parse.ts only reads and splits text; no eval(), Function() or URL fetching is performed",
+        "Playwright 'rejects disallowed file types regardless of client checks' and 'rejects files exceeding the server size limit' pass"
+      ]
+    },
+    {
+      "criterion": "Parsed chunks are serialized as non-executable untrusted data and malicious instruction fixtures cannot alter prompts, tools or roles.",
+      "evidence": [
+        "app/api/uploads/route.ts stores rawBase64 and creates UploadChunk rows with source/text fields",
+        "The parser returns plain { index, source, text } objects; no parsed output is ever inserted into system prompts, tools or role definitions",
+        "UploadChunk.text is treated as an untrusted clue; later Agent calls must receive chunks through a fixed, non-executable envelope",
+        "Playwright 'malicious instructions are stored as text, not executed or reflected as commands' passes; the response never contains instruction/tool/role fields"
+      ]
+    },
+    {
+      "criterion": "Deleting a document removes its chunks and invalidates or marks derived memory as unsupported.",
+      "evidence": [
+        "app/api/uploads/[id]/route.ts (DELETE) uses a Prisma transaction to update DerivedContent supportStatus to 'unsupported' and then delete chunks and the upload",
+        "DerivedContent.uploadId is set to null by the FK onDelete: SetNull, preserving the record while marking it unsupported",
+        "Playwright 'deleting an upload removes chunks and marks derived content unsupported' passes"
+      ]
+    }
+  ]
+}

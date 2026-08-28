@@ -1,0 +1,45 @@
+{
+  "evidence": [
+    "pnpm typecheck passed",
+    "pnpm build passed (Next.js 16.3.3 + Turbopack)",
+    "Playwright full suite passed 39/39 (e2e 14/14 on mobile and desktop, integration 25/25 including adaptive-waves 4/4 and wave-one 7/7)",
+    "Real-LLM structured-output smoke test succeeded with AI Ping Qwen3.7-Plus earlier in this task; fixture provider used for deterministic tests",
+    "Adaptive wave state machine, Interviewer runtime, Sensemaker wave/final runtimes, and multi-wave PlayPage implemented"
+  ],
+  "checks": [
+    {
+      "criterion": "Uncertainty priority and stable tie-breaking pass property tests and the model cannot change the selected focus id.",
+      "evidence": [
+        "lib/interview/uncertainty.ts implements rankActiveUncertainties and selectedUncertainty using recomputeUncertaintyPriority with deterministic lexical id tie-breaking",
+        "tests/integration/adaptive-waves.test.ts: 'Wave 2 focus is deterministic and questions are validated' asserts wave2.focus_uncertainty_id equals the highest-priority active uncertainty in WorkingMemory after Wave 1",
+        "app/api/wave/route.ts GET passes the selected uncertainty id to the Interviewer and rejects any output where focus_uncertainty_id does not match",
+        "ModelCallLog records the attempted output focus id and validation failures; fallback restores the host focus"
+      ]
+    },
+    {
+      "criterion": "Every adaptive batch contains 3-5 validated questions for one focus, at least one concrete-experience question and no recently rejected repetition.",
+      "evidence": [
+        "lib/ai/interviewer.ts validates InterviewerOutput length, focus match, and concrete-experience flag; failing validation falls back to deterministic fallback questions",
+        "tests/integration/adaptive-waves.test.ts asserts wave2.questions.length >= 3 && <= 5 and at least one asks_for_concrete_example",
+        "lib/ai/interviewer.ts filters recent_question_texts against the candidate batch and rejects repeated wording",
+        "Each committed wave is persisted in the Wave table with its own questions JSON and focus_uncertainty_id"
+      ]
+    },
+    {
+      "criterion": "The state machine never creates Wave 5 or displays question 20 and preserves committed batches across retry/resume.",
+      "evidence": [
+        "app/api/wave/route.ts evaluates MAX_WAVES=4 and MAX_QUESTIONS=19 caps in evaluateStop",
+        "tests/integration/adaptive-waves.test.ts: 'state machine never creates Wave 5 or displays question 20' iterates to stop and asserts no wave_index >= 5 and answer count <= 19",
+        "app/api/wave/route.ts GET returns an existing committed Wave on resume and refuses to create a duplicate for the same session/wave_index"
+      ]
+    },
+    {
+      "criterion": "Two-wave fixture paths complete with exactly four first-attempt business model calls through final generation eligibility.",
+      "evidence": [
+        "tests/integration/adaptive-waves.test.ts: 'two-wave fixture path completes with exactly four first-attempt model calls' runs Wave 1, Wave 2, stop and final",
+        "After the fixture path, ModelCallLog for the session contains four success entries: sensemaker_wave (w1), interviewer (w2), sensemaker_wave (w2), sensemaker_final",
+        "The stop endpoint returns stop=true, can_generate=true, provisional=false after Wave 2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: #F5F0E6;
+  --color-paper-raised: #FFFDF7;
+  --color-ink: #171717;
+  --color-ink-muted: #5B5A55;
+  --color-cobalt: #2457E6;
+  --color-cobalt-soft: #DCE5FF;
+  --color-success: #2D7D46;
+  --color-success-soft: #DDEEDF;
+  --color-danger: #B83A2F;
+  --color-border: var(--ink);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --shadow-md: 4px 4px 0 var(--ink);
+}
+
+:root {
+  --paper: #F5F0E6;
+  --paper-raised: #FFFDF7;
+  --ink: #171717;
+  --ink-muted: #5B5A55;
+  --cobalt: #2457E6;
+  --cobalt-soft: #DCE5FF;
+  --success: #2D7D46;
+  --success-soft: #DDEEDF;
+  --danger: #B83A2F;
+  --grid: rgba(23, 23, 23, 0.075);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.graph-paper {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: more), (forced-colors: active) {
+  .graph-paper {
+    background-image: none;
+  }
+}

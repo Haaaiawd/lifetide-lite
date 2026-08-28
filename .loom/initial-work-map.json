@@ -1,0 +1,251 @@
+{
+  "tasks": [
+    {
+      "title": "Build the mobile-first visual interaction prototype",
+      "outcome": "A runnable 人生试运行 Next.js prototype demonstrates landing, one question, the sequential immediate-insight stack as its visual signature, three equal route covers and responsive/reduced-motion behavior with realistic Chinese content.",
+      "done_when": [
+        "A 360px-wide browser can move from landing to a question, submit a local fixture answer, calibrate an immediate insight and browse all three equal route covers.",
+        "The prototype visibly follows Soft Editorial Neo-Brutalism through subtle off-white grid paper, ink, a dominant cobalt accent, green used only for semantic states, 2px borders, 3-4px hard offset shadows, 0-4px corners, restrained mobile density, editorial Chinese serif key statements and sans-serif UI; the sequential immediate-insight stack remains the visual signature, and the result must not resemble a dashboard, childlike interface, generic purple AI landing page, or loud/colorful generic neobrutalism.",
+        "Keyboard navigation, 200% zoom and prefers-reduced-motion preserve every operation and all content.",
+        "No blocked Lifetide sky or unlicensed pixel-frame asset is present in the build output."
+      ],
+      "boundaries": [
+        "Use fixtures only; do not build production AI, authentication, uploads or persistence in this task.",
+        "Use neobrutalism.com/RetroUI's Radix registry as the primary component source; neobrutalism.dev is secondary reference only.",
+        "Do not add React Bits, Magic UI, Aceternity, Rive, Phaser, Three.js or a second component design system.",
+        "Do not copy a registry component without recording its origin, version or commit, and license."
+      ],
+      "depends_on": [],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/ui-ux-design.md",
+        ".loom/capabilities/visual-art-direction.md",
+        ".loom/capabilities/game-design.md"
+      ],
+      "touches": [
+        "package.json",
+        "app/",
+        "components/",
+        "public/",
+        "styles/",
+        "tests/e2e/visual-prototype.spec.ts"
+      ]
+    },
+    {
+      "title": "Implement guest session, consent and temporary data lifecycle",
+      "outcome": "Users can start without registration through a secure server-side guest session; required AI/upload consent is recorded, sensitive data expires after 24 hours, and accounts are only requested for cross-device or extended retention.",
+      "done_when": [
+        "A new visitor receives an opaque HttpOnly guest token and can resume the same session without sensitive content in localStorage.",
+        "A deterministic cleanup job deletes expired guest answers, uploads and derived content after the documented retention window.",
+        "Upload/model processing cannot start without required consent, while research consent remains optional.",
+        "Automated tests prove one guest cannot read or mutate another guest or account session."
+      ],
+      "boundaries": [
+        "Do not add social login or a multi-provider account system before the guest path works.",
+        "Do not log raw answers or upload content."
+      ],
+      "depends_on": ["TASK-001"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/product-definition.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/ui-ux-design.md"
+      ],
+      "touches": [
+        "app/api/session/",
+        "lib/auth/",
+        "lib/privacy/",
+        "lib/db/",
+        "prisma/",
+        "tests/integration/guest-session.test.ts"
+      ]
+    },
+    {
+      "title": "Implement optional document upload and untrusted parsing boundary",
+      "outcome": "Guest and account sessions can optionally upload approved resume, MBTI and text documents, see per-file states, delete them, and expose only sanitized untrusted chunks to later Agent calls.",
+      "done_when": [
+        "The UI supports skip, select, upload, parsing, failure, retry and delete states per file without blocking interview start.",
+        "Server validation enforces configured type, size, tenant and malware/parse boundaries independently of client checks.",
+        "Parsed chunks are serialized as non-executable untrusted data and malicious instruction fixtures cannot alter prompts, tools or roles.",
+        "Deleting a document removes its chunks and invalidates or marks derived memory as unsupported."
+      ],
+      "boundaries": [
+        "Uploaded MBTI and resume statements begin as document-reported clues, never confirmed facts.",
+        "Do not fetch URLs or execute code found in uploaded content."
+      ],
+      "depends_on": ["TASK-002"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/conversational-ai.md"
+      ],
+      "touches": [
+        "app/api/uploads/",
+        "components/upload/",
+        "lib/uploads/",
+        "lib/documents/",
+        "prisma/",
+        "tests/integration/upload-boundary.test.ts"
+      ]
+    },
+    {
+      "title": "Implement Wave 1, WorkingMemory and immediate calibration",
+      "outcome": "The fixed four-question first wave runs without an Interviewer call, Sensemaker produces one evidence-linked insight, and user calibration transactionally updates lightweight WorkingMemory.",
+      "done_when": [
+        "Wave 1 question ids, order, version, skip behavior and wording pass snapshot tests and produce zero Interviewer calls.",
+        "Sensemaker output is runtime-schema validated and every insight citation resolves to a current-session source.",
+        "Accurate, partly accurate and inaccurate feedback persist distinctly; inaccurate feedback invalidates contradictory claims before replacements are added.",
+        "The sequential message-stack UI exposes facts, tentative interpretation, uncertainty and calibration without personality scores."
+      ],
+      "boundaries": [
+        "Do not add PersonaSnapshot, CoverageCell, a hypothesis graph or a separate extractor Agent.",
+        "Do not present model confidence percentages to users."
+      ],
+      "depends_on": ["TASK-002", "TASK-003"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/product-design.md"
+      ],
+      "touches": [
+        "components/interview/",
+        "components/insight/",
+        "lib/interview/",
+        "lib/working-memory/",
+        "lib/ai/sensemaker/",
+        "tests/integration/wave-one.test.ts"
+      ]
+    },
+    {
+      "title": "Implement adaptive waves and deterministic stopping",
+      "outcome": "Interviewer generates each later 3-5 question wave around the sole highest-impact plan-changing uncertainty; host rules cap the interview and decide continue, provisional generation or final generation.",
+      "done_when": [
+        "Uncertainty priority and stable tie-breaking pass property tests and the model cannot change the selected focus id.",
+        "Every adaptive batch contains 3-5 validated questions for one focus, at least one concrete-experience question and no recently rejected repetition.",
+        "The state machine never creates Wave 5 or displays question 20 and preserves committed batches across retry/resume.",
+        "Two-wave fixture paths complete with exactly four first-attempt business model calls through final generation eligibility."
+      ],
+      "boundaries": [
+        "Production focus selection is deterministic, not random.",
+        "Do not add a critic, stop Agent or per-answer model call."
+      ],
+      "depends_on": ["TASK-004"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/ui-ux-design.md"
+      ],
+      "touches": [
+        "lib/interview/",
+        "lib/ai/interviewer/",
+        "lib/ai/sensemaker/",
+        "app/play/",
+        "tests/integration/adaptive-waves.test.ts"
+      ]
+    },
+    {
+      "title": "Generate and present three parallel lives and three-day trials",
+      "outcome": "Sensemaker final generates exactly three evidence-linked, genuinely different three-year lives; the UI presents them equally and lets the user start, modify, pause, exit and reflect on one reversible three-day trial.",
+      "done_when": [
+        "Every final plan passes schema, citation, pairwise-distinctness, gain/loss, uncertainty, risk and reversible-trial gates.",
+        "No data field, copy, position, color or initial focus marks one route as recommended or best.",
+        "Mobile carousel and desktop comparison are keyboard/screen-reader operable and preserve equal information hierarchy.",
+        "A trial can be edited, paused, exited, switched and reflected without streak punishment or irreversible actions."
+      ],
+      "boundaries": [
+        "Use one Sensemaker final call; do not add Planner unless the recorded research decision rule is met.",
+        "Do not claim the three-year adaptation is the original Stanford five-year method."
+      ],
+      "depends_on": ["TASK-005"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/capabilities/life-design.md",
+        ".loom/capabilities/game-design.md"
+      ],
+      "touches": [
+        "lib/ai/sensemaker/",
+        "lib/plans/",
+        "lib/trials/",
+        "components/plans/",
+        "app/plans/",
+        "tests/integration/parallel-lives.test.ts"
+      ]
+    },
+    {
+      "title": "Implement bounded plan conversation and user data controls",
+      "outcome": "Users can ask for evidence-linked explanation, compare tradeoffs, refine a trial and reflect on results while chat remains bounded and export/delete operations affect all linked data.",
+      "done_when": [
+        "Only the four documented chat scopes reach the model, each user message makes at most one call, and the 20-turn limit closes with a useful summary.",
+        "Chat cannot rank routes, mutate WorkingMemory or plans, read full uploads, perform unrelated tasks or exceed crisis/professional boundaries.",
+        "Export includes understandable user-owned session, memory, plan, trial and chat data without internal secrets.",
+        "Delete operations remove selected uploads or the entire session and invalidate all dependent citations and outputs."
+      ],
+      "boundaries": [
+        "Do not expand this into a general-purpose assistant.",
+        "Do not imply live human crisis monitoring or professional care."
+      ],
+      "depends_on": ["TASK-006"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/privacy-ai-safety.md"
+      ],
+      "touches": [
+        "lib/chat/",
+        "lib/privacy/",
+        "app/chat/",
+        "app/settings/",
+        "tests/integration/bounded-chat-and-deletion.test.ts"
+      ]
+    },
+    {
+      "title": "Run release verification and moderated MVP research",
+      "outcome": "The complete fixture, real-LLM, browser, accessibility, performance, security and moderated-research evidence supports or rejects the Lite product's core claims without hiding known failures.",
+      "done_when": [
+        "All P0 rows in the acceptance matrix have reproducible passing evidence and no unresolved waiver.",
+        "Real-LLM reports cover Interviewer, Sensemaker wave, Sensemaker final and chat with fixed synthetic fixtures, version hashes, latency, token, cost, repair and fallback data.",
+        "Browser E2E covers shortest, correction, limit, upload-attack, degraded-final, data deletion and chat-boundary scenarios on mobile and desktop.",
+        "Moderated research answers the documented questions about two-wave sufficiency, correction, route equality, three-year horizon and three-day trial with recorded decisions."
+      ],
+      "boundaries": [
+        "Do not use real participant answers as public golden fixtures.",
+        "Do not restore product complexity to improve a metric before testing the simpler mechanism."
+      ],
+      "depends_on": ["TASK-007"],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/design/product-definition.md",
+        ".loom/capabilities/product-design.md",
+        ".loom/capabilities/ui-ux-design.md",
+        ".loom/capabilities/privacy-ai-safety.md"
+      ],
+      "touches": [
+        "tests/",
+        "reports/",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/PROJECT.md"
+      ]
+    }
+  ]
+}

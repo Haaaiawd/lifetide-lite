@@ -1,0 +1,14 @@
+{
+  "retire_assumptions": ["A-001"],
+  "confirmed": [
+    "The product name is 人生试运行. It does not reuse the 潮生 or Lifetide product name."
+  ],
+  "decisions": [
+    {
+      "title": "Name the product 人生试运行",
+      "decision": "The standalone lightweight product is named 人生试运行. The prior working name 潮生｜人生试玩 is retired.",
+      "rationale": "人生试运行 states the product mechanism directly, feels lighter and more contemporary than 人生模拟器, and connects naturally to three alternative lives and the three-day reversible trial.",
+      "supersedes": []
+    }
+  ]
+}

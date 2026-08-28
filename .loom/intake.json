@@ -1,0 +1,62 @@
+{
+  "confirmed": [
+    "The new product is a smaller, standalone Lifetide experience rather than another feature inside the current full product.",
+    "The core loop is short interview waves followed by immediate user-facing understanding, ending in three alternative life plans and continued conversation.",
+    "Resume, MBTI report and related material upload must remain available but optional.",
+    "The user-facing persona dashboard and full six-layer persona product are removed; a lightweight internal working memory remains for continuity and planning.",
+    "The intended audience is young adults, and the visual experience should feel fashionable, cool, modern, playful and less serious.",
+    "The implementation may be a full Next.js web product rather than a constrained H5 page.",
+    "Existing Lifetide visual assets may be reused when their provenance and license permit it.",
+    "Loom is the continuity and design-document infrastructure for this new workspace."
+  ],
+  "assumptions": [
+    {
+      "text": "The working product name is 潮生｜人生试玩 until naming is revisited after concept validation.",
+      "source": "agent"
+    },
+    {
+      "text": "The first implementation will reuse infrastructure and licensed assets conceptually but will not share runtime code with the existing Lifetide repository until an explicit engineering decision is made.",
+      "source": "agent"
+    },
+    {
+      "text": "Three-year alternative lives are a better consumer horizon than the source method's five-year Odyssey Plans; each route ends in a three-day reversible trial.",
+      "source": "agent"
+    }
+  ],
+  "unresolved": [
+    {
+      "question": "Should anonymous progress persist only on-device, or should account creation be requested when users save plans or upload files?",
+      "impact": "medium"
+    },
+    {
+      "question": "Which exact existing sky backgrounds are user-owned and publishable outside the original Lifetide repository?",
+      "impact": "high"
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Hide the persona product, retain working memory",
+      "decision": "The interface will not expose a persona dashboard or coverage model. The system retains evidence-linked working memory for adaptive questions, immediate insights and plan generation.",
+      "rationale": "Deleting internal understanding would make questions repetitive and plans generic; exposing the full model creates unnecessary user and product complexity.",
+      "supersedes": []
+    },
+    {
+      "title": "Use short value-delivery waves",
+      "decision": "Each wave contains three to five questions and ends with an immediate insight plus user calibration controls.",
+      "rationale": "Short waves make the reward immediate and let correction improve the next wave.",
+      "supersedes": []
+    },
+    {
+      "title": "Modern web product, not mandatory H5 wrapper",
+      "decision": "Design for a mobile-first responsive Next.js web application with desktop expansion and installable PWA potential.",
+      "rationale": "This preserves link-based distribution while allowing richer visual direction, uploads and durable sessions.",
+      "supersedes": []
+    },
+    {
+      "title": "Custom visual system over a themed component kit",
+      "decision": "Use shadcn/ui as accessible structural primitives, Motion for interaction, and a small curated subset of React Bits or Magic UI source components for effects. Art direction remains custom.",
+      "rationale": "Component libraries can accelerate mechanics but cannot supply a coherent brand; unrestricted effect libraries would make the product look like a generic AI landing page.",
+      "supersedes": []
+    }
+  ]
+}

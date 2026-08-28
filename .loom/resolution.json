@@ -1,0 +1,26 @@
+{
+  "resolved": [
+    {
+      "id": "Q-001",
+      "resolution": "MVP starts without registration. A guest session uses an opaque HttpOnly session token and server-side temporary storage. Uploads are allowed after explicit model-processing consent and are automatically purged with the guest session after 24 hours. Account creation is requested only when the user wants cross-device continuation or retention beyond the guest window."
+    },
+    {
+      "id": "Q-002",
+      "resolution": "Original user-provided sky backgrounds are excluded from Lifetide-Lite MVP. Only registry-backed CC0 water, boat and landmark assets may be copied with their license snapshot and checksum. Sky assets remain blocked unless written cross-project publication rights are later recorded."
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Guest-first session and delayed account",
+      "decision": "Users may complete the first waves, upload optional material and preview plans without registration through a temporary server-side guest session. Accounts are requested only for cross-device use or retention beyond 24 hours.",
+      "rationale": "The product must prove value before asking for identity while still keeping sensitive answers and uploads out of ordinary browser storage.",
+      "supersedes": []
+    },
+    {
+      "title": "Exclude unresolved sky assets from MVP",
+      "decision": "Lifetide-Lite will not reuse Lifetide's user-provided sky images in MVP. It may reuse the registered CC0 water, boat and landmark as minor replaceable accents with provenance carried over.",
+      "rationale": "Cross-project publication rights for the sky files are not documented; visual identity must not depend on rights-unclear assets.",
+      "supersedes": []
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "evidence": [
+    "pnpm build passed (Next.js 16.3.3 + Tailwind v4 + TypeScript + Prisma 6.6.0 + SQLite + Turbopack)",
+    "Playwright full suite passed 35/35 (e2e 14/14 on mobile and desktop, integration 21/21 including wave-one 7/7)",
+    "Wave 1 GET exposes version and deterministic questions; POST persists answers and WorkingMemory; feedback updates WorkingMemory transactionally",
+    "Boundaries preserved: no PersonaSnapshot, no coverage metrics, no model confidence percentages shown to users"
+  ],
+  "checks": [
+    {
+      "criterion": "Wave 1 question ids, order, version, skip behavior and wording pass snapshot tests and produce zero Interviewer calls.",
+      "evidence": [
+        "lib/interview/templates.ts defines WAVE_1_VERSION and makeWave1Questions with stable ids w1q1-w1q4, order 1-4, allows_skip: true, and fixed wording",
+        "app/api/wave/route.ts GET returns { wave_id: 'w1', wave_index: 1, version: WAVE_1_VERSION, questions: makeWave1Questions() }",
+        "tests/integration/wave-one.test.ts: 'Wave 1 returns a versioned 4-question template with skip and produces no Interviewer call' passes with expect(data).toEqual({ wave_id: 'w1', wave_index: 1, version: WAVE_1_VERSION, questions: makeWave1Questions() })",
+        "The same test asserts JSON body does not contain 'interviewer' or 'Interviewer'; Wave 1 uses a deterministic template, not an Interviewer model call"
+      ]
+    },
+    {
+      "criterion": "Sensemaker output is runtime-schema validated and every insight citation resolves to a current-session source.",
+      "evidence": [
+        "lib/ai/sensemaker/wave1.ts builds a SensemakerWaveOutput with schema_version 'sensemaker.wave.output.v1'",
+        "lib/ai/sensemaker/wave1.ts runs applyMemoryOperations and then validates that every insight.evidence_id resolves to an active evidence note in the patched memory, throwing if any citation is missing or inactive",
+        "lib/working-memory/operations.ts applyMemoryOperations validates evidence/claim/constraint/route-seed/uncertainty references and enforces array size limits",
+        "tests/integration/wave-one.test.ts: 'submitting Wave 1 creates answers, a WorkingMemory and an insight whose evidence resolves' passes; it asserts insight schema fields (observation, interpretation, uncertainty, evidence_ids, confidence), stores WorkingMemory, and checks every evidence_id resolves in the session's WorkingMemory"
+      ]
+    },
+    {
+      "criterion": "Accurate, partly accurate and inaccurate feedback persist distinctly; inaccurate feedback invalidates contradictory claims before replacements are added.",
+      "evidence": [
+        "app/api/feedback/route.ts accepts only the three verdicts 'accurate' | 'partly_accurate' | 'inaccurate' and persists each as a distinct InsightFeedback record",
+        "lib/working-memory/operations.ts applyInsightFeedback first invalidates contradictory claims for 'inaccurate' verdict, then adds the user's correction as new 'user_confirmed' evidence; 'partly_accurate' downgrades high confidence to medium; 'accurate' only records the feedback",
+        "tests/integration/wave-one.test.ts has dedicated passing tests for accurate, partly_accurate and inaccurate feedback; inaccurate test asserts active claim count decreases and a new user_confirmed correction evidence is added"
+      ]
+    },
+    {
+      "criterion": "The sequential message-stack UI exposes facts, tentative interpretation, uncertainty and calibration without personality scores.",
+      "evidence": [
+        "components/insight/InsightSlip.tsx renders the sequential message stack with '你告诉我的' (facts), '我目前的理解' (tentative interpretation), '还不确定' (uncertainty) and a calibration choice of 准确 / 部分准确 / 不准确",
+        "tests/e2e/visual-prototype.spec.ts asserts the three sections are visible on the insight screen and asserts absence of dashboard/persona language: 最适合你, 推荐, 冠军, 人格, 覆盖率",
+        "The insight is typed as ImmediateInsight with kind 'pattern' | 'tension' | 'constraint' | 'possibility' and confidence 'low' | 'medium' | 'high'; no numeric personality scores or percentages are exposed"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id          String           @id @default(cuid())
+  token       String           @unique
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime
+  consents    Consent[]
+  answers     Answer[]
+  uploads     Upload[]
+  derived     DerivedContent[]
+  workingMemory WorkingMemory?
+  waves       Wave[]
+  modelCalls  ModelCallLog[]
+}
+
+model Consent {
+  id        String    @id @default(cuid())
+  sessionId String
+  type      String // "ai" | "upload" | "research"
+  required  Boolean
+  given     Boolean
+  givenAt   DateTime?
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, type])
+  @@index([sessionId])
+}
+
+model Answer {
+  id          String   @id @default(cuid())
+  sessionId   String
+  questionId  String
+  value       String?
+  skipped     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model Upload {
+  id         String        @id @default(cuid())
+  sessionId  String
+  fileName   String
+  mimeType   String
+  size       Int
+  status     String        // "queued" | "scanning" | "parsing" | "ready" | "rejected" | "failed" | "deleted"
+  error      String?
+  rawBase64  String?       // original file content, base64, for retry / audit
+  chunks     UploadChunk[]
+  derived    DerivedContent[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model UploadChunk {
+  id        String   @id @default(cuid())
+  uploadId  String
+  index     Int
+  source    String   // e.g. "paragraph" | "page" | "line"
+  text      String
+  createdAt DateTime @default(now())
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([uploadId])
+}
+
+// Generic container for insights, routes, trials and chat logs produced from a session.
+model DerivedContent {
+  id            String    @id @default(cuid())
+  sessionId     String
+  uploadId      String?   // if this derived content depends on a specific upload
+  kind          String    // "insight" | "route" | "trial" | "chat"
+  payload       String    // JSON string
+  supportStatus String    @default("supported") // "supported" | "unsupported" | "stale"
+  createdAt     DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  upload  Upload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([uploadId])
+}
+
+// The host-maintained lightweight memory for a session. Stored as a JSON blob
+// because the schema is versioned and validated at runtime.
+model WorkingMemory {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  revision  Int      @default(0)
+  payload   String   // JSON string of WorkingMemory (schema_version "wm.v1")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+// A committed wave: once the first question is shown, the batch is immutable.
+model Wave {
+  id         String   @id @default(cuid())
+  sessionId  String
+  wave_id    String   // e.g. "w1", "w2"
+  wave_index Int
+  focus_uncertainty_id String?
+  questions  String   // JSON string of InterviewQuestion[]
+  status     String   // "committed" | "synthesized" | "final"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@unique([sessionId, wave_id])
+}
+
+// Audit log for model calls (agent: interviewer / sensemaker).
+model ModelCallLog {
+  id               String   @id @default(cuid())
+  sessionId        String?
+  wave_id          String?
+  purpose          String   // "interviewer" | "sensemaker_wave" | "sensemaker_final" | "sensemaker_chat"
+  model_config_id  String?
+  prompt_version   String?
+  status           String   // "success" | "error" | "fallback"
+  input_tokens     Int?
+  output_tokens    Int?
+  latency_ms       Int?
+  createdAt        DateTime @default(now())
+
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([purpose])
+}

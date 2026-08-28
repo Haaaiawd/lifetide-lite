@@ -1,0 +1,42 @@
+{
+  "evidence": [
+    "pnpm build passed with Next.js 16.3.3, Prisma 6.6.0 and SQLite",
+    "Playwright E2E suite 14/14 passed (TASK-001 regression) and integration suite 6/6 passed (guest session, consent, cleanup, isolation)",
+    "Prisma migration applied: sessions, consents, answers, uploads, derived content with ON DELETE CASCADE"
+  ],
+  "checks": [
+    {
+      "criterion": "A new visitor receives an opaque HttpOnly guest token and can resume the same session without sensitive content in localStorage.",
+      "evidence": [
+        "app/api/session/route.ts issues a random 64-char token in an HttpOnly / SameSite=lax / 24h cookie",
+        "Response body never includes the token; only the cookie contains it",
+        "tests/integration/guest-session.test.ts: 'new visitor' and 'same cookie' tests pass"
+      ]
+    },
+    {
+      "criterion": "A deterministic cleanup job deletes expired guest answers, uploads and derived content after the documented retention window.",
+      "evidence": [
+        "app/api/session/cleanup/route.ts deletes all Session rows where expiresAt < now(); FK cascades remove consents, answers, uploads and derived content",
+        "Session.expiresAt is set to 24 hours after creation in lib/auth/session.ts",
+        "tests/integration/guest-session.test.ts: 'cleanup job deletes expired answers, uploads and derived content' passes"
+      ]
+    },
+    {
+      "criterion": "Upload/model processing cannot start without required consent, while research consent remains optional.",
+      "evidence": [
+        "lib/privacy/consent.ts defines ai and upload as required, research as optional",
+        "app/api/answer/route.ts and app/api/upload/route.ts return 403 when required consent is missing",
+        "app/api/session/consent/route.ts records consent and updates canUseAI/canUpload flags",
+        "tests/integration/guest-session.test.ts: 'AI/upload processing is blocked without consent and allowed after consent' and 'research consent stays optional' pass"
+      ]
+    },
+    {
+      "criterion": "Automated tests prove one guest cannot read or mutate another guest or account session.",
+      "evidence": [
+        "app/api/answer/route.ts, app/api/upload/route.ts and app/api/session/consent/route.ts require a valid guest token cookie",
+        "Token is opaque and not correlated with public session id",
+        "tests/integration/guest-session.test.ts: 'one guest cannot read or mutate another guest' passes"
+      ]
+    }
+  ]
+}
