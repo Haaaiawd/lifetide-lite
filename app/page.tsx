@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { PixelIcon } from "@/components/art/PixelIcon";
 
 export default function HomePage() {
   return (
     <div className="flex min-h-[100dvh] flex-col justify-between gap-8">
       <header className="pt-2">
-        <span className="inline-block border-2 border-ink bg-paper-raised px-3 py-1 text-sm font-medium shadow-sm">
+        <span className="inline-flex items-center gap-1.5 border-2 border-ink bg-paper-raised px-3 py-1 text-sm font-medium shadow-sm">
+          <PixelIcon name="sparkle" size={14} className="text-cobalt" />
           人生试运行
         </span>
       </header>
@@ -17,6 +19,7 @@ export default function HomePage() {
         <div className="w-full max-w-md border-2 border-ink bg-paper-raised p-5 shadow-md">
           <div className="mb-3 flex items-center gap-2 text-xs text-ink-muted">
             <span className="font-mono text-cobalt">WAVE 1</span>
+            <PixelIcon name="comment" size={14} className="text-ink-muted" />
             <span>即时理解样张</span>
           </div>
           <div className="space-y-3 font-serif text-base leading-snug">
@@ -48,8 +51,9 @@ export default function HomePage() {
         >
           开始试运行
         </Link>
-        <p className="mt-4 max-w-md text-sm text-ink-muted">
-          无需注册。回答 3-5 题后会得到一条可纠正的理解；足够后再生成三条平行的三年人生。
+        <p className="mt-4 flex max-w-md items-start gap-2 text-sm text-ink-muted">
+          <PixelIcon name="user" size={18} className="mt-0.5 shrink-0 text-ink-muted" />
+          <span>无需注册。回答 3-5 题后会得到一条可纠正的理解；足够后再生成三条平行的三年人生。</span>
         </p>
       </footer>
     </div>
