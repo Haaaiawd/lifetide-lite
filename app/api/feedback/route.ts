@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireGuestSession, hasConsent } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyInsightFeedback } from "@/lib/working-memory/operations";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
@@ -9,7 +8,7 @@ import { hashObject } from "@/lib/utils/hash";
 import { evaluateStop, countSessionQuestions } from "@/app/api/wave/route";
 import { randomUUID } from "node:crypto";
 import type { InsightVerdict } from "@/lib/working-memory/types";
-import type { CalibrationSubmitted, CalibrationSkipped, NextWaveCommitted, RoutePhaseEntered } from "@/lib/state/events";
+import type { CalibrationSubmitted, NextWaveCommitted, RoutePhaseEntered } from "@/lib/state/events";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -65,57 +64,37 @@ export async function POST(request: NextRequest) {
 
   const stop = evaluateStop(nextMemory, await countSessionQuestions(session.id));
 
-  if (verdict !== "inaccurate") {
-    const sourceId = feedback.id;
-    const calibration: CalibrationSubmitted["calibration"] = {
-      id: feedback.id,
-      insight_id: wave_id,
-      verdict: verdict as "accurate" | "partly_accurate" | "inaccurate",
-      correction_text: correction,
-      preferred_direction: next_interest === "继续" ? "continue_here" : next_interest === "预览" ? "preview" : next_interest === "暂停" ? "pause" : undefined,
-      source_ref: { source_id: sourceId, source_revision: 1 },
-    };
-    const source = {
-      source_id: sourceId,
-      session_id: session.id,
-      revision: 1,
-      kind: "calibration" as const,
-      created_at: feedback.created_at,
-      untrusted: false,
-      text_ref: wave_id,
-    };
-    const calPayload: CalibrationSubmitted = { calibration, source };
-    const calEnvelope = makeEnvelope("CALIBRATION_SUBMITTED", {
-      session_id: session.id,
-      actor: "user",
-      base_revision: baseRevision,
-      idempotency_key: `calibration-${session.id}-${wave_id}`,
-      payload: calPayload,
-    });
-    const calResult = await commitEvent(session.id, calEnvelope);
-    if (calResult.ok) {
-      baseRevision = calResult.nextRevision;
-    } else {
-      console.error("Failed to commit CALIBRATION_SUBMITTED:", calResult.message);
-    }
+  const sourceId = feedback.id;
+  const calibration: CalibrationSubmitted["calibration"] = {
+    id: feedback.id,
+    insight_id: wave_id,
+    verdict: verdict as "accurate" | "partly_accurate" | "inaccurate",
+    correction_text: correction,
+    preferred_direction: next_interest === "继续" ? "continue_here" : next_interest === "预览" ? "preview" : next_interest === "暂停" ? "pause" : undefined,
+    source_ref: { source_id: sourceId, source_revision: 1 },
+  };
+  const source = {
+    source_id: sourceId,
+    session_id: session.id,
+    revision: 1,
+    kind: "calibration" as const,
+    created_at: feedback.created_at,
+    untrusted: false,
+    text_ref: wave_id,
+  };
+  const calPayload: CalibrationSubmitted = { calibration, source };
+  const calEnvelope = makeEnvelope("CALIBRATION_SUBMITTED", {
+    session_id: session.id,
+    actor: "user",
+    base_revision: baseRevision,
+    idempotency_key: `calibration-${session.id}-${wave_id}`,
+    payload: calPayload,
+  });
+  const calResult = await commitEvent(session.id, calEnvelope);
+  if (calResult.ok) {
+    baseRevision = calResult.nextRevision;
   } else {
-    const skippedPayload: CalibrationSkipped = {
-      insight_id: wave_id,
-      explicitly_skipped: true,
-    };
-    const skippedEnvelope = makeEnvelope("CALIBRATION_SKIPPED", {
-      session_id: session.id,
-      actor: "user",
-      base_revision: baseRevision,
-      idempotency_key: `calibration-skip-${session.id}-${wave_id}`,
-      payload: skippedPayload,
-    });
-    const skipResult = await commitEvent(session.id, skippedEnvelope);
-    if (skipResult.ok) {
-      baseRevision = skipResult.nextRevision;
-    } else {
-      console.error("Failed to commit CALIBRATION_SKIPPED:", skipResult.message);
-    }
+    console.error("Failed to commit CALIBRATION_SUBMITTED:", calResult.message);
   }
 
   if (stop.stop) {

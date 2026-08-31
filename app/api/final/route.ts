@@ -9,11 +9,12 @@ import { hashObject } from "@/lib/utils/hash";
 import type {
   RoutePhaseEntered,
   RouteIntentCandidatesCommitted,
+  RouteIntentsAccepted,
   OrdinaryDayScreeningStarted,
   OrdinaryDaysCommitted,
   ParallelLivesCommitted,
 } from "@/lib/state/events";
-import type { RouteIntent, ParallelLife, ParallelLivesPlan, OrdinaryDay, EvidenceLink, RadarDimension } from "@/lib/state/contracts";
+import type { RouteIntent, ParallelLife, ParallelLivesPlan, OrdinaryDay, EvidenceLink as ContractEvidenceLink, RadarDimension } from "@/lib/state/contracts";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -33,6 +34,13 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = await runSensemakerFinal(session.id, memory);
+
+  if (!plan.provisional && memory.last_wave_index < 2) {
+    return NextResponse.json(
+      { error: "Formal plan requires at least Wave 2", can_proceed: false },
+      { status: 409 }
+    );
+  }
 
   // Commit final-plan events to the XState ledger.
   const snapshot = await loadPublicSnapshot(session.id);
@@ -99,6 +107,17 @@ export async function POST(request: NextRequest) {
     created_at: new Date().toISOString(),
   };
 
+  const evidenceLinks = (life: typeof plan.lives[0]): ContractEvidenceLink[] => {
+    return life.evidence_for.map((ev) => ({
+      source_id: ev.evidence_id,
+      source_revision: 1,
+      excerpt: ev.supports,
+      epistemic_status: "user_stated" as const,
+      evidence_shape: "abstract_statement" as const,
+      relevance: ev.supports,
+    }));
+  };
+
   const intents: RouteIntent[] = plan.lives.map((life) => ({
     id: life.id,
     generation_provenance_id: provenance.id,
@@ -112,7 +131,7 @@ export async function POST(request: NextRequest) {
       resources: life.year_3,
     },
     real_cost: life.costs_and_tradeoffs[0] ?? "待明确",
-    evidence: life.evidence_for as any,
+    evidence: evidenceLinks(life),
     status: "seed",
   }));
 
@@ -135,6 +154,30 @@ export async function POST(request: NextRequest) {
     baseRevision = intentResult.nextRevision;
   } else {
     console.error("Failed to commit ROUTE_INTENT_CANDIDATES_COMMITTED:", intentResult.message);
+    return NextResponse.json({ error: "Could not persist route candidates" }, { status: 409 });
+  }
+
+  // Explicitly accept the three validated candidate intents.
+  const acceptedIntents: [RouteIntent, RouteIntent, RouteIntent] = intents.map((intent) => ({
+    ...intent,
+    status: "accepted" as const,
+  })) as [RouteIntent, RouteIntent, RouteIntent];
+  const acceptedPayload: RouteIntentsAccepted = { intents: acceptedIntents };
+  const acceptedEnvelope = makeEnvelope("ROUTE_INTENTS_ACCEPTED", {
+    session_id: session.id,
+    actor: "user",
+    base_revision: baseRevision,
+    idempotency_key: `route-intents-accepted-${session.id}`,
+    correlation_id: provenance.correlation_id,
+    proposal_id: provenance.proposal_id,
+    payload: acceptedPayload,
+  });
+  const acceptedResult = await commitEvent(session.id, acceptedEnvelope);
+  if (acceptedResult.ok) {
+    baseRevision = acceptedResult.nextRevision;
+  } else {
+    console.error("Failed to commit ROUTE_INTENTS_ACCEPTED:", acceptedResult.message);
+    return NextResponse.json({ error: "Could not accept route intents" }, { status: 409 });
   }
 
   // Enter ordinary-day screening before parallel lives.
@@ -178,8 +221,8 @@ export async function POST(request: NextRequest) {
   };
 
   const days: [OrdinaryDay, OrdinaryDay, OrdinaryDay] = plan.lives.map((life, idx) => {
-    const intentEvidence = intents[idx].evidence?.[0] as EvidenceLink | undefined;
-    const evidence: EvidenceLink[] = intentEvidence
+    const intentEvidence = intents[idx].evidence?.[0] as ContractEvidenceLink | undefined;
+    const evidence: ContractEvidenceLink[] = intentEvidence
       ? [{
           ...intentEvidence,
           relevance: "说明该普通一天如何从路线意向推演而来",
@@ -243,7 +286,7 @@ export async function POST(request: NextRequest) {
     ordinary_day: life.ordinary_day,
     attractions: life.attractions,
     costs_and_tradeoffs: life.costs_and_tradeoffs,
-    evidence_for: life.evidence_for as any,
+    evidence_for: evidenceLinks(life),
     assumptions: life.assumptions,
     uncertainties: life.uncertainties,
     risks: life.risks,

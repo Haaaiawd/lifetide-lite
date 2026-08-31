@@ -114,31 +114,30 @@ describe("commitEvent revision and idempotency semantics", () => {
   });
 
   it("rejects invalid state transitions", async () => {
-    const envelope = makeEnvelope("WAVE_MISSION_COMMITTED", {
+    const answerId = randomUUID();
+    const envelope = makeEnvelope("ANSWER_SUBMITTED", {
       session_id: sessionId,
-      actor: "interviewer",
+      actor: "user",
       base_revision: 1,
       idempotency_key: `invalid-transition-${sessionId}`,
       payload: {
-        proposal_id: randomUUID(),
-        generation_provenance: {
-          id: randomUUID(),
-          session_id: sessionId,
-          proposal_id: randomUUID(),
-          correlation_id: randomUUID(),
-          prompt_contract_revision: 3,
-          prompt_file_hash: "h",
-          schema_hash: "h",
-          context_builder_version: "v1",
-          context_hash: "h",
-          provider: "fixture",
-          model: "fixture",
-          model_config_json: {},
-          model_config_hash: "h",
-          fixture_suite_version: "v1",
-          created_at: new Date().toISOString(),
+        answer: {
+          id: answerId,
+          question_id: "q1",
+          source_ref: { source_id: answerId, source_revision: 1 },
+          skipped: false,
+          created_from: "card",
         },
-        wave: {} as any,
+        source: {
+          source_id: answerId,
+          session_id: sessionId,
+          revision: 1,
+          kind: "question_answer",
+          created_at: new Date().toISOString(),
+          untrusted: false,
+          text_ref: "q1",
+        },
+        coverage: [],
       } as any,
     });
 
@@ -263,7 +262,7 @@ describe("commitEvent revision and idempotency semantics", () => {
     expect(answers).toBeGreaterThanOrEqual(3);
   });
 
-  it("returns PERSISTENCE_ERROR and rolls back when a domain record cannot be written", async () => {
+  it("rejects nested session_id mismatch and does not write a TransitionEvent", async () => {
     const session = await prisma.session.create({
       data: {
         token: randomUUID(),
@@ -370,7 +369,7 @@ describe("commitEvent revision and idempotency semantics", () => {
 
       const result = await commitEvent(sid, badAnswerEnvelope);
       expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.code).toBe("PERSISTENCE_ERROR");
+      if (!result.ok) expect(result.code).toBe("TENANT_MISMATCH");
 
       // No TransitionEvent should have been written for the failed answer.
       const count = await prisma.transitionEvent.count({

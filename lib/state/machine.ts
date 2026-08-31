@@ -137,7 +137,30 @@ export const harnessMachine = setup({
       lastError: undefined,
     }),
     storeResumeState: assign({
-      resumeState: ({ context }) => JSON.stringify(context),
+      resumeState: ({ self }) => JSON.stringify(self.getSnapshot().value),
+    }),
+    clearResumeState: assign({
+      resumeState: undefined,
+    }),
+    setRouteIntentCandidates: assign({
+      workingUnderstanding: ({ context, event }) => {
+        const e = (event as MachineEvent).envelope;
+        if (e.event_type === "ROUTE_INTENT_CANDIDATES_COMMITTED") {
+          const p = e.payload as RouteIntentCandidatesCommitted;
+          return { ...context.workingUnderstanding, route_intents: p.intents };
+        }
+        return context.workingUnderstanding;
+      },
+    }),
+    setAcceptedRouteIntents: assign({
+      workingUnderstanding: ({ context, event }) => {
+        const e = (event as MachineEvent).envelope;
+        if (e.event_type === "ROUTE_INTENTS_ACCEPTED") {
+          const p = e.payload as RouteIntentsAccepted;
+          return { ...context.workingUnderstanding, route_intents: p.intents };
+        }
+        return context.workingUnderstanding;
+      },
     }),
   },
   guards: {
@@ -186,6 +209,11 @@ export const harnessMachine = setup({
     noActiveSafetyFlag: ({ context }) => {
       return context.safetyFlags.every((f) => f.status === "resolved");
     },
+    hasThreeAcceptedRouteIntents: ({ context }) => {
+      const accepted = context.workingUnderstanding.route_intents.filter((r) => r.status === "accepted");
+      if (accepted.length !== 3) return false;
+      return true;
+    },
     safetyTriggered: ({ event }) => {
       const e = (event as MachineEvent).envelope;
       return e.safety_flag !== undefined;
@@ -199,6 +227,14 @@ export const harnessMachine = setup({
       target: ".safety_stop",
       guard: "safetyTriggered",
       actions: "incrementRevision",
+    },
+    SESSION_PAUSED: {
+      target: ".paused",
+      actions: ["storeResumeState", "incrementRevision"],
+    },
+    PROVIDER_FAILED: {
+      target: ".degraded",
+      actions: ["storeResumeState", "setLastError", "incrementRevision"],
     },
   },
   context: {
@@ -255,6 +291,10 @@ export const harnessMachine = setup({
     interviewing: {
       initial: "orienting_wave",
       states: {
+        hist: {
+          type: "history",
+          history: "deep",
+        },
         orienting_wave: {
           on: {
             WAVE_MISSION_COMMITTED: {
@@ -325,14 +365,6 @@ export const harnessMachine = setup({
         },
       },
       on: {
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
-        PROVIDER_FAILED: {
-          target: "degraded",
-          actions: ["setLastError", "incrementRevision"],
-        },
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           guard: "safetyTriggered",
@@ -343,26 +375,24 @@ export const harnessMachine = setup({
     route_intents: {
       on: {
         ROUTE_INTENT_CANDIDATES_COMMITTED: {
-          actions: "incrementRevision",
+          actions: ["setRouteIntentCandidates", "incrementRevision"],
         },
         ROUTE_INTENT_EDITED: {
           actions: "incrementRevision",
         },
         ROUTE_INTENTS_ACCEPTED: {
           guard: "exactlyThreeAcceptedIntents",
-          actions: "incrementRevision",
+          actions: ["setAcceptedRouteIntents", "incrementRevision"],
         },
         READINESS_GATE_WAIVED: {
           actions: "incrementRevision",
         },
         ORDINARY_DAY_SCREENING_STARTED: {
           target: "ordinary_day_screening",
+          guard: "hasThreeAcceptedRouteIntents",
           actions: "incrementRevision",
         },
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
+
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           actions: "incrementRevision",
@@ -381,10 +411,7 @@ export const harnessMachine = setup({
           target: "parallel_lives_ready",
           actions: "incrementRevision",
         },
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
+
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           actions: "incrementRevision",
@@ -404,10 +431,7 @@ export const harnessMachine = setup({
         BLUEPRINT_COMMITTED: {
           actions: "incrementRevision",
         },
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
+
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           actions: "incrementRevision",
@@ -424,10 +448,7 @@ export const harnessMachine = setup({
           target: "bounded_reflection",
           actions: "incrementRevision",
         },
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
+
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           actions: "incrementRevision",
@@ -453,10 +474,7 @@ export const harnessMachine = setup({
           target: "parallel_lives_ready",
           actions: "incrementRevision",
         },
-        SESSION_PAUSED: {
-          target: "paused",
-          actions: ["storeResumeState", "incrementRevision"],
-        },
+
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           actions: "incrementRevision",
@@ -465,19 +483,85 @@ export const harnessMachine = setup({
     },
     paused: {
       on: {
+        SESSION_PAUSED: { actions: [] },
         SESSION_RESUMED: {
-          target: "interviewing",
+          target: "resuming",
           actions: ["clearLastError", "incrementRevision"],
         },
       },
     },
     degraded: {
       on: {
+        PROVIDER_FAILED: { actions: [] },
         PROVIDER_RECOVERED: {
-          target: "interviewing",
+          target: "resuming",
           actions: ["clearLastError", "incrementRevision"],
         },
       },
+    },
+    resuming: {
+      entry: ["clearLastError", "clearResumeState"],
+      always: [
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return typeof state === "object" && Object.keys(state)[0] === "interviewing";
+          },
+          target: "interviewing.hist",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "route_intents" || (typeof state === "object" && Object.keys(state)[0] === "route_intents");
+          },
+          target: "route_intents",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "ordinary_day_screening" || (typeof state === "object" && Object.keys(state)[0] === "ordinary_day_screening");
+          },
+          target: "ordinary_day_screening",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "parallel_lives_ready" || (typeof state === "object" && Object.keys(state)[0] === "parallel_lives_ready");
+          },
+          target: "parallel_lives_ready",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "trial_active" || (typeof state === "object" && Object.keys(state)[0] === "trial_active");
+          },
+          target: "trial_active",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "bounded_reflection" || (typeof state === "object" && Object.keys(state)[0] === "bounded_reflection");
+          },
+          target: "bounded_reflection",
+        },
+        {
+          guard: ({ context }) => {
+            if (!context.resumeState) return false;
+            const state = JSON.parse(context.resumeState);
+            return state === "consent_and_optional_material" || (typeof state === "object" && Object.keys(state)[0] === "consent_and_optional_material");
+          },
+          target: "consent_and_optional_material",
+        },
+        {
+          target: "interviewing.orienting_wave",
+        },
+      ],
     },
     safety_stop: {
       type: "final",
