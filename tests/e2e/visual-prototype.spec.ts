@@ -17,7 +17,8 @@ const setupSessionAndConsent = async (page: Page) => {
 const goToStart = async (page: Page) => {
   await setupSessionAndConsent(page);
   await page.goto("/");
-  await expect(page.getByText("回答几个短问题")).toBeVisible();
+  await expect(page.getByText("我不会替你决定人生")).toBeVisible();
+  await page.getByRole("button", { name: "我正面临一个具体选择，想先看清它" }).click();
   await page.getByRole("link", { name: "开始试运行" }).click();
   await page.waitForURL("/play");
 };
@@ -167,8 +168,9 @@ test.describe("人生试运行视觉原型 — TASK-001 验收", () => {
     // Landing
     await page.goto("/");
     await expect(page.getByText("人生试运行")).toBeVisible();
-    await expect(page.getByText("回答几个短问题，看见三种可试玩的人生")).toBeVisible();
-    await expect(page.getByText("即时理解样张")).toBeVisible();
+    await expect(page.getByText("我不会替你决定人生")).toBeVisible();
+    await page.getByRole("button", { name: "我正面临一个具体选择，想先看清它" }).click();
+    await expect(page.getByRole("link", { name: "开始试运行" })).toBeVisible();
     await page.screenshot({ path: "reports/01-landing-mobile-360.png" });
 
     // Start
@@ -242,8 +244,9 @@ test.describe("人生试运行视觉原型 — TASK-001 验收", () => {
       (document.body.style as any).zoom = "200%";
     });
 
-    await expect(page.getByText("回答几个短问题")).toBeVisible();
+    await expect(page.getByText("我不会替你决定人生")).toBeVisible();
     await setupSessionAndConsent(page);
+    await page.getByRole("button", { name: "我正面临一个具体选择，想先看清它" }).click();
     await page.getByRole("link", { name: "开始试运行" }).click();
     await page.waitForURL("/play");
 

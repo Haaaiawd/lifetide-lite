@@ -36,7 +36,8 @@ test.describe("UI screenshot flow", () => {
     await setupSessionAndConsent(page);
 
     await page.goto("/");
-    await expect(page.getByText("回答几个短问题")).toBeVisible();
+    await expect(page.getByText("我不会替你决定人生")).toBeVisible();
+    await page.getByRole("button", { name: "我正面临一个具体选择，想先看清它" }).click();
     await screenshot(page, "01-landing-desktop");
     await page.getByRole("link", { name: "开始试运行" }).click();
     await page.waitForURL("/play");
@@ -95,7 +96,8 @@ test.describe("UI screenshot flow", () => {
     await setupSessionAndConsent(page);
 
     await page.goto("/");
-    await expect(page.getByText("回答几个短问题")).toBeVisible();
+    await expect(page.getByText("我不会替你决定人生")).toBeVisible();
+    await page.getByRole("button", { name: "我正面临一个具体选择，想先看清它" }).click();
     await screenshot(page, "11-landing-mobile");
     await page.getByRole("link", { name: "开始试运行" }).click();
     await page.waitForURL("/play");

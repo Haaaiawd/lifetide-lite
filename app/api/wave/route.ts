@@ -59,6 +59,22 @@ export async function GET(request: NextRequest) {
   const inRoutePhase = stateValue === "route_intents" || (typeof stateValue === "object" && stateValue !== null && "route_intents" in stateValue);
   const inAwaitingCalibration = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "awaiting_calibration";
   const inSynthesizing = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "synthesizing_wave";
+  const finalOrTrialStates = new Set(["parallel_lives_ready", "trial_active", "bounded_reflection"]);
+  const inFinalOrTrialPhase =
+    (typeof stateValue === "string" && finalOrTrialStates.has(stateValue)) ||
+    (typeof stateValue === "object" && stateValue !== null && finalOrTrialStates.has(Object.keys(stateValue as object)[0] ?? ""));
+
+  if (inFinalOrTrialPhase) {
+    const stop = evaluateStop(memory, await countSessionQuestions(session.id));
+    const response = NextResponse.json({
+      stop: true,
+      can_generate: stop.canGenerate,
+      provisional: stop.provisional,
+      reason: "final_or_trial_phase",
+    });
+    if (isNew) attachGuestCookie(response, session.token);
+    return response;
+  }
 
   if (inRoutePhase) {
     const stop = evaluateStop(memory, await countSessionQuestions(session.id));

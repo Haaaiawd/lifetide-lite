@@ -146,6 +146,7 @@ export type WorkingMemory = {
   recent_feedback: InsightFeedback[];
   last_wave_index: number;
   updated_at: string;
+  finalPlan?: FinalPlan;
 };
 
 export type ImmediateInsight = {

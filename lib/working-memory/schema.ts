@@ -148,6 +148,7 @@ export const workingMemorySchema = z
     recent_feedback: z.array(insightFeedbackSchema),
     last_wave_index: z.number().int(),
     updated_at: z.string().min(1),
+    finalPlan: z.record(z.unknown()).optional(),
   })
   .strict();
 
