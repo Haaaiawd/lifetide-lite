@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireGuestSession, hasConsent } from "@/lib/auth/session";
-import { loadOrCreateWorkingMemory } from "@/lib/working-memory/store";
+import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { runSensemakerFinal } from "@/lib/ai/sensemaker/final";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { makeEnvelope } from "@/lib/state/envelope";
@@ -28,6 +28,11 @@ export async function POST(request: NextRequest) {
   }
 
   const memory = await loadOrCreateWorkingMemory(session.id);
+
+  // Idempotent replay: if a plan is already stored for this session, return it.
+  if (memory.finalPlan) {
+    return NextResponse.json(memory.finalPlan);
+  }
 
   if (memory.last_wave_index === 0) {
     return NextResponse.json({ error: "Complete at least Wave 1 before generating plans" }, { status: 400 });
@@ -324,6 +329,10 @@ export async function POST(request: NextRequest) {
   if (!livesResult.ok) {
     console.error("Failed to commit PARALLEL_LIVES_COMMITTED:", livesResult.message);
   }
+
+  // Persist the final plan so reload or re-clicks return the same result.
+  memory.finalPlan = plan;
+  await saveWorkingMemory(session.id, memory);
 
   return NextResponse.json(plan);
 }
