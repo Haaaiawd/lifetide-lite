@@ -6,7 +6,7 @@ import { buildWaveFromProposal, persistWaveMissionAndArtifacts } from "@/lib/db/
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { hashObject } from "@/lib/utils/hash";
 import { makeEnvelope } from "@/lib/state/envelope";
-import type { WaveMissionCommitted, AnswerSubmitted, WaveEndCommitted, InsightCommitted } from "@/lib/state/events";
+import type { WaveMissionCommitted, AnswerSubmitted, WaveEndCommitted, InsightCommitted, SessionStarted } from "@/lib/state/events";
 import type { Answer } from "@/lib/state/contracts";
 import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
 import { runSensemakerWave } from "@/lib/ai/sensemaker/wave";
@@ -22,6 +22,24 @@ const MAX_QUESTIONS = 19;
 
 export async function GET(request: NextRequest) {
   const { session, isNew } = await getOrCreateGuestSession(request);
+
+  if (isNew) {
+    const started: SessionStarted = {
+      guest_token_hash: session.token,
+      expires_at: session.expiresAt.toISOString(),
+    };
+    const envelope = makeEnvelope("SESSION_STARTED", {
+      session_id: session.id,
+      actor: "system",
+      base_revision: 0,
+      idempotency_key: `session-start-${session.id}`,
+      payload: started,
+    });
+    const result = await commitEvent(session.id, envelope);
+    if (!result.ok) {
+      console.error("Failed to commit SESSION_STARTED from /api/wave:", result.message);
+    }
+  }
 
   if (!hasConsent(session.consents, "ai")) {
     const response = NextResponse.json(

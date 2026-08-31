@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOrCreateGuestSession, attachGuestCookie, GUEST_TOKEN_COOKIE } from "@/lib/auth/session";
 import { consentCatalog, hasConsent } from "@/lib/privacy/consent";
-import { commitEvent } from "@/lib/db/commit";
+import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { makeEnvelope } from "@/lib/state/envelope";
 import type { SessionStarted } from "@/lib/state/events";
 import type { NextRequest } from "next/server";
@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
       .map((c) => c.type),
   });
 
-  if (isNew) {
+  const snapshot = await loadPublicSnapshot(session.id);
+
+  if (isNew || !snapshot) {
     const started: SessionStarted = {
       guest_token_hash: session.token,
       expires_at: session.expiresAt.toISOString(),
@@ -42,13 +44,15 @@ export async function GET(request: NextRequest) {
       console.error("Failed to commit SESSION_STARTED:", result.message);
     }
 
-    response.cookies.set(GUEST_TOKEN_COOKIE, session.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 24 * 60 * 60,
-    });
+    if (isNew) {
+      response.cookies.set(GUEST_TOKEN_COOKIE, session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 24 * 60 * 60,
+      });
+    }
   }
 
   return response;
