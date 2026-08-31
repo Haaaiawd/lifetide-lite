@@ -9,6 +9,18 @@ import type { MachineContext } from "@/lib/state/machine";
 import type { MachineEvent } from "@/lib/state/machine";
 import type { EventEnvelope, Id, Revision, SessionStateHead } from "@/lib/state/contracts";
 import type { WaveMissionCommitted, QuestionBatchCommitted, InsightCommitted, AnswerSubmitted, RouteIntentCandidatesCommitted, CalibrationSubmitted } from "@/lib/state/events";
+import { z } from "zod";
+import {
+  waveSchema,
+  sourceVersionSchema,
+  answerSchema,
+  answerCoverageSchema,
+  generationProvenanceSchema,
+  routeIntentSchema,
+  ordinaryDaySchema,
+  parallelLivesPlanSchema,
+  microbatchSchema,
+} from "@/lib/state/contracts";
 
 type AnyEnvelope = EventEnvelope<string, unknown>;
 
@@ -34,6 +46,147 @@ function envelopeToMachineEvent(envelope: AnyEnvelope): MachineEvent {
   return { type: envelope.event_type, envelope } as unknown as MachineEvent;
 }
 
+const sessionStartedPayloadSchema = z.object({
+  guest_token_hash: z.string().min(1),
+  expires_at: z.string().min(1),
+});
+
+const consentRecordedPayloadSchema = z.object({
+  consent_version: z.string().min(1),
+  ai: z.literal(true),
+  upload: z.boolean(),
+});
+
+const modelCommitMetaSchema = z.object({
+  proposal_id: z.string().min(1),
+  generation_provenance: generationProvenanceSchema,
+});
+
+const answerSubmittedPayloadSchema = z.object({
+  answer: answerSchema,
+  source: sourceVersionSchema,
+  coverage: z.array(answerCoverageSchema),
+});
+
+const calibrationSubmittedPayloadSchema = z.object({
+  calibration: z.object({
+    id: z.string().min(1),
+    insight_id: z.string().min(1),
+    verdict: z.enum(["accurate", "partly_accurate", "inaccurate"]),
+    correction_text: z.string().optional(),
+    preferred_direction: z.enum(["continue_here", "change_direction", "preview", "pause"]).optional(),
+    source_ref: z.object({ source_id: z.string().min(1), source_revision: z.number().int().min(1) }),
+  }),
+  source: sourceVersionSchema,
+});
+
+const routePhaseEnteredPayloadSchema = z.object({
+  reason: z.enum(["mission_sufficient", "user_preview", "user_stopped", "wave_cap"]),
+  interview_snapshot_revision: z.number().int().min(0),
+});
+
+const routeIntentCandidatesPayloadSchema = modelCommitMetaSchema.extend({
+  intents: z.array(routeIntentSchema).length(3),
+});
+
+const ordinaryDayScreeningStartedPayloadSchema = z.object({
+  accepted_intent_ids: z.tuple([z.string().min(1), z.string().min(1), z.string().min(1)]),
+});
+
+const ordinaryDaysCommittedPayloadSchema = modelCommitMetaSchema.extend({
+  days: z.tuple([ordinaryDaySchema, ordinaryDaySchema, ordinaryDaySchema]),
+});
+
+const parallelLivesCommittedPayloadSchema = modelCommitMetaSchema.extend({
+  plan: parallelLivesPlanSchema,
+});
+
+function validatePayload(envelope: AnyEnvelope): true | CommitResult {
+  try {
+    switch (envelope.event_type) {
+      case "SESSION_STARTED":
+        sessionStartedPayloadSchema.parse(envelope.payload);
+        break;
+      case "CONSENT_RECORDED":
+        consentRecordedPayloadSchema.parse(envelope.payload);
+        break;
+      case "WAVE_MISSION_COMMITTED":
+        modelCommitMetaSchema.extend({ wave: waveSchema }).parse(envelope.payload);
+        break;
+      case "QUESTION_BATCH_COMMITTED":
+        modelCommitMetaSchema.extend({ wave_id: z.string().min(1), batch: microbatchSchema }).parse(envelope.payload);
+        break;
+      case "ANSWER_SUBMITTED":
+        answerSubmittedPayloadSchema.parse(envelope.payload);
+        break;
+      case "WAVE_END_COMMITTED":
+        modelCommitMetaSchema.extend({ wave_id: z.string().min(1), stop_reason: z.string().min(1) }).parse(envelope.payload);
+        break;
+      case "INSIGHT_COMMITTED":
+        modelCommitMetaSchema.extend({ insight_status: z.literal("generated"), proposal: z.record(z.unknown()) }).parse(envelope.payload);
+        break;
+      case "CALIBRATION_SUBMITTED":
+        calibrationSubmittedPayloadSchema.parse(envelope.payload);
+        break;
+      case "CALIBRATION_SKIPPED":
+        z.object({ insight_id: z.string().min(1), explicitly_skipped: z.literal(true) }).parse(envelope.payload);
+        break;
+      case "NEXT_WAVE_COMMITTED":
+        z.object({ kind: z.enum(["core", "deep_dive"]) }).parse(envelope.payload);
+        break;
+      case "ROUTE_PHASE_ENTERED":
+        routePhaseEnteredPayloadSchema.parse(envelope.payload);
+        break;
+      case "ROUTE_INTENT_CANDIDATES_COMMITTED":
+        routeIntentCandidatesPayloadSchema.parse(envelope.payload);
+        break;
+      case "ROUTE_INTENTS_ACCEPTED":
+        z.object({ intents: z.array(routeIntentSchema).length(3) }).parse(envelope.payload);
+        break;
+      case "ORDINARY_DAY_SCREENING_STARTED":
+        ordinaryDayScreeningStartedPayloadSchema.parse(envelope.payload);
+        break;
+      case "ORDINARY_DAYS_COMMITTED":
+        ordinaryDaysCommittedPayloadSchema.parse(envelope.payload);
+        break;
+      case "PARALLEL_LIVES_COMMITTED":
+        parallelLivesCommittedPayloadSchema.parse(envelope.payload);
+        break;
+    }
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, code: "INVALID_PROPOSAL", message: `payload validation failed for ${envelope.event_type}: ${message}` };
+  }
+}
+
+function assertNestedSessionIds(payload: unknown, sessionId: Id, seen = new Set<unknown>()): true | CommitResult {
+  if (!payload || typeof payload !== "object") return true;
+  if (seen.has(payload)) return true;
+  seen.add(payload);
+
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const result = assertNestedSessionIds(item, sessionId, seen);
+      if (result !== true) return result;
+    }
+    return true;
+  }
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === "session_id" && typeof value === "string" && value !== sessionId) {
+      return {
+        ok: false,
+        code: "TENANT_MISMATCH",
+        message: `nested session_id ${value} does not match request session`,
+      };
+    }
+    const result = assertNestedSessionIds(value, sessionId, seen);
+    if (result !== true) return result;
+  }
+  return true;
+}
+
 export async function commitEvent(
   sessionId: Id,
   envelope: AnyEnvelope,
@@ -42,6 +195,12 @@ export async function commitEvent(
   if (envelope.session_id !== sessionId) {
     return { ok: false, code: "TENANT_MISMATCH", message: "event session_id does not match request session" };
   }
+
+  const nestedCheck = assertNestedSessionIds(envelope.payload, sessionId);
+  if (nestedCheck !== true) return nestedCheck;
+
+  const payloadValidation = validatePayload(envelope);
+  if (payloadValidation !== true) return payloadValidation;
 
   try {
     return await prisma.$transaction(

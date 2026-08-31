@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createActor } from "xstate";
-import { harnessMachine, type MachineContext } from "@/lib/state/machine";
+import { harnessMachine } from "@/lib/state/machine";
 
 describe("harness machine transitions", () => {
   it("starts in entry and moves to consent on SESSION_STARTED", () => {
@@ -184,5 +184,80 @@ describe("harness machine transitions", () => {
       },
     });
     expect(actor.getSnapshot().value).toBe("safety_stop");
+  });
+
+  it("resumes to the previous state after SESSION_PAUSED", () => {
+    const actor = createActor(harnessMachine, { input: {} });
+    actor.start();
+    actor.send({
+      type: "SESSION_STARTED",
+      envelope: {
+        event_id: "e1",
+        event_type: "SESSION_STARTED",
+        schema_version: 3,
+        session_id: "s1",
+        actor: "host",
+        base_revision: 0,
+        emitted_at: new Date().toISOString(),
+        idempotency_key: "k1",
+        correlation_id: "c1",
+        payload_hash: "h1",
+        payload: { guest_token_hash: "abc", expires_at: new Date().toISOString() },
+      },
+    });
+    actor.send({
+      type: "CONSENT_RECORDED",
+      envelope: {
+        event_id: "e2",
+        event_type: "CONSENT_RECORDED",
+        schema_version: 3,
+        session_id: "s1",
+        actor: "user",
+        base_revision: 1,
+        emitted_at: new Date().toISOString(),
+        idempotency_key: "k2",
+        correlation_id: "c2",
+        payload_hash: "h2",
+        payload: { consent_version: "v1", ai: true, upload: false },
+      },
+    });
+
+    expect(actor.getSnapshot().value).toEqual({ interviewing: "orienting_wave" });
+
+    actor.send({
+      type: "SESSION_PAUSED",
+      envelope: {
+        event_id: "e3",
+        event_type: "SESSION_PAUSED",
+        schema_version: 3,
+        session_id: "s1",
+        actor: "user",
+        base_revision: 2,
+        emitted_at: new Date().toISOString(),
+        idempotency_key: "k3",
+        correlation_id: "c3",
+        payload_hash: "h3",
+        payload: { resume_state: "", reason: "user" },
+      },
+    });
+    expect(actor.getSnapshot().value).toBe("paused");
+
+    actor.send({
+      type: "SESSION_RESUMED",
+      envelope: {
+        event_id: "e4",
+        event_type: "SESSION_RESUMED",
+        schema_version: 3,
+        session_id: "s1",
+        actor: "user",
+        base_revision: 3,
+        emitted_at: new Date().toISOString(),
+        idempotency_key: "k4",
+        correlation_id: "c4",
+        payload_hash: "h4",
+        payload: { explicit: true },
+      },
+    });
+    expect(actor.getSnapshot().value).toEqual({ interviewing: "orienting_wave" });
   });
 });
