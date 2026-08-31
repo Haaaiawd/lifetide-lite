@@ -1,30 +1,34 @@
 # 人生试运行：Next.js 平台、组件 registry 与素材治理
 
 - Kind: system
-- Status: shaped
+- Status: canonical design target
 - Product: 人生试运行
 
 ## Responsibility in the whole
 
-本文定义人生试运行 MVP 的前端平台、组件来源、安装政策、动效边界、guest-first 状态、上传、性能、无障碍与素材权利。目标是支撑一个移动优先、可链接分发、桌面可扩展的 10–20 分钟访谈体验，并准确实现 **Soft Editorial Neo-Brutalism／柔化的编辑型新粗野主义**。
+本文定义人生试运行 MVP 的前端平台、组件来源、安装政策、动效边界、guest-first 状态、上传、性能、无障碍与素材权利。目标是支撑一个移动优先、可链接分发、桌面可扩展的持续对话体验，并准确实现 **Soft Editorial Neo-Brutalism／柔化的编辑型新粗野主义**。状态和对话行为以 [对话式六维决策 Harness](./conversational-six-dimension-harness.md) 为权威。
 
 技术基线：
 
 - Next.js + React + TypeScript strict；
 - Tailwind CSS v4，品牌 token 由 CSS variables 驱动；
+- XState v5（MIT）表达访谈、路线和恢复状态机；
+- AI SDK + Zod 承担 provider 与结构化输出；
+- Prisma Client 6.6.0 + SQLite 是已运行 donor 数据基线；Harness 迁移先保留它，不把 Postgres 迁移夹带进状态改造；当前 manifest 缺少 Prisma CLI，且 pnpm 10 会忽略未显式允许的 `@prisma/client` build script，因此它是待 TASK-008 修复的 donor 健康缺口，不是“已验证可从干净安装构建”；
 - `neobrutalism.com` 当前开源 shadcn registry 的 **Radix** 变体作为主要组件源码；
+- AI Elements（Apache-2.0）只选择性吸收 conversation/message/prompt 的本地源码，不接管状态或视觉；
 - Motion (`motion/react`) 仅用于克制的顺序显露、状态和 layout transition；
 - Phosphor Icons，统一 regular／medium 线性家族。
 
-组件 registry 提供的是可访问结构和本地可修改源码，不替代信息架构与品牌判断。MVP 不安装效果库，不引入游戏引擎、3D／WebGL、动画资产 runtime 或全套模板。
+组件 registry 提供的是可访问结构和本地可修改源码，不替代信息架构与品牌判断。MVP 不安装效果库，不引入游戏引擎、3D／WebGL、动画资产 runtime、自治 Agent 框架或全套模板。不得同时引入 AI Elements 与 assistant-ui 等重叠 conversation runtime。
 
 ## Inputs, outputs, and boundaries
 
 ### Inputs
 
-- 问题、答案草稿、波次进度、上传／扫描／解析状态；
+- 对话消息、问题微批次、答案草稿、波次进度、上传／扫描／解析状态；
 - 即时理解 claim、来源摘要、不确定边界与用户校准；
-- 三条地位平等的三年路线和三天试验；
+- 六维雷达、路线意向、三个普通一天、三条地位平等的三年路线和三天试验；
 - guest 会话、恢复位置、网络与异步状态；
 - 系统和用户的 reduced-motion、高对比与字号偏好；
 - 已核权、登记并校验的本地素材。
@@ -33,7 +37,8 @@
 
 - 服务器优先渲染的 landing 与稳定页面壳层；
 - 键盘、读屏和触控均可完成的问题、上传、校准、路线浏览与试验；
-- 逐张加入文档流的 printed dialogue slips；
+- 卡片与自由文本并存、回答可折叠编辑的持续对话画布；
+- 逐波加入文档流的 printed dialogue slips；
 - 只在必要 client island 内运行的 Motion；
 - 即使字体、背景、图片或动画失败也完整可用的语义界面；
 - 可审计的组件来源、版本、本地修改和资产 provenance。
@@ -43,6 +48,7 @@
 - 不在 UI 暴露 persona dashboard、覆盖率、置信度仪表、人格评分或内部工作记忆字段。
 - 不复制 registry 的整页模板、营销 blocks、dashboard blocks 或默认主题作为成品。
 - 不使用 generic shadcn 组件加效果库拼装品牌；选定 registry 的 Radix 源码是统一起点。
+- 不让第三方聊天库拥有 server session、wave state、AI 调用、message persistence 或品牌 token。
 - MVP 不在访谈、路线或上传流程中使用 React Bits、Magic UI、Aceternity、Rive、Phaser、Three.js 或 effect library。landing 页允许一个受控的 3D voxel 装饰，且该装饰失败时主流程仍可继续。
 - 装饰层不驱动业务状态；关闭 JavaScript 增强、Motion 或图片时，内容仍可读且主流程有恢复路径。
 - 外部素材不得成为 Logo、商标或不可替换的品牌核心。
@@ -54,13 +60,14 @@
 ```text
 app/
   page.tsx                    # editorial landing, Server Component
-  play/page.tsx               # 当前波次壳层
-  play/insights/page.tsx      # printed dialogue slip stack
-  routes/page.tsx             # three-route comparison
-  routes/[routeId]/page.tsx   # route statement + three-day trial
+  play/page.tsx               # continuous conversation canvas
+  routes/page.tsx             # route intents + ordinary-day comparison
+  routes/[routeId]/page.tsx   # parallel life + three-day trial
   settings/accessibility/...  # 用户覆盖项
 components/
-  interview/                  # QuestionFrame, ChoiceCard, Scale, ShortAnswer
+  conversation/               # Message, Composer, FoldedAnswer, StageMarker
+  interview/                  # Microbatch, ChoiceCard, Scale, SceneAnswer
+  radar/                      # text-first RadarBubble, EvidenceDisclosure
   insight/                    # InsightSlip, EvidenceDisclosure, CalibrationRow
   routes/                     # RouteCarousel, RouteCover, TrialSheet
   upload/                     # UploadDropzone, FileRow, ParseStatus
@@ -72,12 +79,13 @@ components/
 
 ### Control flow
 
-1. Server Component 根据 opaque HttpOnly guest token 获取会话／波次快照并输出语义壳层。
-2. client question component 保存未提交草稿；本地校验后发送幂等请求。
-3. 提交期间保留旧问题与输入，成功响应再显示下一题或波后理解，避免白屏和布局跳变。
-4. `InsightSlip` 按服务端已验证顺序加入文档流；校准写入 server state，不是动画反馈事件。
-5. 生成完成后进入三路线比较；carousel index 只是 view state，不能承载推荐语义。
-6. 视觉状态从业务状态单向派生。动画结束、取消或失败都不能触发提交、确认或路线选择。
+1. Server Component 根据 opaque HttpOnly guest token 获取状态机快照和 committed conversation events，输出语义壳层。
+2. client composer/question cards 只保存未提交草稿和视图状态；提交发送带 revision 与幂等键的事件。
+3. XState machine 在服务端/共享纯逻辑层验证事件；AI 只能返回 proposal，不能直接改变状态。
+4. 提交期间保留旧消息与输入；成功后卡片折叠为可编辑用户气泡，再显示承接或下一微批次。
+5. `InsightSlip` 每波按服务端已验证顺序加入文档流；校准写入 server state，不是动画反馈事件。
+6. 路线意向与普通一天确认后进入三路线比较；carousel index 只是 view state，不能承载推荐语义。
+7. 视觉状态从业务状态单向派生。动画结束、取消或失败都不能触发提交、确认或路线选择。
 
 ## Component source decision
 
@@ -85,6 +93,9 @@ components/
 
 | Candidate | Current evidence | Fit | Decision |
 | --- | --- | --- | --- |
+| XState v5 | MIT、zero-dependency core、显式 state/event/guard model | 适合把模型 proposal 与 committed state 分离，并支持可视化、测试与恢复 | **状态控制平面；采用** |
+| AI Elements | Apache-2.0、基于 AI SDK/shadcn 的本地源码组件 | 可节省 message/prompt/streaming primitive 实现，但需完全重做视觉并移除其状态假设 | **选择性 source adoption** |
+| assistant-ui | MIT、功能完整的 assistant runtime 与 UI | 能力强但与 AI Elements/自有 XState 和 server event log 重叠 | **当前拒绝；不双栈** |
 | `neobrutalism.com` registry | 当前 shadcn CLI-compatible、open-source／open-code registry；Tailwind v4 tokens；研究盘点为 57+ components，并覆盖 Base UI、Radix 与 React Aria 变体方向；当前官方安装页明确给出 Base UI 与 Radix URL | 源码进入仓库，可逐个定制；现成边框、硬阴影和状态结构最接近目标，Radix 路径与既定 React 结构匹配 | **主要来源；MVP 只用 Radix 路径** |
 | `neobrutalism.dev`（ekmas） | MIT、shadcn-based、可复制源码 | 可作为实现和状态处理的交叉参考，但不应形成第二套 token 或组件 API | **次要参考；不直接混装** |
 | BRUT/UI | 提供 Soft／Solid／Loud 强度思路 | 强度旋钮有助于评审“是否太吵”，但组件覆盖、采用度和成熟度不足以承担 MVP 基线 | **概念参考，不安装** |
@@ -147,6 +158,18 @@ npx shadcn@latest add https://neobrutalism.com/r/radix/button.json
 - registry 组件进入 `components/ui/` 后成为本地维护源码，不做自动同步。
 - 若 registry 组件新增 runtime dependency，先评估需求、许可证、维护、SSR/RSC、bundle、reduced-motion 与卸载路径；不能因 CLI 自动提出就接受。
 - 当前文档不新增任何 dependency。实际安装必须属于后续明确的实现任务。
+
+### TASK-008 reproducible toolchain gate
+
+TASK-007 只冻结政策，不修改 manifest 或 lockfile。TASK-008 的第一段实现必须在任何 Prisma schema/API 改造之前完成下列最小修复，并把变更写入同一 lockfile：
+
+1. 在 `package.json` 固定 `"packageManager": "pnpm@10.24.0"`；不得让开发机自行选择 npm/yarn 或另一 pnpm major。
+2. 保留 `@prisma/client: 6.6.0`，新增匹配的 `devDependencies.prisma: "6.6.0"`，不使用浮动版本或 CLI/Client 跨版本组合。
+3. 新增 `db:generate = "prisma generate"` 与 `postinstall = "prisma generate"`；所有 typecheck/build 前必须已有按当前 schema 生成的 client。
+4. 在 `package.json` 写入 `pnpm.onlyBuiltDependencies: ["@prisma/client"]`；不把通用 allow-all、交互式本机批准或未提交的全局配置当作可复现安装。
+5. 更新 `pnpm-lock.yaml` 后，在一个明确的新鲜 checkout/worktree（开始时不存在 `node_modules`）运行 `pnpm install --frozen-lockfile`。随后 `pnpm ignored-builds` 不得列出 `@prisma/client`，并依次通过 `pnpm exec prisma generate`、`pnpm exec prisma validate`、迁移状态、typecheck、lint 和 build。
+
+只有这组证据成立，文档才允许把 donor 基线升级为“clean-install healthy”。`node_modules` 的偶然存在、一次本机生成结果或旧 TASK 的 build 证据均不能替代它。
 
 ### Initial primitive allowlist
 
@@ -334,10 +357,14 @@ MVP 优先使用 CSS／SVG：方格纸背景、结构线、编号、切角、钴
 8. **Asset audit**：构建产物中每个视觉文件均有 registry、checksum、license snapshot 与用途；blocked 文件零引用。
 9. **Upload and guest lifecycle**：无上传可完成；24 小时 guest 清理可验证；第三方模型同意发生在发送前；删除会处理派生内容。
 10. **Content resilience**：长中文、英文、无证据、3 个 evidence items、长文件名、失败重试与路线标题换行不溢出。
-11. **Acceptance signal**：真实用户 5 秒内理解短波次→即时理解→三条试玩路线，并在 10–20 分钟内认为界面现代、清楚、有触感而不吵闹。
+11. **Conversation architecture**：XState transitions、committed event log 与 AI proposal 分离；AI Elements 源码不拥有 server state 或品牌 token；无第二 conversation runtime。
+12. **Acceptance signal**：真实用户 5 秒内理解“对话/卡片均可→每波校准→普通一天→三条试玩路线”，并认为界面现代、清楚、有触感而不吵闹。
 
 ## Evidence opened
 
+- XState v5 repository、docs 与 MIT license：<https://github.com/statelyai/xstate>、<https://stately.ai/docs>、<https://github.com/statelyai/xstate/blob/main/LICENSE>。
+- AI Elements repository 与 Apache-2.0 license：<https://github.com/vercel/ai-elements>、<https://github.com/vercel/ai-elements/blob/main/LICENSE>。
+- assistant-ui repository（已评估但因 runtime 重叠未选择）：<https://github.com/assistant-ui/assistant-ui>。
 - neobrutalism.com Installation：registry 无单独组件包，shadcn CLI 复制源码；Radix URL 为 `https://neobrutalism.com/r/radix/<component>.json`；提供 Tailwind v4 token 与 namespace 配置：<https://neobrutalism.com/docs/installation>。
 - neobrutalism.com Components：研究盘点为 57+ components，并覆盖 Base UI、Radix 与 React Aria 变体方向；实现前以 registry `list` 和目标组件页重新确认：<https://neobrutalism.com/components>。
 - neobrutalism.dev：MIT、shadcn-based 次要参考；不与主要 registry 混装：<https://neobrutalism.dev/>。

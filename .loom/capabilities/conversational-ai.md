@@ -6,7 +6,8 @@
 
 ## Project decisions this field changes
 
-- 双 Agent 如何分工：Interviewer 围绕唯一最高影响未知生成下一波问题，Sensemaker 从整波回答中形成可追溯的工作记忆与一条暂定洞察。
+- 双角色如何分工：Interviewer 自主提议一个会改变决策的 wave mission，并在每次吸收上一批回答后生成 1–3 个下一问；Sensemaker 从整波回答中形成可追溯的工作理解、雷达变化与一条暂定洞察。
+- 开波时 Interviewer 先给出 5–10 个无宿主 id 的单一决策目标，再从未覆盖目标中选择首个 1–3 题微批次；这样自适应来自语义判断，而不是宿主固定题库或临时补目标。
 - 什么时候追问具体经历、什么时候总结、什么时候承认信息不足或停止。
 - 上传的简历/MBTI 如何进入上下文，以及如何防止材料文本或模型先验压过用户本人。
 - 即时洞察怎样表达为可纠正假设，而不是权威判词或伪人格评分。
@@ -36,10 +37,10 @@
 
 ## Consequences for design, implementation, and verification
 
-- Interviewer 输入应包含用户目标、宿主选定的焦点未知、最近问题、工作记忆切片、纠正、敏感边界和负担信号；一次输出下一波 3–5 题及目的，所有题均可跳过。
-- Sensemaker 输出运行时校验的 memory patch 与一条 `ImmediateInsight`；洞察必须包含有效 `evidence_ids`、暂定程度和中性校准邀请，事实/解释/未知的详细状态保存在 WorkingMemory。
+- Interviewer 输入应包含用户目标、最近问题和回答、工作理解切片、雷达、纠正、敏感边界、负担信号与宿主上限；AI 选择 mission、措辞和顺序，每次输出 1–3 个下一问或提议结束。宿主校验权限、每波 5–10 个有效提问目标、实际最多 10 题和最多 5 波的上限，但不使用机械 argmax 替 AI 选择焦点。
+- Sensemaker 输出运行时校验的 memory patch 与一条 `ImmediateInsight`；洞察必须包含有效的精确 revision `EvidenceLink`、暂定程度和中性校准邀请，事实/解释/未知的详细状态保存在 `WorkingUnderstanding`。
 - 附件内容用明确的数据边界包裹，视为用户提供的数据而非指令；简历/MBTI 缺失不能改变核心流程资格。
-- 每次短波结束先让用户确认/纠正，再将洞察用于三年路线；未经确认的内容仍可使用但必须标为 tentative，不得悄然升级为事实。
+- 每个微批次后只允许 0–2 句自然承接；每个正式波次结束才输出一条 insight 并让用户确认/纠正。未经确认的内容仍可使用但必须标为 tentative，不得悄然升级为事实。
 - Prompt 和模型版本可追溯；结构化失败、超时或 fallback 时不拼凑洞察，向用户说明暂时无法生成并保留回答。
 - 对医疗、法律、财务、诊断和危机内容执行由 privacy-ai-safety dossier 定义的边界，不临场编造资源。
 
@@ -59,5 +60,6 @@
 - [Product design](./product-design.md) 定义何时给价值，本领域决定如何通过轮次兑现。
 - [Life design methodology](./life-design.md) 提供问题重构和路线方法，对话 AI 不擅自发明“正确人生”。
 - [UI/UX design](./ui-ux-design.md) 呈现消息、来源和纠正状态，对话 AI 提供结构化内容。
+- [Conversation psychology](./conversation-psychology.md) 定义渐进深度、反映强度、敏感同意与非临床边界；对话 AI 将其编译成可测试行为。
 - [Privacy and AI safety](./privacy-ai-safety.md) 定义可处理数据和危机边界，对话 AI 负责一致执行并记录信号。
 - [Game design](./game-design.md) 只接收去敏的进展事件，不读取回答内容来决定奖励。

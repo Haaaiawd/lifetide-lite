@@ -1,0 +1,56 @@
+{
+  "evidence": [
+    "`.loom/prompt-inventory.md` maps owner intent, product promises, prompt specifications, runtime calls, tests and resolved contradictions.",
+    "Repository scan found no runtime references to PersonaAuditor, StopDecision, Planner, CoverageCell, PersonaSnapshot or a 72-cell matrix in `lib/`, `app/`, `prompts/` or `tests/`.",
+    "`lib/ai/interviewer.ts` now uses the v3 `InterviewerProposal` contract: 5-10 elicitation units, 1-3 opening questions, concrete-experience-first sequencing and host-assigned ids. Fixture and fallback stay deterministic.",
+    "`lib/ai/sensemaker/wave.ts` prompt enforces strict separation of observation (fact), interpretation (provisional) and uncertainty (unknown), and prohibits score/coverage/ranking language.",
+    "Bounded-chat runtime is present: `lib/ai/sensemaker/chat.ts`, `lib/chat/store.ts`, `lib/chat/summary.ts`, with `BoundedChatThread` / `SensemakerChatOutput` types and schemas in `lib/working-memory/types.ts` and `lib/working-memory/schema.ts`.",
+    "`rtk pnpm typecheck` passed; `rtk pnpm build` passed; `rtk pnpm lint` passed with 0 errors; `rtk pnpm test:contracts` passed 23 tests; `rtk pnpm exec playwright test --project=integration` passed 29 tests.",
+    "`rtk loom check` returned healthy=true with active TASK-009."
+  ],
+  "checks": [
+    {
+      "criterion": "The health audit maps owner intent, product promises, prompt specifications, runtime calls and tests, and resolves every critical contradiction it finds.",
+      "evidence": [
+        "`.loom/prompt-inventory.md` contains the owner-intent-vs-state table, prompt/runtime file map, four critical contradictions with resolutions, and audit commands/results.",
+        "Contradictions identified: wave shape (3-5 questions vs 5-10 units/1-3 per microbatch), stop cap (4/19 vs canonical 5/10 per wave), radar/evidence model, and prompt/code contract mismatch."
+      ]
+    },
+    {
+      "criterion": "Production flow has only Interviewer and Sensemaker model roles; PersonaAuditor, StopDecision and Planner are not called and the 72-cell matrix is not a generation or stopping gate.",
+      "evidence": [
+        "`grep` scans across `lib/`, `app/`, `prompts/` and tests found no runtime calls or references to PersonaAuditor, StopDecision, Planner, CoverageCell, PersonaSnapshot or 72-cell.",
+        "Only `Interviewer` and `Sensemaker` subdirectories and prompts remain under `lib/ai/` and `prompts/`."
+      ]
+    },
+    {
+      "criterion": "Adaptive interviewing follows a progressive, autonomy-preserving sequence from concrete experience to contrast and optional future projection, with burden-aware question counts and no profile-completion questions.",
+      "evidence": [
+        "`lib/ai/interviewer.ts` prompt requires concrete-experience first, then contrast/counterexample, then optional future-projection, and limits questions to 1-3 per microbatch.",
+        "The prompt explicitly forbids MBTI, profile scores, coverage questions and personality labels. Burden signals (skip rate, answer length, elapsed time) are included in the prompt."
+      ]
+    },
+    {
+      "criterion": "Sensemaker wave, final and bounded-chat prompts separate evidence, provisional interpretation, imagination and unknowns; final routes are structurally different and every prototype tests one real uncertainty.",
+      "evidence": [
+        "`lib/ai/sensemaker/wave.ts` prompt requires observation (fact), interpretation (provisional) and uncertainty (unknown) as separate fields.",
+        "`lib/ai/sensemaker/final.ts` prompt and validation enforce three structurally distinct lives, no ranking language and a reversible, low-cost trial with hypothesis/today_action/what_to_observe.",
+        "`lib/ai/sensemaker/chat.ts` follows the bounded-chat contract with four scopes, 20-turn limit and citation filtering."
+      ]
+    },
+    {
+      "criterion": "Odyssey play expands through optional grounded simulation lenses without adding another Agent or inflating the base FinalPlan contract.",
+      "evidence": [
+        "No new Agent or orchestration runtime was added; Odyssey-related behavior is not in the current active scope, but the prompt architecture and FinalPlan contract remain closed to ad-hoc additions."
+      ]
+    },
+    {
+      "criterion": "Typecheck and representative integration tests prove deterministic stopping, prompt fallbacks, citation validity, route equality and bounded-chat behavior.",
+      "evidence": [
+        "`pnpm typecheck` and `pnpm build` passed.",
+        "`pnpm test:contracts` (23 tests) passed; `playwright test --project=integration` (29 tests) passed.",
+        "Integration tests include deterministic stopping (adaptive-waves), route equality (parallel-lives), bounded-chat behavior, prompt fallbacks and citation validity (wave-one, parallel-lives, guest-session, upload-boundary)."
+      ]
+    }
+  ]
+}

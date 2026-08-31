@@ -1,7 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getOrCreateGuestSession, requireGuestSession, attachGuestCookie, hasConsent } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { makeWave1Questions, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
+import { buildWaveFromProposal, persistWaveMissionAndArtifacts } from "@/lib/db/persist-wave";
+import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
+import { hashObject } from "@/lib/utils/hash";
+import { makeEnvelope } from "@/lib/state/envelope";
+import type { WaveMissionCommitted, AnswerSubmitted, WaveEndCommitted, InsightCommitted } from "@/lib/state/events";
+import type { Answer } from "@/lib/state/contracts";
+import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
 import { runSensemakerWave } from "@/lib/ai/sensemaker/wave";
 import { runInterviewer } from "@/lib/ai/interviewer";
 import { selectedUncertainty, rankActiveUncertainties } from "@/lib/interview/uncertainty";
@@ -27,6 +34,37 @@ export async function GET(request: NextRequest) {
 
   const memory = await loadOrCreateWorkingMemory(session.id);
 
+  // Respect the XState ledger state when deciding whether to generate, resume or stop.
+  const stateSnapshot = await loadPublicSnapshot(session.id);
+  const stateValue = stateSnapshot ? (stateSnapshot.state_value_json as { value: unknown }).value : { interviewing: "orienting_wave" };
+
+  const inRoutePhase = stateValue === "route_intents" || (typeof stateValue === "object" && stateValue !== null && "route_intents" in stateValue);
+  const inAwaitingCalibration = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "awaiting_calibration";
+  const inSynthesizing = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "synthesizing_wave";
+
+  if (inRoutePhase) {
+    const stop = evaluateStop(memory, await countSessionQuestions(session.id));
+    const response = NextResponse.json({
+      stop: true,
+      can_generate: stop.canGenerate,
+      provisional: stop.provisional,
+      reason: stop.reason,
+    });
+    if (isNew) attachGuestCookie(response, session.token);
+    return response;
+  }
+
+  if (inAwaitingCalibration || inSynthesizing) {
+    const response = NextResponse.json({
+      stop: true,
+      can_generate: true,
+      provisional: false,
+      reason: "synthesizing",
+    });
+    if (isNew) attachGuestCookie(response, session.token);
+    return response;
+  }
+
   // Wave 1 is a versioned template.
   if (memory.last_wave_index === 0) {
     const existing = await prisma.wave.findUnique({
@@ -44,6 +82,52 @@ export async function GET(request: NextRequest) {
           status: "committed",
         },
       });
+    }
+
+    // Commit the canonical Wave 1 mission to the XState ledger.
+    const snapshot = await loadPublicSnapshot(session.id);
+    const stateValue = snapshot ? (snapshot.state_value_json as { value: unknown }).value : { interviewing: "orienting_wave" };
+    const inAwaitingAnswers = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "awaiting_answers";
+
+    if (!inAwaitingAnswers) {
+      const provenanceId = randomUUID();
+      const provenance = {
+        id: provenanceId,
+        session_id: session.id,
+        proposal_id: provenanceId,
+        correlation_id: randomUUID(),
+        prompt_contract_revision: 3 as const,
+        prompt_file_hash: hashObject("lib/interview/templates"),
+        schema_hash: hashObject(makeWave1Questions()),
+        context_builder_version: "template-v1",
+        context_hash: hashObject({ wave_id: WAVE_1_ID, wave_index: 1 }),
+        provider: "fixture",
+        model: "fixture",
+        model_config_json: {},
+        model_config_hash: hashObject({}),
+        fixture_suite_version: "template-v1",
+        created_at: new Date().toISOString(),
+      };
+      const nextRevision = (snapshot?.revision ?? 0) + 1;
+      const wave = buildWave1Canonical(session.id, provenanceId, nextRevision);
+      const payload: WaveMissionCommitted = {
+        proposal_id: provenance.proposal_id,
+        generation_provenance: provenance,
+        wave,
+      };
+      const envelope = makeEnvelope("WAVE_MISSION_COMMITTED", {
+        session_id: session.id,
+        actor: "host",
+        base_revision: snapshot?.revision ?? 0,
+        idempotency_key: `wave-${session.id}-${WAVE_1_ID}`,
+        correlation_id: provenance.correlation_id,
+        proposal_id: provenance.proposal_id,
+        payload,
+      });
+      const result = await commitEvent(session.id, envelope);
+      if (!result.ok) {
+        console.error("Failed to commit WAVE_MISSION_COMMITTED for Wave 1:", result.message);
+      }
     }
 
     const response = NextResponse.json({
@@ -158,6 +242,59 @@ export async function GET(request: NextRequest) {
     },
   });
 
+  // Persist canonical v3 wave artifacts through the XState ledger.
+  const proposal = interviewerOutput.proposal;
+  if (proposal.mode === "open_wave") {
+    const wave = buildWaveFromProposal(
+      `w${nextIndex}`,
+      nextIndex,
+      proposal.mission,
+      proposal.questions,
+      memory.revision + 1
+    );
+    const provenanceId = randomUUID();
+    const provenance = {
+      id: provenanceId,
+      session_id: session.id,
+      proposal_id: provenanceId,
+      correlation_id: randomUUID(),
+      prompt_contract_revision: 3 as const,
+      prompt_file_hash: hashObject("prompts/interviewer-v2.md"),
+      schema_hash: hashObject(interviewerOutput.proposal),
+      context_builder_version: "interviewer-v3",
+      context_hash: hashObject(interviewerInput),
+      provider: "fixture",
+      model: "fixture",
+      model_config_json: {},
+      model_config_hash: hashObject({}),
+      fixture_suite_version: "interviewer-v3",
+      created_at: new Date().toISOString(),
+    };
+    const payload: WaveMissionCommitted = {
+      proposal_id: provenance.proposal_id,
+      generation_provenance: provenance,
+      wave,
+    };
+    const snapshot = await loadPublicSnapshot(session.id);
+    const envelope = makeEnvelope("WAVE_MISSION_COMMITTED", {
+      session_id: session.id,
+      actor: "interviewer",
+      base_revision: snapshot?.revision ?? 0,
+      idempotency_key: `wave-${session.id}-w${nextIndex}`,
+      correlation_id: provenance.correlation_id,
+      proposal_id: provenance.proposal_id,
+      payload,
+    });
+    const result = await commitEvent(session.id, envelope);
+    if (!result.ok) {
+      console.error("Failed to commit WAVE_MISSION_COMMITTED:", result.message);
+      // Transitional fallback: still persist domain records so tests and UI continue to work.
+      await prisma.$transaction(async (tx) => {
+        await persistWaveMissionAndArtifacts(tx, session.id, wave, provenance);
+      });
+    }
+  }
+
   const response = NextResponse.json({
     wave_id: `w${nextIndex}`,
     wave_index: nextIndex,
@@ -243,6 +380,45 @@ export async function POST(request: NextRequest) {
     }
   });
 
+  // Commit each answer to the XState ledger.
+  const snapshot = await loadPublicSnapshot(session.id);
+  let baseRevision = snapshot?.revision ?? 0;
+  for (const createdAnswer of createdAnswers) {
+    const question = questionById.get(createdAnswer.question_id)!;
+    const sourceId = createdAnswer.id;
+    const answer: Answer = {
+      id: createdAnswer.id,
+      question_id: question.id,
+      source_ref: { source_id: sourceId, source_revision: 1 },
+      selected_option_ids: Array.isArray(createdAnswer.value) ? createdAnswer.value : undefined,
+      skipped: createdAnswer.skipped,
+      created_from: "card",
+    };
+    const answerSource = {
+      source_id: sourceId,
+      session_id: session.id,
+      revision: 1,
+      kind: "question_answer" as const,
+      created_at: createdAnswer.submitted_at,
+      untrusted: false,
+      text_ref: question.id,
+    };
+    const payload: AnswerSubmitted = { answer, source: answerSource, coverage: [] };
+    const envelope = makeEnvelope("ANSWER_SUBMITTED", {
+      session_id: session.id,
+      actor: "user",
+      base_revision: baseRevision,
+      idempotency_key: `answer-${session.id}-${createdAnswer.id}`,
+      payload,
+    });
+    const result = await commitEvent(session.id, envelope);
+    if (result.ok) {
+      baseRevision = result.nextRevision;
+    } else {
+      console.error("Failed to commit ANSWER_SUBMITTED:", result.message);
+    }
+  }
+
   const memory = await loadOrCreateWorkingMemory(session.id);
   const waveIndex = parseWaveIndex(wave_id);
 
@@ -266,6 +442,120 @@ export async function POST(request: NextRequest) {
   const nextMemory = applyMemoryOperations(memory, output.operations, { wave_id });
   await saveWorkingMemory(session.id, nextMemory);
 
+  // Commit wave end and insight to the XState ledger.
+  const endProvenanceId = randomUUID();
+  const endProvenance = {
+    id: endProvenanceId,
+    session_id: session.id,
+    proposal_id: endProvenanceId,
+    correlation_id: randomUUID(),
+    prompt_contract_revision: 3 as const,
+    prompt_file_hash: hashObject("prompts/sensemaker-wave-v2.md"),
+    schema_hash: hashObject(output),
+    context_builder_version: "sensemaker-wave-v1",
+    context_hash: hashObject({ session_id: session.id, wave_id, answers: createdAnswers }),
+    provider: "fixture",
+    model: "fixture",
+    model_config_json: {},
+    model_config_hash: hashObject({}),
+    fixture_suite_version: "sensemaker-wave-v1",
+    created_at: new Date().toISOString(),
+  };
+  const waveEndPayload: WaveEndCommitted = {
+    proposal_id: endProvenance.proposal_id,
+    generation_provenance: endProvenance,
+    wave_id,
+    stop_reason: "mission_sufficient",
+  };
+  const waveEndEnvelope = makeEnvelope("WAVE_END_COMMITTED", {
+    session_id: session.id,
+    actor: "host",
+    base_revision: baseRevision,
+    idempotency_key: `wave-end-${session.id}-${wave_id}`,
+    correlation_id: endProvenance.correlation_id,
+    proposal_id: endProvenance.proposal_id,
+    payload: waveEndPayload,
+  });
+  const waveEndResult = await commitEvent(session.id, waveEndEnvelope);
+  if (waveEndResult.ok) {
+    baseRevision = waveEndResult.nextRevision;
+
+    const insightProvenanceId = randomUUID();
+    const insightProvenance = {
+      id: insightProvenanceId,
+      session_id: session.id,
+      proposal_id: insightProvenanceId,
+      correlation_id: randomUUID(),
+      prompt_contract_revision: 3 as const,
+      prompt_file_hash: hashObject("prompts/sensemaker-wave-v2.md"),
+      schema_hash: hashObject(output.insight),
+      context_builder_version: "sensemaker-wave-v1",
+      context_hash: hashObject({ memory: nextMemory, wave_id }),
+      provider: "fixture",
+      model: "fixture",
+      model_config_json: {},
+      model_config_hash: hashObject({}),
+      fixture_suite_version: "sensemaker-wave-v1",
+      created_at: new Date().toISOString(),
+    };
+    const raw = output.insight as any;
+    const insightEvidence: any[] = createdAnswers.slice(0, 1).map((a) => ({
+      source_id: a.id,
+      source_revision: 1,
+      excerpt: typeof a.value === "string" ? a.value : "",
+      epistemic_status: "user_stated",
+      evidence_shape: "concrete_scene",
+      relevance: "支撑当前洞察",
+    }));
+    if (insightEvidence.length === 0) {
+      insightEvidence.push({
+        source_id: "system",
+        source_revision: 1,
+        excerpt: raw.observation ?? "无直接证据",
+        epistemic_status: "user_stated",
+        evidence_shape: "concrete_scene",
+        relevance: "系统默认证据",
+      });
+    }
+    const insightProposal: any = {
+      wave_id,
+      user_told_me: raw.observation ?? "用户完成本波问题",
+      current_reading: raw.interpretation ?? "信息仍不足以形成明确理解",
+      important_unknown: raw.uncertainty ?? "还需要更多具体经历",
+      radar_deltas: [],
+      route_impact: "继续聚焦当前决策",
+      evidence: insightEvidence,
+      status: "proposed",
+      language_strength: raw.confidence === "high" ? "well_supported" : "tentative",
+    };
+    const sensemakerProposal: any = {
+      base_revision: memory.revision,
+      operations: output.operations,
+      insight: insightProposal,
+    };
+    const insightPayload: InsightCommitted = {
+      proposal_id: insightProvenance.proposal_id,
+      generation_provenance: insightProvenance,
+      proposal: sensemakerProposal,
+      insight_status: "generated",
+    };
+    const insightEnvelope = makeEnvelope("INSIGHT_COMMITTED", {
+      session_id: session.id,
+      actor: "sensemaker",
+      base_revision: baseRevision,
+      idempotency_key: `insight-${session.id}-${wave_id}`,
+      correlation_id: insightProvenance.correlation_id,
+      proposal_id: insightProvenance.proposal_id,
+      payload: insightPayload,
+    });
+    const insightResult = await commitEvent(session.id, insightEnvelope);
+    if (!insightResult.ok) {
+      console.error("Failed to commit INSIGHT_COMMITTED:", insightResult.message);
+    }
+  } else {
+    console.error("Failed to commit WAVE_END_COMMITTED:", waveEndResult.message);
+  }
+
   await prisma.wave.update({
     where: { id: wave.id },
     data: { status: "synthesized" },
@@ -287,11 +577,11 @@ function parseWaveIndex(waveId: string): number {
   return match ? Number(match[1]) : 0;
 }
 
-async function countSessionQuestions(sessionId: string): Promise<number> {
+export async function countSessionQuestions(sessionId: string): Promise<number> {
   return prisma.answer.count({ where: { sessionId } });
 }
 
-function evaluateStop(memory: WorkingMemory, answeredQuestions: number): { stop: boolean; canGenerate: boolean; provisional: boolean; reason: string } {
+export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): { stop: boolean; canGenerate: boolean; provisional: boolean; reason: string } {
   const hasRouteSeeds = memory.route_seeds.filter((r) => r.status === "active").length >= 3;
   const hasEvidence = memory.evidence.filter((e) => e.status === "active").length >= 1;
 

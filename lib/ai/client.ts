@@ -83,7 +83,7 @@ export type GenerateStructuredOptions<T> = {
   wave_id?: string;
   session_id?: string;
   prompt: string;
-  schema: z.ZodType<T>;
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   max_tokens?: number;
   timeout_ms?: number;
   temperature?: number;

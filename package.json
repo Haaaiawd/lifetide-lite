@@ -2,6 +2,7 @@
   "name": "lifetide-lite",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.24.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -9,7 +10,11 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:contracts": "vitest run tests/contracts tests/unit",
+    "test:contracts:watch": "vitest tests/contracts tests/unit",
+    "db:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.104",
@@ -35,9 +40,18 @@
     "@types/react-dom": "19.2.5",
     "@types/three": "^0.185.4",
     "eslint": "^10.9.1",
+    "fast-check": "^4.1.1",
     "postcss": "8.5.5",
+    "prisma": "6.6.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.8.3",
-    "typescript-eslint": "^8.68.0"
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^3.1.1",
+    "xstate": "^5.19.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client"
+    ]
   }
 }

@@ -43,7 +43,7 @@
 ## Consequences for design, implementation, and verification
 
 - `journey-and-interaction.md` 应把首个有意义反馈放在短波次内，并在每条洞察旁提供“为什么这样想 / 不像我 / 补充一点”。
-- `insight-plan-contracts.md` 的洞察对象必须携带 `status=tentative`、依据摘要、未知、生成时间和纠正状态；计划必须恰有三条三年路线及一个三天试验，不得有总排名。
+- `insight-plan-contracts.md` 的洞察对象必须把 lifecycle `status`（proposed/generated/calibrated/stale/invalidated）与证据措辞 `language_strength`（tentative/well_supported/conflicted）分开，并携带依据、未知、生成时间和独立校准事件；计划必须恰有三条三年路线及一个三天试验，不得有总排名。
 - `adaptive-interview-system.md` 应让纠正改变后续工作记忆，而非只收集点赞/踩。
 - 匿名试用、保存、上传、导出和删除必须是完整产品状态，不可留给隐私文案补洞。
 - MVP 研究同时测量洞察可信度、纠正率、路线差异度、三天试验启动率；完成页面数或对话轮数不是价值指标。

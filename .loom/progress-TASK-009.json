@@ -1,0 +1,14 @@
+{
+  "progress": {
+    "completed": [
+      "Health audit mapped in `.loom/prompt-inventory.md`.",
+      "Verified no runtime references to PersonaAuditor, StopDecision, Planner, 72-cell, CoverageCell or PersonaSnapshot.",
+      "Migrated `lib/ai/interviewer.ts` to v3 `InterviewerProposal` (5-10 elicitation units, 1-3 opening questions, concrete→contrast→optional-future ordering) while keeping backward-compatible `questions` output.",
+      "Updated `lib/ai/sensemaker/wave.ts` prompt to enforce fact/interpretation/unknown separation and prohibit score/coverage/ranking language.",
+      "Pulled in bounded-chat runtime (`lib/ai/sensemaker/chat.ts`, `lib/chat/store.ts`, `lib/chat/summary.ts`) and added missing `BoundedChatThread` / `SensemakerChatOutput` types and schemas.",
+      "All verification passed: typecheck, lint, build, 23 contract/unit tests, 29 Playwright integration tests."
+    ],
+    "current": "Determining whether to proceed with deeper v3 data migration (build-wave-patch.ts radar, route-intent model) or close TASK-009 evidence and return to TASK-008.",
+    "next": "Complete the remaining v3 runtime alignment or hand off to TASK-008 API/persistence wiring with a clean prompt baseline."
+  }
+}
