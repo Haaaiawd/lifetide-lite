@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" data-scroll-behavior="smooth">
       <body className="graph-paper text-ink antialiased">
         <Providers>
           <main className="mx-auto min-h-[100dvh] w-full max-w-7xl px-4 py-6 md:px-6 lg:px-8">

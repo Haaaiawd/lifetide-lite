@@ -1,0 +1,72 @@
+{
+  "evidence": [
+    {
+      "criterion": "XState v5 expresses session/wave top-level states and AI output cannot bypass guards directly",
+      "proof": "commitEvent in lib/db/commit.ts restores an XState actor from the persisted snapshot, sends the canonical event, and only persists domain records and state head when the actor transitions. app/api/session, app/api/session/consent, app/api/wave, app/api/feedback and app/api/final all route through commitEvent. Guard rejection is detected when neither state value nor context revision changes.",
+      "artefacts": [
+        "lib/db/commit.ts",
+        "lib/state/machine.ts",
+        "app/api/session/route.ts",
+        "app/api/session/consent/route.ts",
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/api/final/route.ts"
+      ]
+    },
+    {
+      "criterion": "Revision-safe, idempotent event ledger",
+      "proof": "commitEvent implements idempotency-key replay, idempotency-payload conflict detection, stale-base-revision rejection and monotonic revision increment. The full flow reaches parallel_lives_ready. Unit tests cover idempotency, revision conflict, invalid state and PERSISTENCE_ERROR rollback.",
+      "artefacts": [
+        "lib/db/commit.ts",
+        "tests/unit/commit-event.test.ts"
+      ]
+    },
+    {
+      "criterion": "Canonical v3 domain records are persisted for waves, answers, insights, calibrations and route intents",
+      "proof": "persistWaveMission, persistAnswer, persistInsight, persistCalibration and persistRouteIntents in lib/db/commit.ts upsert domain records transactionally. Wave 1 template now commits a canonical Wave mission with elicitation units, microbatch and questions.",
+      "artefacts": [
+        "lib/db/commit.ts",
+        "lib/db/persist-wave.ts",
+        "lib/interview/templates.ts",
+        "app/api/wave/route.ts",
+        "prisma/schema.prisma"
+      ]
+    },
+    {
+      "criterion": "Existing integration and e2e regressions remain passing",
+      "proof": "Full Playwright integration suite (30 tests) passes; e2e mobile and desktop suites (18 tests) pass; pnpm typecheck, build and lint (0 errors) pass; contract and unit tests pass.",
+      "artefacts": [
+        "tests/integration/",
+        "tests/e2e/",
+        "tests/contracts/",
+        "tests/unit/",
+        "package.json"
+      ]
+    },
+    {
+      "criterion": "Main conversation APIs route through the XState ledger for the full conversation flow",
+      "proof": "GET/POST /api/wave emits WAVE_MISSION_COMMITTED, ANSWER_SUBMITTED, WAVE_END_COMMITTED and INSIGHT_COMMITTED. POST /api/feedback emits CALIBRATION_SUBMITTED, NEXT_WAVE_COMMITTED or ROUTE_PHASE_ENTERED. POST /api/final emits ROUTE_PHASE_ENTERED, ROUTE_INTENT_CANDIDATES_COMMITTED, ORDINARY_DAY_SCREENING_STARTED, ORDINARY_DAYS_COMMITTED and PARALLEL_LIVES_COMMITTED.",
+      "artefacts": [
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/api/final/route.ts",
+        "tests/integration/harness-state.test.ts"
+      ]
+    },
+    {
+      "criterion": "Full two-wave + final plan ledger is revision-safe and monotonic",
+      "proof": "tests/integration/harness-state.test.ts asserts the exact event sequence, monotonic revisions, unique idempotency keys and final parallel_lives_ready state.",
+      "artefacts": [
+        "tests/integration/harness-state.test.ts",
+        "lib/db/commit.ts",
+        "lib/state/machine.ts"
+      ]
+    }
+  ],
+  "remaining_gaps": [
+    "Strict source-reference validation against tx.SourceHead/tx.SourceVersion before persisting (currently a TODO in lib/db/commit.ts).",
+    "Domain record persistence for ORDINARY_DAYS and PARALLEL_LIVES (no Prisma models yet; events are ledger-only).",
+    "Append-and-supersede semantic-correction persistence for semantic corrections and CALIBRATION_SKIPPED.",
+    "Additional property/fault tests for deep-dive limits, elicitation minimums, provider failure and trial reflection."
+  ]
+}

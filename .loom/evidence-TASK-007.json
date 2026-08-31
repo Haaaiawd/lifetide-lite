@@ -1,0 +1,64 @@
+{
+  "evidence": [
+    "Responsible owner explicitly stopped further Keeper review after seven completed rounds; `rtk loom keeper skip` recorded the reason without claiming an independent pass.",
+    "`rtk pwsh -NoProfile -File .loom/tools/verify-harness.ps1` passed at final closure with HARNESS_LINT_OK, json=16, markdown=31, prompts=6 and decisions=26.",
+    "`rtk loom check` returned healthy=true with zero errors and zero warnings while TASK-007 was active.",
+    "`rtk git diff --check` passed, and `git status --short` showed intentional changes only under .loom/ and prompts/; no runtime, dependency, database-schema or visual-source file was modified.",
+    "A focused stale-contract scan found no life_shape_axes, open/deep proposal conflation, update_claim, proposed_mission, duplicate DeepDive/Interviewer schema, optional calibration SourceVersion or all-question local-index residue in canonical design/capability/prompt/task/decision files.",
+    "Keeper attempt 7's five material gaps now have exact dispositions: stable ordered elicitation units and committed continue ids; pure fact-derived readiness; immutable supersede_claim provenance; recommendation-only deep dive followed by a distinct open call; and a pinned TASK-008 pnpm/Prisma clean-install gate."
+  ],
+  "checks": [
+    {
+      "criterion": "PROJECT and every linked product/system/journey/contract/acceptance document agree on two runtime roles, 5-10 elicitation units and at most 10 actual questions per wave, 1-3 per microbatch, default three and maximum five waves, maximum two in-cap deep dives, one formal insight per wave, six dimensions with five radar states and fifth-wave stop behavior.",
+      "evidence": [
+        ".loom/PROJECT.md and .loom/design/conversational-six-dimension-harness.md state the same role, wave, unit, microbatch, insight, radar and hard-stop constants.",
+        ".loom/design/insight-plan-contracts.md and .loom/design/state-and-persistence-protocol.md encode those constants as proposal shapes, guards, transitions and negative tests.",
+        ".loom/design/acceptance-and-research.md maps the same invariants to P0 contract/property/E2E evidence.",
+        "The final Harness lint asserts the shared constants across the canonical files."
+      ]
+    },
+    {
+      "criterion": "Every operational prompt declares contract revision, trusted inputs, authority, output, decision procedure, epistemic/safety rules, self-check and degraded behavior; no stale prompt remains canonical.",
+      "evidence": [
+        "All six operational prompts declare contract_revision: 3 plus Single responsibility, Inputs, Authority, Output, decision procedure, safety/epistemic rules, Self-check and Failure behavior.",
+        "prompts/PROMPT-ARCHITECTURE.md freezes composition order, the two-role/mode map, host/model authority, provenance, repair, activation and deletion rules.",
+        "The lint enumerates exactly interviewer-v2, sensemaker-wave-v2, odyssey-generator-v2, prototype-designer-v2, blueprint-writer-v2 and sensemaker-chat-v3 and fails if required sections disappear."
+      ]
+    },
+    {
+      "criterion": "The route-readiness gate and F01-F12 fixtures cover correction, contradiction, refusal, long/short answers, upload injection, route collapse, source edits, fifth-wave insufficiency and crisis boundaries without a 72-cell runtime dependency.",
+      "evidence": [
+        ".loom/design/insight-plan-contracts.md defines deriveRouteReadiness(snapshot) as a host-only pure derivation from committed facts and exact source refs.",
+        ".loom/design/prompt-eval-fixtures.md defines F01-F12 across the required normal, correction, refusal, injection, route-collapse, cap and crisis cases.",
+        ".loom/design/acceptance-and-research.md maps readiness and fixtures to contract, semantic, property, fault and E2E tests.",
+        "Canonical documents retain 72 cells only as rejected/legacy research context, never as a runtime type, score or gate."
+      ]
+    },
+    {
+      "criterion": "Open-source decisions retain the frozen visual/runtime donor, select XState v5 and selective AI Elements source adoption, and reject overlapping conversation runtimes or multi-Agent frameworks.",
+      "evidence": [
+        ".loom/design/platform-and-assets.md selects XState v5, keeps AI SDK/Zod/Prisma-SQLite and frozen visual tokens, and limits AI Elements to selective local source adoption.",
+        "prompts/PROMPT-ARCHITECTURE.md and .loom/PROJECT.md retain exactly Interviewer and Sensemaker runtime roles and reject a second conversation or Agent orchestration runtime.",
+        "Final git status proves TASK-007 changed only .loom/ and prompts/."
+      ]
+    },
+    {
+      "criterion": "Canonical state/event persistence, exact SourceRef lifecycle, formal/provisional readiness truth table and artifact field ownership are executable from disk without implementer invention.",
+      "evidence": [
+        ".loom/design/state-and-persistence-protocol.md defines the XState states/events/guards, transition ledger/snapshot transaction, revisions, idempotency, pause/degraded/safety recovery and required tests.",
+        ".loom/design/insight-plan-contracts.md defines immutable SourceVersion/SourceHead/SourceRef, GenerationProvenance, ordered ElicitationUnit, proposal/commit ownership, supersede_claim, route readiness, route/life/trial artifacts and negative tests.",
+        "Deep dive has one recommendation-only proposal followed by a distinct accepted open_wave call; continued questions use exact committed unit ids.",
+        "TASK-008 names exact donor reads, touches, first actions, clean-install policy and verification commands."
+      ]
+    },
+    {
+      "criterion": "Automated cross-document lint passes; every material gap from the latest independent Keeper handoff is mapped to a canonical contract, test or explicit TASK-008 action, with no hallucinated runtime-health claim.",
+      "evidence": [
+        "Final L0 output: HARNESS_LINT_OK; json=16 markdown=31 prompts=6 decisions=26.",
+        "Final `rtk loom check`: healthy=true, errors=[], warnings=[].",
+        "Keeper attempt 7 remains honestly recorded as needs_revision; its five findings are closed on disk and the responsible owner's explicit seven-round stop is recorded through `loom keeper skip` and D-026.",
+        ".loom/design/prompt-architecture-brief.md distinguishes design-contract health from not-yet-implemented runtime health and records the donor Prisma clean-install failure as TASK-008 work."
+      ]
+    }
+  ]
+}

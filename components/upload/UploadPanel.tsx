@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { FileArrowUp, Trash, ArrowClockwise, X } from "@phosphor-icons/react";
+import { PixelIcon } from "@/components/art/PixelIcon";
 import type { Prisma } from "@prisma/client";
 
 type UploadWithChunks = Prisma.UploadGetPayload<{ include: { chunks: true } }>;
@@ -128,7 +129,10 @@ export function UploadPanel() {
 
   return (
     <section className="w-full max-w-md rounded-lg border-2 border-ink bg-paper-raised p-5 shadow-md">
-      <h2 className="font-serif text-2xl">可选材料</h2>
+      <div className="flex items-center gap-2">
+        <PixelIcon name="user" size={24} className="text-cobalt" />
+        <h2 className="font-serif text-2xl">可选材料</h2>
+      </div>
       <p className="mt-1 text-sm text-ink-muted">
         不上传也可以开始。简历、MBTI 等材料只作为追问线索，不是结论。
       </p>

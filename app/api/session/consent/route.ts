@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { requireGuestSession } from "@/lib/auth/session";
 import { canProcess, consentCatalog, isRequired, type ConsentType } from "@/lib/privacy/consent";
 import { prisma } from "@/lib/db/prisma";
+import { commitEvent } from "@/lib/db/commit";
+import { makeEnvelope } from "@/lib/state/envelope";
+import { loadPublicSnapshot } from "@/lib/db/commit";
+import type { ConsentRecorded } from "@/lib/state/events";
 import type { NextRequest } from "next/server";
 
 const ALLOWED = new Set<ConsentType>(["ai", "upload", "research"]);
@@ -63,6 +67,29 @@ export async function POST(request: NextRequest) {
     given: c.given,
   }));
 
+  const canUseAI = canProcess(consentChecks, "ai").allowed;
+  const canUpload = canProcess(consentChecks, "upload").allowed;
+
+  if (canUseAI) {
+    const snapshot = await loadPublicSnapshot(session.id);
+    const consentRecorded: ConsentRecorded = {
+      consent_version: "v1",
+      ai: true,
+      upload: canUpload,
+    };
+    const envelope = makeEnvelope("CONSENT_RECORDED", {
+      session_id: session.id,
+      actor: "user",
+      base_revision: snapshot?.revision ?? 0,
+      idempotency_key: `consent-${session.id}`,
+      payload: consentRecorded,
+    });
+    const result = await commitEvent(session.id, envelope);
+    if (!result.ok) {
+      console.error("Failed to commit CONSENT_RECORDED:", result.message);
+    }
+  }
+
   return NextResponse.json({
     consents: refreshed.consents.map((c) => ({
       type: c.type,
@@ -70,8 +97,8 @@ export async function POST(request: NextRequest) {
       given: c.given,
       givenAt: c.givenAt,
     })),
-    canUseAI: canProcess(consentChecks, "ai").allowed,
-    canUpload: canProcess(consentChecks, "upload").allowed,
+    canUseAI,
+    canUpload,
     missingRequired: refreshed.consents
       .filter((c) => c.required && !c.given)
       .map((c) => c.type),

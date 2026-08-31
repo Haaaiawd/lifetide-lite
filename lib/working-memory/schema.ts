@@ -192,4 +192,64 @@ export const sensemakerWaveOutputSchema = z
   })
   .strict();
 
+export const chatScopeSchema = z.enum(["explain", "compare_tradeoff", "refine_trial", "reflect_on_trial"]);
+
+export const chatMessageSchema = z.object({
+  id: idSchema,
+  role: z.enum(["user", "assistant"]),
+  text: z.string().min(1).max(1500),
+  scope: chatScopeSchema.optional(),
+  cited_evidence_ids: z.array(idSchema).optional(),
+  local_note: z.string().max(160).optional(),
+  created_at: z.string().min(1),
+});
+
+export const boundedChatThreadSchema = z.object({
+  id: idSchema,
+  session_id: idSchema,
+  final_plan_revision: z.number().int().min(0),
+  turns_used: z.number().int().min(0).max(20),
+  status: z.enum(["active", "closed_limit", "closed_user", "closed_safety"]),
+  local_notes: z.array(z.string().max(160)).max(8),
+  messages: z.array(chatMessageSchema).max(41),
+});
+
+const recentMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  text: z.string().max(1500),
+});
+
+export const sensemakerChatInputSchema = z.object({
+  schema_version: z.literal("sensemaker.chat.input.v1"),
+  scope: chatScopeSchema,
+  message: z.string().min(1).max(1500),
+  plan: z.any(),
+  memory_summary: z.string().max(6000),
+  recent_messages: z.array(recentMessageSchema).max(6),
+  turns_remaining: z.number().int().min(0).max(20),
+  prompt_version: z.string().min(1),
+});
+
+const rawSensemakerChatOutputSchema = z.object({
+  schema_version: z.literal("sensemaker.chat.output.v1").optional(),
+  response: z.string().min(1).max(2000).optional(),
+  answer: z.string().min(1).max(2000).optional(),
+  reply: z.string().min(1).max(2000).optional(),
+  cited_evidence_ids: z.array(z.string().max(64)).max(5).default([]),
+  local_note: z.string().max(160).nullable().optional(),
+  offer_reinterview: z.boolean().default(false),
+  close_thread: z.boolean().default(false),
+});
+
+export const sensemakerChatOutputSchema = rawSensemakerChatOutputSchema
+  .transform((data) => ({
+    schema_version: data.schema_version ?? "sensemaker.chat.output.v1",
+    response: data.response ?? data.answer ?? data.reply ?? "",
+    cited_evidence_ids: data.cited_evidence_ids,
+    local_note: data.local_note ?? undefined,
+    offer_reinterview: data.offer_reinterview,
+    close_thread: data.close_thread,
+  }))
+  .refine((data) => data.response.length > 0, "chat output must include response, answer or reply");
+
 export type WorkingMemoryFromSchema = z.infer<typeof workingMemorySchema>;

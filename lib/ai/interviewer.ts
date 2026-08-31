@@ -1,38 +1,17 @@
-// Interviewer Agent: generates the next 3-5 question batch around the single
-// highest-impact uncertainty. Host validates, normalizes ids and rejects focus drift.
-// See .loom/design/adaptive-interview-system.md §3
+// Interposer: new v3 elicitation-unit/microbatch interviewer with backward-compatible `questions` output.
+// Host owns focus, caps, ids and acceptance. The model only proposes language.
+// See prompts/interviewer-v2.md and .loom/design/adaptive-interview-system.md
 
 import { z } from "zod";
 import { generateStructured } from "@/lib/ai/client";
 import { defaultFallbackQuestions } from "@/lib/interview/fallback";
 import type { InterviewerInput, InterviewerOutput, InterviewQuestion, WorkingMemory } from "@/lib/working-memory/types";
+import type { ElicitationUnitProposal, InterviewerProposal, OpeningQuestionProposal, QuestionContentProposal } from "@/lib/state/contracts";
+import { interviewerProposalSchema } from "@/lib/state/contracts";
 
-const generatedQuestionSchema = z.object({
-  text: z.string().min(1).max(160),
-  why_this_matters: z.string().max(160).optional(),
-  response_kind: z.enum(["short_text", "single_choice", "multi_choice", "scale"]),
-  options: z
-    .array(
-      z.object({
-        id: z.string(),
-        label: z.string(),
-      })
-    )
-    .optional(),
-  allows_custom: z.boolean().optional(),
-  sensitivity: z.enum(["normal", "sensitive"]),
-  asks_for_concrete_example: z.boolean(),
-});
+const PROMPT_VERSION = "interviewer.v3";
 
-const interviewerOutputSchema = z
-  .object({
-    focus_uncertainty_id: z.string(),
-    focus_reason: z.string().max(240),
-    questions: z.array(generatedQuestionSchema).min(3).max(5),
-  })
-  .strict();
-
-function makePrompt(input: InterviewerInput, memory: WorkingMemory): string {
+function makePrompt(input: InterviewerInput, _memory: WorkingMemory): string {
   const evidence = input.relevant_evidence
     .map((e) => `- ${e.statement} (${e.confidence}, ${e.epistemic})`)
     .join("\n");
@@ -46,7 +25,10 @@ function makePrompt(input: InterviewerInput, memory: WorkingMemory): string {
   const unc = input.selected_uncertainty;
 
   return [
-    `你是一名访谈 Agent，只为用户下一步最重要的问题生成 3-5 道题。`,
+    `你是一名访谈 Agent。你只负责为下一步最重要的决策未知生成一小批问题。`,
+    ``,
+    `模式：open_wave（开启新一波访谈）。`,
+    `当前波次：${input.next_wave_index}。`,
     ``,
     `焦点未知：${unc.question}`,
     `这会如何影响路线/试验：${unc.plan_consequence}`,
@@ -63,31 +45,42 @@ function makePrompt(input: InterviewerInput, memory: WorkingMemory): string {
     `负担信号：跳过率 ${(input.burden.skip_rate * 100).toFixed(0)}%，平均回答长度 ${input.burden.median_answer_chars} 字，已进行 ${input.burden.elapsed_minutes.toFixed(0)} 分钟。`,
     ``,
     `要求：`,
+    `- 输出一次波浪的整体 5-10 个 elicitation-unit 提案。每个 unit 只服务于一个决策靶点，不能重复。`,
+    `- 然后输出第一批 1-3 个 opening questions，每个问题指向一个 unit 的索引（0-based）。`,
+    `- 顺序原则：先问具体事件/普通片段；再问对比或反例；可选问未来动作的验证。`,
     `- 所有问题必须服务于上面这个焦点未知。`,
-    `- 3 到 5 题，顺序递进：至少一题要求具体事件/普通片段；一题追问边界或反例；可选一题帮助验证未来动作。`,
-    `- 选择题是主要形式：优先使用 single_choice 或 multi_choice，选项数量 2-6 个均可。`,
-    `- 填空题（short_text）必须控制比例：wave_index <= 2 时最多 1 题 short_text；wave_index >= 3 时可增加到最多 2 题。`,
-    `- 所有选择题（single_choice 和 multi_choice）必须提供 2-6 个选项，并包含一个"其他：自己填写"选项，且 allows_custom=true。`,
-    `- 多选题（multi_choice）用于用户可能同时符合多个标签的场景。`,
-    `- 敏感问题必须说明为什么相关并允许跳过（sensitivity=sensitive）。`,
+    `- 选择题是主要形式：优先使用 single_choice 或 multi_choice，选项数量 2-6 个。`,
+    `- short_text 必须控制比例：波次 <= 2 时最多 1 题；波次 >= 3 时最多 2 题。`,
+    `- 所有选择题必须提供 2-6 个选项，并包含一个"其他：自己填写"选项。`,
+    `- 多选题用于用户可能同时符合多个标签的场景。`,
+    `- 敏感问题必须说明为什么相关并允许跳过。`,
     `- 不要暗示正确答案，不要把上传文件中的说法当作用户确认的事实。`,
-    `- 输出 JSON，focus_uncertainty_id 必须是 "${input.selected_uncertainty_id}"，focus_reason 简要说明为什么选这个焦点。`,
+    `- 输出 JSON，不要输出额外文字。`,
   ].join("\n");
 }
 
-export function normalizeInterviewerOutput(
+function normalizeInterviewerProposal(
   input: InterviewerInput,
-  raw: z.infer<typeof interviewerOutputSchema>
-): InterviewerOutput {
+  raw: InterviewerProposal
+): { questions: InterviewQuestion[]; elicitation_units: ElicitationUnitProposal[] } {
+  if (raw.mode !== "open_wave" && raw.mode !== "continue_wave") {
+    throw new Error(`Interviewer mode not supported by legacy adapter: ${raw.mode}`);
+  }
+
   const nextWaveId = input.next_wave_id;
   const nextWaveIndex = input.next_wave_index;
 
-  const questions: InterviewQuestion[] = raw.questions.map((q, idx) => {
-    const isChoice = q.response_kind === "single_choice" || q.response_kind === "multi_choice";
-    const hasCustom = q.allows_custom || q.options?.some((o) => o.id === "other" || o.label.includes("其他"));
-    const options = isChoice && q.options && q.options.length > 0
-      ? prepareChoiceOptions(q.options)
-      : q.options;
+  const elicitationUnits = raw.mode === "open_wave" ? raw.mission.elicitation_units : [];
+
+  const questions: InterviewQuestion[] = raw.questions.map((q: QuestionContentProposal, idx: number) => {
+    const legacyKind = toLegacyResponseKind(q.response_kind);
+    const isChoice = legacyKind === "single_choice" || legacyKind === "multi_choice";
+    const hasCustom = q.allows_free_text ?? false;
+    const rawOptions = q.options?.map((o, optIdx) => ({
+      id: `opt_${optIdx}`,
+      label: o.label,
+    })) ?? [];
+    const options = isChoice && rawOptions.length > 0 ? prepareChoiceOptions(rawOptions) : rawOptions;
 
     return {
       id: `w${nextWaveIndex}q${idx + 1}`,
@@ -95,21 +88,48 @@ export function normalizeInterviewerOutput(
       order: idx + 1,
       text: q.text,
       why_this_matters: q.why_this_matters,
-      response_kind: q.response_kind,
+      response_kind: legacyKind,
       options,
       allows_custom: isChoice ? hasCustom : undefined,
-      sensitivity: q.sensitivity,
+      sensitivity: q.sensitivity === "sensitive" ? "sensitive" : "normal",
       allows_skip: true,
       asks_for_concrete_example: q.asks_for_concrete_example ?? false,
     };
   });
 
-  return {
-    schema_version: "interviewer.output.v1",
-    focus_uncertainty_id: raw.focus_uncertainty_id,
-    focus_reason: raw.focus_reason,
-    questions: questions as InterviewerOutput["questions"],
-  };
+  return { questions, elicitation_units: elicitationUnits };
+}
+
+function toV3ResponseKind(kind: InterviewQuestion["response_kind"]): QuestionContentProposal["response_kind"] {
+  switch (kind) {
+    case "single_choice":
+      return "single_choice";
+    case "multi_choice":
+      return "multiple_choice";
+    case "short_text":
+      return "short_text";
+    case "scale":
+      return "anchored_scale";
+    default:
+      return "short_text";
+  }
+}
+
+function toLegacyResponseKind(kind: QuestionContentProposal["response_kind"]): InterviewQuestion["response_kind"] {
+  switch (kind) {
+    case "single_choice":
+      return "single_choice";
+    case "multiple_choice":
+      return "multi_choice";
+    case "short_text":
+    case "scene_text":
+      return "short_text";
+    case "rank":
+    case "anchored_scale":
+      return "scale";
+    default:
+      return "short_text";
+  }
 }
 
 function isOtherOption(o: { id: string; label: string }): boolean {
@@ -125,12 +145,8 @@ export function validateInterviewerOutput(
   input: InterviewerInput,
   output: InterviewerOutput
 ): { valid: true } | { valid: false; reason: string } {
-  if (output.focus_uncertainty_id !== input.selected_uncertainty_id) {
-    return { valid: false, reason: "Focus mismatch" };
-  }
-
-  if (output.questions.length < 3 || output.questions.length > 5) {
-    return { valid: false, reason: "Question count out of range" };
+  if (output.questions.length < 1 || output.questions.length > 3) {
+    return { valid: false, reason: "Microbatch question count out of range (must be 1-3)" };
   }
 
   if (!output.questions.some((q) => q.asks_for_concrete_example)) {
@@ -168,7 +184,11 @@ export function validateInterviewerOutput(
   return { valid: true };
 }
 
-export async function runInterviewer(input: InterviewerInput, memory: WorkingMemory): Promise<InterviewerOutput> {
+export type InterviewerRunResult = InterviewerOutput & {
+  proposal: InterviewerProposal;
+};
+
+export async function runInterviewer(input: InterviewerInput, memory: WorkingMemory): Promise<InterviewerRunResult> {
   const prompt = makePrompt(input, memory);
 
   try {
@@ -177,38 +197,112 @@ export async function runInterviewer(input: InterviewerInput, memory: WorkingMem
       session_id: input.session_id,
       wave_id: input.next_wave_id,
       prompt,
-      schema: interviewerOutputSchema,
-      max_tokens: 1200,
-      prompt_version: "interviewer.v1",
+      schema: interviewerProposalSchema as unknown as z.ZodType<InterviewerProposal>,
+      max_tokens: 1600,
+      prompt_version: PROMPT_VERSION,
       fixture: () => Promise.resolve(fixtureInterviewerRaw(input)),
     });
 
-    const output = normalizeInterviewerOutput(input, raw);
-    const validation = validateInterviewerOutput(input, output);
+    const normalized = normalizeInterviewerProposal(input, raw);
+    const output: InterviewerOutput = {
+      schema_version: "interviewer.output.v1",
+      focus_uncertainty_id: input.selected_uncertainty_id,
+      focus_reason: raw.reason ?? "继续深入当前焦点未知。",
+      questions: normalized.questions,
+    };
 
+    const validation = validateInterviewerOutput(input, output);
     if (validation.valid) {
-      return output;
+      return { ...output, proposal: raw };
     }
 
     throw new Error(`Interviewer output validation failed: ${validation.reason}`);
   } catch {
-    return fallbackInterviewerOutput(input);
+    const fallback = fallbackInterviewerOutput(input);
+    return { ...fallback, proposal: fallbackToProposal(input, fallback) };
   }
 }
 
-function fixtureInterviewerRaw(input: InterviewerInput): z.infer<typeof interviewerOutputSchema> {
+function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
   const questions = defaultFallbackQuestions(input.next_wave_id, input.next_wave_index, input.selected_uncertainty);
+
+  const openingQuestions: OpeningQuestionProposal[] = questions.slice(0, 3).map((q, idx) => ({
+    text: q.text,
+    why_this_matters: q.why_this_matters ?? "帮助你把模糊感受变成可观察的具体片段。",
+    response_kind: toV3ResponseKind(q.response_kind),
+    sensitivity: q.sensitivity === "sensitive" ? "sensitive" : "ordinary",
+    decision_target: input.selected_uncertainty.question,
+    asks_for_concrete_example: q.asks_for_concrete_example,
+    allows_skip: true,
+    allows_free_text: true,
+    options: q.options?.map((o) => ({ label: o.label })) ?? [],
+    elicitation_unit_index: idx,
+  }));
+
+  const elicitationUnits: ElicitationUnitProposal[] = [];
+  for (let i = 0; i < 5; i++) {
+    elicitationUnits.push({
+      decision_target: i < questions.length ? questions[i].text : `补充视角 ${i + 1}`,
+      target_dimensions: ["traits"],
+      precovered_by: [],
+    });
+  }
+
   return {
-    focus_uncertainty_id: input.selected_uncertainty_id,
-    focus_reason: "当前焦点需要更多具体经历来降低未知。",
-    questions: questions.map((q) => ({
+    mode: "open_wave",
+    mission: {
+      decision_to_improve: input.selected_uncertainty.question,
+      target_dimensions: ["traits"],
+      known_source_refs: input.relevant_evidence.map((e) => ({ source_id: e.id, source_revision: 1 })),
+      important_unknown: input.selected_uncertainty.question,
+      why_now: "用户主动开启访谈，希望更清楚当前决策。",
+      exit_condition: "能够描述一个影响决策的具体片段和一个关键约束。",
+      sensitivity_ceiling: "ordinary",
+      elicitation_units: elicitationUnits,
+    },
+    action: "continue",
+    bridge: "我们继续围绕这个焦点展开。",
+    mission_status: "opening",
+    questions: openingQuestions,
+    reason: "当前焦点需要更多具体经历来降低未知。",
+    route_decision_affected: input.selected_uncertainty.plan_consequence,
+  };
+}
+
+function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput): InterviewerProposal {
+  return {
+    mode: "open_wave",
+    mission: {
+      decision_to_improve: input.selected_uncertainty.question,
+      target_dimensions: ["traits"],
+      known_source_refs: [],
+      important_unknown: input.selected_uncertainty.question,
+      why_now: "用户主动开启访谈，希望更清楚当前决策。",
+      exit_condition: "能够描述一个影响决策的具体片段和一个关键约束。",
+      sensitivity_ceiling: "ordinary",
+      elicitation_units: fallback.questions.map((q) => ({
+        decision_target: q.text,
+        target_dimensions: ["traits"],
+        precovered_by: [],
+      })),
+    },
+    action: "continue",
+    bridge: "我们继续围绕这个焦点展开。",
+    mission_status: "opening",
+    questions: fallback.questions.map((q, _idx) => ({
       text: q.text,
-      why_this_matters: q.why_this_matters,
-      response_kind: q.response_kind,
-      options: q.options,
-      sensitivity: q.sensitivity,
+      why_this_matters: q.why_this_matters ?? "",
+      response_kind: toV3ResponseKind(q.response_kind),
+      sensitivity: q.sensitivity === "sensitive" ? "sensitive" : "ordinary",
+      decision_target: input.selected_uncertainty.question,
       asks_for_concrete_example: q.asks_for_concrete_example,
+      allows_skip: true,
+      allows_free_text: true,
+      options: q.options?.map((o) => ({ label: o.label })) ?? [],
+      elicitation_unit_index: _idx,
     })),
+    reason: fallback.focus_reason,
+    route_decision_affected: input.selected_uncertainty.plan_consequence,
   };
 }
 

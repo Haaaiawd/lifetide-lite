@@ -347,3 +347,45 @@ export type ContractError = {
   safe_detail: string;
   trace_id: Id;
 };
+
+export type ChatScope = "explain" | "compare_tradeoff" | "refine_trial" | "reflect_on_trial";
+
+export type ChatMessage = {
+  id: Id;
+  role: "user" | "assistant";
+  text: string;
+  scope?: ChatScope;
+  cited_evidence_ids?: Id[];
+  local_note?: string;
+  created_at: string;
+};
+
+export type BoundedChatThread = {
+  id: Id;
+  session_id: Id;
+  final_plan_revision: number;
+  turns_used: number;
+  status: "active" | "closed_limit" | "closed_user" | "closed_safety";
+  local_notes: string[];
+  messages: ChatMessage[];
+};
+
+export type SensemakerChatInput = {
+  schema_version: "sensemaker.chat.input.v1";
+  scope: ChatScope;
+  message: string;
+  plan: FinalPlan;
+  memory_summary: string;
+  recent_messages: Array<{ role: "user" | "assistant"; text: string }>;
+  turns_remaining: number;
+  prompt_version: string;
+};
+
+export type SensemakerChatOutput = {
+  schema_version: "sensemaker.chat.output.v1";
+  response: string;
+  cited_evidence_ids: Id[];
+  local_note?: string;
+  offer_reinterview: boolean;
+  close_thread: boolean;
+};

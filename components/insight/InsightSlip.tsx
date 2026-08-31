@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "motion/react";
 import { Check, X } from "@phosphor-icons/react";
+import { PixelIcon } from "@/components/art/PixelIcon";
 import type { InsightView } from "@/lib/working-memory/types";
 
 export type InsightSlipProps = {
@@ -80,6 +81,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       className="border-2 border-ink bg-paper-raised p-5 shadow-md md:p-6"
     >
       <div className="mb-4 flex items-center gap-2">
+        <PixelIcon name="comment" size={16} className="text-cobalt" />
         <span className="font-mono text-sm text-cobalt">WAVE {insight.wave}</span>
         <span className="text-sm text-ink-muted">即时理解</span>
       </div>

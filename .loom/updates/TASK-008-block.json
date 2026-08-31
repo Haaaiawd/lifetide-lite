@@ -1,0 +1,7 @@
+{
+  "reason": "Refocused to TASK-009 prompt-system reframe; TASK-008 core skeleton landed and verified, full route/API wiring to be completed after prompt architecture is restored.",
+  "recovery_conditions": [
+    "TASK-009 prompt architecture and health audit complete",
+    "Return to TASK-008 to finish API route migration, full domain-record persistence, safety/recovery fault tests and evidence closure"
+  ]
+}

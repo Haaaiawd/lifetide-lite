@@ -1,0 +1,74 @@
+{
+  "title": "Restore and professionalize the Lite prompt system",
+  "outcome": "The prompt system returns to a small two-role architecture: Interviewer reduces one decision-changing uncertainty at a time, while Sensemaker maintains evidence-linked decision memory, produces calibrated insight, generates three distinct lives and supports bounded reflection. Runtime readiness is deterministic and no longer depends on a 72-cell persona profile.",
+  "done_when": [
+    "The health audit maps owner intent, product promises, prompt specifications, runtime calls and tests, and resolves every critical contradiction it finds.",
+    "Production flow has only Interviewer and Sensemaker model roles; PersonaAuditor, StopDecision and Planner are not called and the 72-cell matrix is not a generation or stopping gate.",
+    "Adaptive interviewing follows a progressive, autonomy-preserving sequence from concrete experience to contrast and optional future projection, with burden-aware question counts and no profile-completion questions.",
+    "Sensemaker wave, final and bounded-chat prompts separate evidence, provisional interpretation, imagination and unknowns; final routes are structurally different and every prototype tests one real uncertainty.",
+    "Odyssey play expands through optional grounded simulation lenses without adding another Agent or inflating the base FinalPlan contract.",
+    "Typecheck and representative integration tests prove deterministic stopping, prompt fallbacks, citation validity, route equality and bounded-chat behavior."
+  ],
+  "boundaries": [
+    "Keep the product small: no user-visible or runtime-completion persona matrix, no personality scoring and no hidden profile questionnaire.",
+    "Use host code for caps, focus selection, readiness, validation, persistence and safety gates; use models only for semantic judgment and language generation.",
+    "Do not add an Agent when an existing Sensemaker mode or deterministic function can carry the responsibility.",
+    "Treat psychological interviewing principles as conversation design, not therapy, diagnosis or covert persuasion.",
+    "Preserve three equal futures and reversible experiments; playful simulations must label imagined details and remain grounded in user evidence."
+  ],
+  "reads": [
+    ".loom/PROJECT.md",
+    ".loom/design/product-definition.md",
+    ".loom/design/adaptive-interview-system.md",
+    ".loom/design/insight-plan-contracts.md",
+    ".loom/design/journey-and-interaction.md",
+    ".loom/design/prompt-architecture-brief.md",
+    ".loom/capabilities/product-design.md",
+    ".loom/capabilities/conversational-ai.md",
+    ".loom/capabilities/life-design.md",
+    ".loom/capabilities/game-design.md",
+    ".loom/capabilities/privacy-ai-safety.md",
+    "prompts/PROMPT-ARCHITECTURE.md",
+    "prompts/life-design-spec-v2.md",
+    "prompts/interviewer-v2.md",
+    "prompts/sensemaker-wave-v2.md",
+    "prompts/odyssey-generator-v2.md",
+    "prompts/prototype-designer-v2.md",
+    "prompts/blueprint-writer-v2.md",
+    "lib/ai/interviewer.ts",
+    "lib/ai/sensemaker/wave.ts",
+    "lib/ai/sensemaker/final.ts",
+    "lib/ai/sensemaker/chat.ts",
+    "app/api/wave/route.ts",
+    "app/api/final/route.ts"
+  ],
+  "touches": [
+    ".loom/design/prompt-architecture-brief.md",
+    ".loom/design/adaptive-interview-system.md",
+    ".loom/prompt-inventory.md",
+    "prompts/PROMPT-ARCHITECTURE.md",
+    "prompts/life-design-spec-v2.md",
+    "prompts/interviewer-v2.md",
+    "prompts/sensemaker-wave-v2.md",
+    "prompts/odyssey-generator-v2.md",
+    "prompts/prototype-designer-v2.md",
+    "prompts/blueprint-writer-v2.md",
+    "lib/ai/interviewer.ts",
+    "lib/ai/sensemaker/wave.ts",
+    "lib/ai/sensemaker/final.ts",
+    "lib/ai/sensemaker/chat.ts",
+    "lib/interview/",
+    "app/api/wave/route.ts",
+    "app/api/final/route.ts",
+    "tests/integration/"
+  ],
+  "progress": {
+    "completed": [
+      "Reconstructed owner intent and the original two-Agent product promise.",
+      "Confirmed architecture drift: 72-cell persona gate, PersonaAuditor, StopDecision and Planner contradict completed task boundaries.",
+      "Identified unsafe fallback behavior that marks nearly all persona cells usable after Wave 2."
+    ],
+    "current": "Designing the first-principles target loop and prompt architecture.",
+    "next": "Rewrite the health brief and operational prompts, then reconcile runtime orchestration."
+  }
+}

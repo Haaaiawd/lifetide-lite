@@ -19,6 +19,19 @@ model Session {
   workingMemory WorkingMemory?
   waves       Wave[]
   modelCalls  ModelCallLog[]
+  sourceVersions SourceVersion[]
+  sourceHeads SourceHead[]
+  transitionEvents TransitionEvent[]
+  stateHead   SessionStateHead?
+  generationProvenance GenerationProvenance[]
+  dependencyEdges DependencyEdge[]
+  waveMissions WaveMission[]
+  elicitationUnits ElicitationUnit[]
+  microbatches Microbatch[]
+  questions   Question[]
+  immediateInsights ImmediateInsight[]
+  calibrations Calibration[]
+  routeIntents RouteIntent[]
 }
 
 model Consent {
@@ -148,4 +161,283 @@ model ModelCallLog {
 
   @@index([sessionId])
   @@index([purpose])
+}
+
+// TASK-008: source versioning, state ledger and new harness domain tables.
+
+model SourceVersion {
+  id        String   @id @default(cuid())
+  sessionId String
+  sourceId  String   @map("source_id")
+  revision  Int
+  kind      String
+  createdAt DateTime @default(now())
+  untrusted Boolean  @default(false)
+  textRef   String   @map("textRef")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, sourceId, revision])
+  @@index([sessionId])
+  @@index([sourceId])
+  @@map("SourceVersion")
+}
+
+model SourceHead {
+  id            String    @id @default(cuid())
+  sessionId     String
+  sourceId      String    @map("source_id")
+  activeRevision Int?     @map("activeRevision")
+  status        String    @default("active")
+  deletedAt     DateTime? @map("deletedAt")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, sourceId])
+  @@map("SourceHead")
+}
+
+model TransitionEvent {
+  id                String   @id @default(cuid())
+  sessionId         String
+  eventId           String   @map("eventId")
+  eventType         String   @map("eventType")
+  schemaVersion     Int      @default(3) @map("schemaVersion")
+  baseRevision      Int      @map("baseRevision")
+  committedRevision Int      @map("committedRevision")
+  idempotencyKey    String   @map("idempotencyKey")
+  payloadHash       String   @map("payloadHash")
+  correlationId     String   @map("correlationId")
+  causationId       String?  @map("causationId")
+  proposalId        String?  @map("proposalId")
+  actor             String
+  fromState         String   @map("fromState")
+  toState           String   @map("toState")
+  eventMetadataJson String   @map("eventMetadataJson")
+  stateSnapshotJson String   @map("stateSnapshotJson")
+  snapshotHash      String   @map("snapshotHash")
+  committedAt       DateTime @default(now()) @map("committedAt")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, eventId])
+  @@unique([sessionId, idempotencyKey])
+  @@index([sessionId])
+  @@index([sessionId, proposalId])
+  @@map("TransitionEvent")
+}
+
+model SessionStateHead {
+  id               String    @id @default(cuid())
+  sessionId        String    @unique
+  revision         Int       @default(0)
+  machineVersion   Int       @default(3) @map("machineVersion")
+  stateValueJson   String    @map("stateValueJson")
+  publicContextJson String   @map("publicContextJson")
+  resumeStateJson  String?   @map("resumeStateJson")
+  snapshotHash     String    @map("snapshotHash")
+  updatedAt        DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("SessionStateHead")
+}
+
+model GenerationProvenance {
+  id                     String   @id @default(cuid())
+  sessionId              String
+  proposalId             String   @map("proposalId")
+  correlationId          String   @map("correlationId")
+  promptContractRevision Int      @default(3) @map("promptContractRevision")
+  promptFileHash         String   @map("promptFileHash")
+  schemaHash             String   @map("schemaHash")
+  contextBuilderVersion  String   @map("contextBuilderVersion")
+  contextHash            String   @map("contextHash")
+  provider               String
+  model                  String
+  modelConfigJson        String   @map("modelConfigJson")
+  modelConfigHash        String   @map("modelConfigHash")
+  fixtureSuiteVersion    String   @map("fixtureSuiteVersion")
+  createdAt              DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  waveMissions WaveMission[]
+  elicitationUnits ElicitationUnit[]
+  microbatches Microbatch[]
+  questions Question[]
+  immediateInsights ImmediateInsight[]
+  routeIntents RouteIntent[]
+
+  @@unique([sessionId, proposalId])
+  @@index([sessionId])
+  @@map("GenerationProvenance")
+}
+
+model DependencyEdge {
+  id        String   @id @default(cuid())
+  sessionId String
+  fromId    String
+  fromKind  String
+  toId      String
+  toKind    String
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([fromId])
+  @@index([toId])
+  @@map("DependencyEdge")
+}
+
+model WaveMission {
+  id                 String   @id @default(cuid())
+  sessionId          String
+  waveId             String   @map("waveId")
+  generationProvenanceId String @map("generationProvenanceId")
+  decisionToImprove  String   @map("decisionToImprove")
+  targetDimensions   String   @map("targetDimensions")
+  knownSourceRefs    String   @map("knownSourceRefs")
+  importantUnknown   String   @map("importantUnknown")
+  whyNow             String   @map("whyNow")
+  exitCondition      String   @map("exitCondition")
+  sensitivityCeiling String   @map("sensitivityCeiling")
+  createdAt          DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, waveId])
+  @@index([sessionId])
+  @@map("WaveMission")
+}
+
+model ElicitationUnit {
+  id                 String   @id @default(cuid())
+  sessionId          String
+  waveId             String   @map("waveId")
+  generationProvenanceId String @map("generationProvenanceId")
+  orderInWave        Int      @map("orderInWave")
+  decisionTarget     String   @map("decisionTarget")
+  targetDimensions   String   @map("targetDimensions")
+  status             String   @default("pending")
+  questionId         String?  @map("questionId")
+  sourceRefs         String   @map("sourceRefs")
+  createdAt          DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([waveId])
+  @@map("ElicitationUnit")
+}
+
+model Microbatch {
+  id                 String   @id @default(cuid())
+  sessionId          String
+  waveId             String   @map("waveId")
+  generationProvenanceId String @map("generationProvenanceId")
+  index              Int
+  sessionRevision    Int      @map("sessionRevision")
+  status             String   @default("proposed")
+  idempotencyKey     String   @map("idempotencyKey")
+  createdAt          DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+  questions  Question[]
+
+  @@index([sessionId])
+  @@index([waveId])
+  @@map("Microbatch")
+}
+
+model Question {
+  id                  String  @id @default(cuid())
+  sessionId           String
+  waveId              String  @map("waveId")
+  microbatchId        String  @map("microbatchId")
+  generationProvenanceId String @map("generationProvenanceId")
+  orderInWave         Int     @map("orderInWave")
+  elicitationUnitId   String  @map("elicitationUnitId")
+  text                String
+  responseKind        String  @map("responseKind")
+  options             String?
+  sensitivity         String
+  whyThisMatters      String  @map("whyThisMatters")
+  decisionTarget      String  @map("decisionTarget")
+  asksForConcreteExample Boolean @default(false) @map("asksForConcreteExample")
+  allowsSkip          Boolean @default(true) @map("allowsSkip")
+  allowsFreeText      Boolean @default(true) @map("allowsFreeText")
+  createdAt           DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  microbatch Microbatch         @relation(fields: [microbatchId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([waveId])
+  @@map("Question")
+}
+
+model ImmediateInsight {
+  id                String   @id @default(cuid())
+  sessionId         String
+  waveId            String   @map("waveId")
+  generationProvenanceId String @map("generationProvenanceId")
+  generatedAt       DateTime @default(now()) @map("generatedAt")
+  userToldMe        String   @map("userToldMe")
+  currentReading    String   @map("currentReading")
+  importantUnknown  String   @map("importantUnknown")
+  radarDeltas       String   @map("radarDeltas")
+  routeImpact       String   @map("routeImpact")
+  evidence          String
+  status            String   @default("generated")
+  languageStrength  String   @map("languageStrength")
+  createdAt         DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([waveId])
+  @@map("ImmediateInsight")
+}
+
+model Calibration {
+  id                String    @id @default(cuid())
+  sessionId         String
+  insightId         String    @map("insightId")
+  verdict           String
+  correctionText    String?   @map("correctionText")
+  preferredDirection String?  @map("preferredDirection")
+  sourceId          String    @map("sourceId")
+  sourceRevision    Int       @map("sourceRevision")
+  createdAt         DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([insightId])
+  @@map("Calibration")
+}
+
+model RouteIntent {
+  id                 String   @id @default(cuid())
+  sessionId          String
+  generationProvenanceId String @map("generationProvenanceId")
+  titleHint          String   @map("titleHint")
+  lifeShape          String   @map("lifeShape")
+  realCost           String   @map("realCost")
+  evidence           String
+  status             String   @default("seed")
+  createdAt          DateTime @default(now())
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provenance GenerationProvenance @relation(fields: [generationProvenanceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("RouteIntent")
 }
