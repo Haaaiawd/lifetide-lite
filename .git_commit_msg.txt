@@ -1,7 +1,7 @@
-Replace Three.js landing mascot with a static, brand-aligned HeroMark.
+Fix cold-start state machine and landing HeroMark layout after real-user browser test.
 
-- components/landing/HeroMark.tsx: new static hero illustration showing three fanned "life cards" (稳定/探索/混合) using the existing paper/ink/cobalt design tokens, 2px borders, and hard shadows.
-- components/landing/LandingPage.tsx: replace removed VoxelMascotClient with HeroMark.
-- No continuous animation; entrance motion respects `prefers-reduced-motion`.
+- app/api/wave/route.ts: commit SESSION_STARTED when a guest session is first created by GET /api/wave, so the XState ledger starts from 'entry' correctly even when the user lands on /play before calling /api/session.
+- app/api/session/route.ts: also ensure SESSION_STARTED is committed when the session has no persisted snapshot, preventing state desync when the consent flow begins.
+- components/landing/HeroMark.tsx: move card transforms into motion animate props (x/y/rotate) instead of inline style, so the fanned three-card composition renders correctly; add z-index layering and slightly wider spread.
 
-Verification: typecheck, build, lint (0 errors), and Playwright e2e+integration (48/48) all pass.
+Verification: typecheck, build, lint (0 errors), test:contracts (31/31), and Playwright e2e+integration (48/48) all pass.
