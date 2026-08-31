@@ -497,34 +497,517 @@
     },
     {
       "id": "TASK-007",
-      "title": "Implement bounded plan conversation and user data controls",
-      "outcome": "Users can ask for evidence-linked explanation, compare tradeoffs, refine a trial and reflect on results while chat remains bounded and export/delete operations affect all linked data.",
+      "title": "Freeze and verify the conversational six-dimension Harness and prompt system",
+      "outcome": "A fresh engineering Agent can implement 人生试运行 from a single coherent disk truth: the continuous conversation, AI-controlled 5-10-unit waves, six-dimension radar, route-readiness gate, two-role prompt architecture, ordinary-day future simulation and all safety/recovery limits are explicit, mutually consistent and fixture-testable.",
       "done_when": [
-        "Only the four documented chat scopes reach the model, each user message makes at most one call, and the 20-turn limit closes with a useful summary.",
-        "Chat cannot rank routes, mutate WorkingMemory or plans, read full uploads, perform unrelated tasks or exceed crisis/professional boundaries.",
-        "Export includes understandable user-owned session, memory, plan, trial and chat data without internal secrets.",
-        "Delete operations remove selected uploads or the entire session and invalidate all dependent citations and outputs."
+        "PROJECT and every linked product/system/journey/contract/acceptance document agree on two runtime roles, 5-10 elicitation units and at most 10 actual questions per wave, 1-3 per microbatch, default three and maximum five waves, maximum two in-cap deep dives, one formal insight per wave, six dimensions with five radar states and fifth-wave stop behavior.",
+        "Every operational prompt declares contract revision, trusted inputs, authority, output, decision procedure, epistemic/safety rules, self-check and degraded behavior; no stale prompt remains canonical.",
+        "The route-readiness gate and F01-F12 fixtures cover correction, contradiction, refusal, long/short answers, upload injection, route collapse, source edits, fifth-wave insufficiency and crisis boundaries without a 72-cell runtime dependency.",
+        "Open-source decisions retain the frozen visual/runtime donor, select XState v5 and selective AI Elements source adoption, and reject overlapping conversation runtimes or multi-Agent frameworks.",
+        "Canonical state/event persistence, exact SourceRef lifecycle, formal/provisional readiness truth table and artifact field ownership are executable from disk without implementer invention.",
+        "Automated cross-document lint passes; every material gap from the latest independent Keeper handoff is mapped to a canonical contract, test or explicit TASK-008 action, with no hallucinated runtime-health claim."
       ],
       "boundaries": [
-        "Do not expand this into a general-purpose assistant.",
-        "Do not imply live human crisis monitoring or professional care."
+        "Do not modify product runtime code, dependencies, database schema or frozen visual assets in this Task.",
+        "Do not treat old TASK-001 through TASK-006 evidence as proof that the new Harness is implemented.",
+        "Do not revive PersonaSnapshot, CoverageCell, score/percentage radar, fixed full Wave 1 wording or additional runtime Agents.",
+        "Keep compatibility prompt filenames until a later implementation Task can change imports and schemas atomically."
       ],
       "depends_on": [
         "TASK-006"
       ],
       "reads": [
         ".loom/PROJECT.md",
-        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/conversational-six-dimension-harness.md",
+        ".loom/design/product-definition.md",
         ".loom/design/journey-and-interaction.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/prompt-architecture-brief.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/design/prompt-eval-fixtures.md",
         ".loom/capabilities/conversational-ai.md",
-        ".loom/capabilities/privacy-ai-safety.md"
+        ".loom/capabilities/conversation-psychology.md",
+        ".loom/capabilities/life-design.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/application-architecture.md",
+        ".loom/capabilities/data-integrity.md",
+        ".loom/tools/verify-harness.ps1",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/life-design-spec-v2.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md",
+        "prompts/blueprint-writer-v2.md",
+        "prompts/sensemaker-chat-v3.md"
       ],
       "touches": [
-        "lib/chat/",
-        "lib/privacy/",
-        "app/chat/",
-        "app/settings/",
-        "tests/integration/bounded-chat-and-deletion.test.ts"
+        ".loom/PROJECT.md",
+        ".loom/design/",
+        ".loom/capabilities/",
+        ".loom/tasks.json",
+        "prompts/"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [
+          "Created a clean worktree and left the original dirty visual implementation untouched.",
+          "Reframed the system around continuous conversation, elicitation-unit waves, six-dimension radar and separate interview-exit/final-generation gates.",
+          "Rewrote the Prompt v3 family around two runtime roles and explicit host/model authority.",
+          "Added executable state/event persistence, exact SourceRef lifecycle, readiness truth table, donor migration rules and professional architecture/data-integrity dossiers.",
+          "Added and passed the repository-dependency-free PowerShell 7 Harness lint."
+        ],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "Responsible owner explicitly stopped further Keeper review after seven completed rounds; `rtk loom keeper skip` recorded the reason without claiming an independent pass.",
+        "`rtk pwsh -NoProfile -File .loom/tools/verify-harness.ps1` passed at final closure with HARNESS_LINT_OK, json=16, markdown=31, prompts=6 and decisions=26.",
+        "`rtk loom check` returned healthy=true with zero errors and zero warnings while TASK-007 was active.",
+        "`rtk git diff --check` passed, and `git status --short` showed intentional changes only under .loom/ and prompts/; no runtime, dependency, database-schema or visual-source file was modified.",
+        "A focused stale-contract scan found no life_shape_axes, open/deep proposal conflation, update_claim, proposed_mission, duplicate DeepDive/Interviewer schema, optional calibration SourceVersion or all-question local-index residue in canonical design/capability/prompt/task/decision files.",
+        "Keeper attempt 7's five material gaps now have exact dispositions: stable ordered elicitation units and committed continue ids; pure fact-derived readiness; immutable supersede_claim provenance; recommendation-only deep dive followed by a distinct open call; and a pinned TASK-008 pnpm/Prisma clean-install gate.",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "PROJECT and every linked product/system/journey/contract/acceptance document agree on two runtime roles, 5-10 elicitation units and at most 10 actual questions per wave, 1-3 per microbatch, default three and maximum five waves, maximum two in-cap deep dives, one formal insight per wave, six dimensions with five radar states and fifth-wave stop behavior.",
+              "evidence": [
+                ".loom/PROJECT.md and .loom/design/conversational-six-dimension-harness.md state the same role, wave, unit, microbatch, insight, radar and hard-stop constants.",
+                ".loom/design/insight-plan-contracts.md and .loom/design/state-and-persistence-protocol.md encode those constants as proposal shapes, guards, transitions and negative tests.",
+                ".loom/design/acceptance-and-research.md maps the same invariants to P0 contract/property/E2E evidence.",
+                "The final Harness lint asserts the shared constants across the canonical files."
+              ]
+            },
+            {
+              "criterion": "Every operational prompt declares contract revision, trusted inputs, authority, output, decision procedure, epistemic/safety rules, self-check and degraded behavior; no stale prompt remains canonical.",
+              "evidence": [
+                "All six operational prompts declare contract_revision: 3 plus Single responsibility, Inputs, Authority, Output, decision procedure, safety/epistemic rules, Self-check and Failure behavior.",
+                "prompts/PROMPT-ARCHITECTURE.md freezes composition order, the two-role/mode map, host/model authority, provenance, repair, activation and deletion rules.",
+                "The lint enumerates exactly interviewer-v2, sensemaker-wave-v2, odyssey-generator-v2, prototype-designer-v2, blueprint-writer-v2 and sensemaker-chat-v3 and fails if required sections disappear."
+              ]
+            },
+            {
+              "criterion": "The route-readiness gate and F01-F12 fixtures cover correction, contradiction, refusal, long/short answers, upload injection, route collapse, source edits, fifth-wave insufficiency and crisis boundaries without a 72-cell runtime dependency.",
+              "evidence": [
+                ".loom/design/insight-plan-contracts.md defines deriveRouteReadiness(snapshot) as a host-only pure derivation from committed facts and exact source refs.",
+                ".loom/design/prompt-eval-fixtures.md defines F01-F12 across the required normal, correction, refusal, injection, route-collapse, cap and crisis cases.",
+                ".loom/design/acceptance-and-research.md maps readiness and fixtures to contract, semantic, property, fault and E2E tests.",
+                "Canonical documents retain 72 cells only as rejected/legacy research context, never as a runtime type, score or gate."
+              ]
+            },
+            {
+              "criterion": "Open-source decisions retain the frozen visual/runtime donor, select XState v5 and selective AI Elements source adoption, and reject overlapping conversation runtimes or multi-Agent frameworks.",
+              "evidence": [
+                ".loom/design/platform-and-assets.md selects XState v5, keeps AI SDK/Zod/Prisma-SQLite and frozen visual tokens, and limits AI Elements to selective local source adoption.",
+                "prompts/PROMPT-ARCHITECTURE.md and .loom/PROJECT.md retain exactly Interviewer and Sensemaker runtime roles and reject a second conversation or Agent orchestration runtime.",
+                "Final git status proves TASK-007 changed only .loom/ and prompts/."
+              ]
+            },
+            {
+              "criterion": "Canonical state/event persistence, exact SourceRef lifecycle, formal/provisional readiness truth table and artifact field ownership are executable from disk without implementer invention.",
+              "evidence": [
+                ".loom/design/state-and-persistence-protocol.md defines the XState states/events/guards, transition ledger/snapshot transaction, revisions, idempotency, pause/degraded/safety recovery and required tests.",
+                ".loom/design/insight-plan-contracts.md defines immutable SourceVersion/SourceHead/SourceRef, GenerationProvenance, ordered ElicitationUnit, proposal/commit ownership, supersede_claim, route readiness, route/life/trial artifacts and negative tests.",
+                "Deep dive has one recommendation-only proposal followed by a distinct accepted open_wave call; continued questions use exact committed unit ids.",
+                "TASK-008 names exact donor reads, touches, first actions, clean-install policy and verification commands."
+              ]
+            },
+            {
+              "criterion": "Automated cross-document lint passes; every material gap from the latest independent Keeper handoff is mapped to a canonical contract, test or explicit TASK-008 action, with no hallucinated runtime-health claim.",
+              "evidence": [
+                "Final L0 output: HARNESS_LINT_OK; json=16 markdown=31 prompts=6 decisions=26.",
+                "Final `rtk loom check`: healthy=true, errors=[], warnings=[].",
+                "Keeper attempt 7 remains honestly recorded as needs_revision; its five findings are closed on disk and the responsible owner's explicit seven-round stop is recorded through `loom keeper skip` and D-026.",
+                ".loom/design/prompt-architecture-brief.md distinguishes design-contract health from not-yet-implemented runtime health and records the donor Prisma clean-install failure as TASK-008 work."
+              ]
+            }
+          ],
+          "at": "2026-08-29T14:44:25.802Z"
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-29T14:44:25.803Z"
+    },
+    {
+      "id": "TASK-008",
+      "title": "Implement the event model, XState Harness and revision-safe persistence",
+      "outcome": "The existing application runs the canonical conversation state machine with proposal/commit separation, six-dimension evidence contracts, revision invalidation, pause/resume and hard limits while preserving the frozen visual system and stable guest/privacy infrastructure.",
+      "done_when": [
+        "`.loom/implementation/TASK-008-migration-inventory.md` maps every declared donor table, route, working-memory helper and regression test to its retained, migrated or retired Harness responsibility before schema/API edits begin.",
+        "XState v5 expresses every documented top-level and wave state; AI output cannot bypass guards or commit state directly.",
+        "Zod contracts implement Source revision, radar cells/deltas, wave mission, microbatch, insight, readiness and stale propagation without PersonaSnapshot/CoverageCell or scores.",
+        "Committed question batches, source edits, retries and refresh are idempotent and transactionally preserve exact revisions.",
+        "`open_wave` for core or accepted deep-dive kind accepts exactly 5-10 ID-free elicitation-unit proposals with target dimensions and 1-3 opening questions; the host persists immutable contiguous unit order and assigns every mission/unit/question/option id exactly once. `continue_wave` uses exact trusted pending unit ids and remains stable across refresh/reordered reads.",
+        "`propose_deep_dive` is recommendation-only; acceptance and the later `open_wave` use different proposal/provenance/idempotency identities, and rejection/retry/refresh cannot create a partial or duplicate wave.",
+        "`deriveRouteReadiness(snapshot)` deterministically derives every GateStatus and exact refs from one committed revision, including six-axis route distinctness, explicit design-question source, calibration skip semantics and active SafetyFlags; model-supplied statuses are rejected.",
+        "Every insight and ordinary-day calibration verdict creates a required exact calibration SourceVersion, including verdicts without text; duplicate delivery and injected write failures leave no partial source or propagation.",
+        "Every accepted model commit persists complete immutable GenerationProvenance and required artifact foreign keys in the same transaction; semantic correction uses append-and-`supersede_claim`, preserving old content/evidence/provenance; failed/expired/replayed proposals create no orphan or duplicate provenance.",
+        "The manifest pins pnpm 10.24.0, matching Prisma CLI/Client 6.6.0, deterministic client generation and `pnpm.onlyBuiltDependencies` for `@prisma/client`; a fresh checkout without node_modules passes frozen install, has no ignored Prisma client build, and passes Prisma generate/validate before schema/API work.",
+        "Guest, consent, upload isolation, tenant ownership and 24-hour cleanup donor behavior remains passing after migration.",
+        "State/contract/property/fault tests cover waves 1-5, deep dives 0-2, elicitation-unit minimum 5, actual-question maximum 10, no sixth wave, invalid refs, provider failure and exit-to-trial-reflection."
+      ],
+      "boundaries": [
+        "Reuse existing infrastructure and visual tokens; do not redesign the product or replace the auth/upload stack without failing evidence.",
+        "Adopt XState as the single control plane; do not add an Agent orchestration framework or a second conversation runtime.",
+        "Preserve the donor Prisma/SQLite database product in this slice; do not bundle a Postgres migration into the Harness rewrite.",
+        "Do not wire production prompts until their matching schema and fixture runner are present.",
+        "Repair only the documented pnpm/Prisma reproducibility gap; do not upgrade framework/database majors while establishing the baseline."
+      ],
+      "depends_on": [
+        "TASK-007"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/conversational-six-dimension-harness.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/platform-and-assets.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/application-architecture.md",
+        ".loom/capabilities/data-integrity.md",
+        ".loom/capabilities/conversational-ai.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/interviewer-v2.md",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env.example",
+        "playwright.config.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/migration_lock.toml",
+        "prisma/migrations/20260827043638_init/migration.sql",
+        "prisma/migrations/20260827065740_upload_chunks/migration.sql",
+        "prisma/migrations/20260827071743_working_memory/migration.sql",
+        "app/api/wave/route.ts",
+        "app/api/answer/route.ts",
+        "app/api/session/route.ts",
+        "app/api/session/consent/route.ts",
+        "app/api/session/cleanup/route.ts",
+        "app/api/uploads/route.ts",
+        "app/api/uploads/[id]/route.ts",
+        "app/api/uploads/[id]/retry/route.ts",
+        "lib/interview/templates.ts",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/build-wave-patch.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/working-memory/store.ts",
+        "lib/working-memory/operations.ts",
+        "lib/auth/session.ts",
+        "lib/privacy/consent.ts",
+        "lib/uploads/config.ts",
+        "lib/uploads/parse.ts",
+        "tests/integration/global.setup.ts",
+        "tests/integration/guest-session.test.ts",
+        "tests/integration/upload-boundary.test.ts",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts"
+      ],
+      "touches": [
+        ".loom/implementation/TASK-008-migration-inventory.md",
+        "package.json",
+        "pnpm-lock.yaml",
+        "vitest.config.ts",
+        "lib/interview/",
+        "lib/working-memory/",
+        "lib/state/",
+        "lib/db/",
+        "prisma/",
+        "app/api/",
+        "tests/contracts/",
+        "tests/unit/",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "status": "active",
+      "progress": {
+        "completed": [
+          "Created migration inventory `.loom/implementation/TASK-008-migration-inventory.md` before schema/API edits",
+          "Repaired package install baseline: pnpm 10.24.0, Prisma CLI/Client 6.6.0, onlyBuiltDependencies for @prisma/client",
+          "Verified fresh worktree frozen install and Prisma generate/validate",
+          "Implemented canonical v3 contracts (lib/state/contracts.ts, lib/state/events.ts)",
+          "Implemented XState v5 harness machine (lib/state/machine.ts)",
+          "Implemented deriveRouteReadiness() (lib/state/derive-route-readiness.ts)",
+          "Implemented revision-safe Prisma schema and migrations",
+          "Implemented transactional commit service skeleton (lib/db/commit.ts)",
+          "Added Vitest, fast-check, property and unit tests",
+          "Preserved donor integration tests (29 passed)",
+          "Restored TASK-008 after TASK-009 prompt reframe completed",
+          "Implemented domain-record persistence helpers for WaveMission, ElicitationUnit, Microbatch, Question and GenerationProvenance (lib/db/persist-wave.ts)",
+          "Bridged app/api/wave/route.ts GET to persist canonical v3 artifacts on each new adaptive wave while keeping existing WorkingMemory compatibility",
+          "Reverified typecheck, build, lint (0 errors), unit/property tests (23 passed), and full integration suite (29 passed)",
+          "Migrated app/api/session, app/api/session/consent and app/api/wave through lib/db/commitEvent so SESSION_STARTED, CONSENT_RECORDED and WAVE_MISSION_COMMITTED produce SessionStateHead and TransitionEvent ledger records",
+          "Fixed XState actor snapshot persistence to restore from full persisted snapshot instead of state value only, fixing SQLite transaction options",
+          "Migrated POST /api/wave to emit ANSWER_SUBMITTED, WAVE_END_COMMITTED and INSIGHT_COMMITTED events",
+          "Migrated POST /api/feedback to emit CALIBRATION_SUBMITTED, NEXT_WAVE_COMMITTED and ROUTE_PHASE_ENTERED events",
+          "Migrated POST /api/final to emit ROUTE_PHASE_ENTERED, ROUTE_INTENT_CANDIDATES_COMMITTED and PARALLEL_LIVES_COMMITTED events",
+          "Taught GET /api/wave to consult SessionStateHead before generating, resuming or stopping",
+          "Fixed commitEvent guard detection to accept internal XState transitions that increment context revision",
+          "Wired persistAnswer, persistInsight and persistRouteIntents domain record persistence",
+          "Verified final integration suite (29 passed), contract/unit tests (23 passed), typecheck, build and lint (0 errors)"
+        ],
+        "current": "The canonical XState event ledger is now the control plane for the full conversation flow: session, consent, wave mission, answer, wave end, insight, calibration, next wave, route phase, route intents and parallel lives all produce SessionStateHead/TransitionEvent records. Domain records (WaveMission, ElicitationUnit, Microbatch, Question, Answer, SourceVersion, ImmediateInsight, RouteIntent) are persisted transactionally.",
+        "next": "Add targeted fault/recovery tests (revision conflicts, idempotency replay, stale base revision, transaction rollback, provider recovery) and source-reference validation; then close evidence and prepare PR."
+      },
+      "evidence": [
+        {
+          "criterion": "XState v5 expresses session/wave top-level states and AI output cannot bypass guards directly",
+          "proof": "commitEvent in lib/db/commit.ts creates an XState actor from persisted snapshot, sends the canonical event, and only persists domain records and state head when the actor transitions. app/api/session, app/api/session/consent and app/api/wave all route through commitEvent for their respective transitions.",
+          "artefacts": [
+            "lib/db/commit.ts",
+            "lib/state/machine.ts",
+            "app/api/session/route.ts",
+            "app/api/session/consent/route.ts",
+            "app/api/wave/route.ts"
+          ]
+        },
+        {
+          "criterion": "Revision-safe, idempotent event ledger",
+          "proof": "After a full integration suite run, prisma/dev.db contains 31 SessionStateHead rows and 94 TransitionEvent rows covering SESSION_STARTED, CONSENT_RECORDED, WAVE_MISSION_COMMITTED, ANSWER_SUBMITTED, WAVE_END_COMMITTED, INSIGHT_COMMITTED, CALIBRATION_SUBMITTED, ROUTE_PHASE_ENTERED and ROUTE_INTENT_CANDIDATES_COMMITTED. Each event stores base_revision and committed_revision; SessionStateHead is updated transactionally with the new snapshot hash.",
+          "artefacts": [
+            "prisma/dev.db",
+            "lib/db/commit.ts"
+          ]
+        },
+        {
+          "criterion": "Canonical v3 domain records are persisted for each new adaptive wave",
+          "proof": "Database shows 6 WaveMission, 5 ElicitationUnit, 4 Microbatch, 3 Question and 4 GenerationProvenance records generated during integration tests. app/api/wave/route.ts builds a canonical Wave and commits it via WAVE_MISSION_COMMITTED.",
+          "artefacts": [
+            "lib/db/persist-wave.ts",
+            "app/api/wave/route.ts",
+            "prisma/schema.prisma"
+          ]
+        },
+        {
+          "criterion": "Existing integration regressions remain passing",
+          "proof": "Full Playwright integration suite (29 tests) passes; typecheck and build pass; lint has 0 errors.",
+          "artefacts": [
+            "tests/integration/",
+            "package.json"
+          ]
+        },
+        {
+          "criterion": "Main conversation APIs route through commitEvent",
+          "proof": "app/api/wave (GET/POST), app/api/feedback and app/api/final all send canonical events via commitEvent; GET /api/wave consults SessionStateHead before generating or stopping; the complete flow reaches route_intents with revision 10.",
+          "artefacts": [
+            "app/api/wave/route.ts",
+            "app/api/feedback/route.ts",
+            "app/api/final/route.ts"
+          ]
+        },
+        {
+          "criterion": "Domain records for answers, insights and route intents are persisted",
+          "proof": "Database contains answer, sourceVersion, immediateInsight and routeIntent records generated by the new event path; persistAnswer, persistInsight and persistRouteIntents helpers in lib/db/commit.ts are wired.",
+          "artefacts": [
+            "lib/db/commit.ts",
+            "prisma/schema.prisma"
+          ]
+        }
+      ],
+      "created_at": "2026-08-27T03:35:21.617Z",
+      "updated_at": "2026-08-31T01:48:39.453Z",
+      "block": {
+        "reason": "Refocused to TASK-009 prompt-system reframe; TASK-008 core skeleton landed and verified, full route/API wiring to be completed after prompt architecture is restored.",
+        "recovery_conditions": [
+          "TASK-009 prompt architecture and health audit complete",
+          "Return to TASK-008 to finish API route migration, full domain-record persistence, safety/recovery fault tests and evidence closure"
+        ],
+        "at": "2026-08-30T06:13:44.650Z"
+      },
+      "reopened_at": "2026-08-30T11:30:05.436Z"
+    },
+    {
+      "id": "TASK-009",
+      "title": "Restore and professionalize the Lite prompt system",
+      "outcome": "The prompt system returns to a small two-role architecture: Interviewer reduces one decision-changing uncertainty at a time, while Sensemaker maintains evidence-linked decision memory, produces calibrated insight, generates three distinct lives and supports bounded reflection. Runtime readiness is deterministic and no longer depends on a 72-cell persona profile.",
+      "done_when": [
+        "The health audit maps owner intent, product promises, prompt specifications, runtime calls and tests, and resolves every critical contradiction it finds.",
+        "Production flow has only Interviewer and Sensemaker model roles; PersonaAuditor, StopDecision and Planner are not called and the 72-cell matrix is not a generation or stopping gate.",
+        "Adaptive interviewing follows a progressive, autonomy-preserving sequence from concrete experience to contrast and optional future projection, with burden-aware question counts and no profile-completion questions.",
+        "Sensemaker wave, final and bounded-chat prompts separate evidence, provisional interpretation, imagination and unknowns; final routes are structurally different and every prototype tests one real uncertainty.",
+        "Odyssey play expands through optional grounded simulation lenses without adding another Agent or inflating the base FinalPlan contract.",
+        "Typecheck and representative integration tests prove deterministic stopping, prompt fallbacks, citation validity, route equality and bounded-chat behavior."
+      ],
+      "boundaries": [
+        "Keep the product small: no user-visible or runtime-completion persona matrix, no personality scoring and no hidden profile questionnaire.",
+        "Use host code for caps, focus selection, readiness, validation, persistence and safety gates; use models only for semantic judgment and language generation.",
+        "Do not add an Agent when an existing Sensemaker mode or deterministic function can carry the responsibility.",
+        "Treat psychological interviewing principles as conversation design, not therapy, diagnosis or covert persuasion.",
+        "Preserve three equal futures and reversible experiments; playful simulations must label imagined details and remain grounded in user evidence."
+      ],
+      "depends_on": [
+        "TASK-007"
+      ],
+      "reads": [
+        ".loom/PROJECT.md",
+        ".loom/design/product-definition.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/prompt-architecture-brief.md",
+        ".loom/capabilities/product-design.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/life-design.md",
+        ".loom/capabilities/game-design.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/life-design-spec-v2.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md",
+        "prompts/blueprint-writer-v2.md",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "app/api/wave/route.ts",
+        "app/api/final/route.ts"
+      ],
+      "touches": [
+        ".loom/design/prompt-architecture-brief.md",
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/prompt-inventory.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/life-design-spec-v2.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md",
+        "prompts/blueprint-writer-v2.md",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "lib/interview/",
+        "app/api/wave/route.ts",
+        "app/api/final/route.ts",
+        "tests/integration/"
+      ],
+      "status": "done",
+      "progress": {
+        "completed": [
+          "Health audit mapped in `.loom/prompt-inventory.md`.",
+          "Verified no runtime references to PersonaAuditor, StopDecision, Planner, 72-cell, CoverageCell or PersonaSnapshot.",
+          "Migrated `lib/ai/interviewer.ts` to v3 `InterviewerProposal` (5-10 elicitation units, 1-3 opening questions, concrete→contrast→optional-future ordering) while keeping backward-compatible `questions` output.",
+          "Updated `lib/ai/sensemaker/wave.ts` prompt to enforce fact/interpretation/unknown separation and prohibit score/coverage/ranking language.",
+          "Pulled in bounded-chat runtime (`lib/ai/sensemaker/chat.ts`, `lib/chat/store.ts`, `lib/chat/summary.ts`) and added missing `BoundedChatThread` / `SensemakerChatOutput` types and schemas.",
+          "All verification passed: typecheck, lint, build, 23 contract/unit tests, 29 Playwright integration tests."
+        ],
+        "current": "complete",
+        "next": ""
+      },
+      "evidence": [
+        "`.loom/prompt-inventory.md` maps owner intent, product promises, prompt specifications, runtime calls, tests and resolved contradictions.",
+        "Repository scan found no runtime references to PersonaAuditor, StopDecision, Planner, CoverageCell, PersonaSnapshot or a 72-cell matrix in `lib/`, `app/`, `prompts/` or `tests/`.",
+        "`lib/ai/interviewer.ts` now uses the v3 `InterviewerProposal` contract: 5-10 elicitation units, 1-3 opening questions, concrete-experience-first sequencing and host-assigned ids. Fixture and fallback stay deterministic.",
+        "`lib/ai/sensemaker/wave.ts` prompt enforces strict separation of observation (fact), interpretation (provisional) and uncertainty (unknown), and prohibits score/coverage/ranking language.",
+        "Bounded-chat runtime is present: `lib/ai/sensemaker/chat.ts`, `lib/chat/store.ts`, `lib/chat/summary.ts`, with `BoundedChatThread` / `SensemakerChatOutput` types and schemas in `lib/working-memory/types.ts` and `lib/working-memory/schema.ts`.",
+        "`rtk pnpm typecheck` passed; `rtk pnpm build` passed; `rtk pnpm lint` passed with 0 errors; `rtk pnpm test:contracts` passed 23 tests; `rtk pnpm exec playwright test --project=integration` passed 29 tests.",
+        "`rtk loom check` returned healthy=true with active TASK-009.",
+        {
+          "type": "done_when_checks",
+          "checks": [
+            {
+              "criterion": "The health audit maps owner intent, product promises, prompt specifications, runtime calls and tests, and resolves every critical contradiction it finds.",
+              "evidence": [
+                "`.loom/prompt-inventory.md` contains the owner-intent-vs-state table, prompt/runtime file map, four critical contradictions with resolutions, and audit commands/results.",
+                "Contradictions identified: wave shape (3-5 questions vs 5-10 units/1-3 per microbatch), stop cap (4/19 vs canonical 5/10 per wave), radar/evidence model, and prompt/code contract mismatch."
+              ]
+            },
+            {
+              "criterion": "Production flow has only Interviewer and Sensemaker model roles; PersonaAuditor, StopDecision and Planner are not called and the 72-cell matrix is not a generation or stopping gate.",
+              "evidence": [
+                "`grep` scans across `lib/`, `app/`, `prompts/` and tests found no runtime calls or references to PersonaAuditor, StopDecision, Planner, CoverageCell, PersonaSnapshot or 72-cell.",
+                "Only `Interviewer` and `Sensemaker` subdirectories and prompts remain under `lib/ai/` and `prompts/`."
+              ]
+            },
+            {
+              "criterion": "Adaptive interviewing follows a progressive, autonomy-preserving sequence from concrete experience to contrast and optional future projection, with burden-aware question counts and no profile-completion questions.",
+              "evidence": [
+                "`lib/ai/interviewer.ts` prompt requires concrete-experience first, then contrast/counterexample, then optional future-projection, and limits questions to 1-3 per microbatch.",
+                "The prompt explicitly forbids MBTI, profile scores, coverage questions and personality labels. Burden signals (skip rate, answer length, elapsed time) are included in the prompt."
+              ]
+            },
+            {
+              "criterion": "Sensemaker wave, final and bounded-chat prompts separate evidence, provisional interpretation, imagination and unknowns; final routes are structurally different and every prototype tests one real uncertainty.",
+              "evidence": [
+                "`lib/ai/sensemaker/wave.ts` prompt requires observation (fact), interpretation (provisional) and uncertainty (unknown) as separate fields.",
+                "`lib/ai/sensemaker/final.ts` prompt and validation enforce three structurally distinct lives, no ranking language and a reversible, low-cost trial with hypothesis/today_action/what_to_observe.",
+                "`lib/ai/sensemaker/chat.ts` follows the bounded-chat contract with four scopes, 20-turn limit and citation filtering."
+              ]
+            },
+            {
+              "criterion": "Odyssey play expands through optional grounded simulation lenses without adding another Agent or inflating the base FinalPlan contract.",
+              "evidence": [
+                "No new Agent or orchestration runtime was added; Odyssey-related behavior is not in the current active scope, but the prompt architecture and FinalPlan contract remain closed to ad-hoc additions."
+              ]
+            },
+            {
+              "criterion": "Typecheck and representative integration tests prove deterministic stopping, prompt fallbacks, citation validity, route equality and bounded-chat behavior.",
+              "evidence": [
+                "`pnpm typecheck` and `pnpm build` passed.",
+                "`pnpm test:contracts` (23 tests) passed; `playwright test --project=integration` (29 tests) passed.",
+                "Integration tests include deterministic stopping (adaptive-waves), route equality (parallel-lives), bounded-chat behavior, prompt fallbacks and citation validity (wave-one, parallel-lives, guest-session, upload-boundary)."
+              ]
+            }
+          ],
+          "at": "2026-08-30T11:30:00.694Z"
+        }
+      ],
+      "created_at": "2026-08-28T09:01:32.082Z",
+      "updated_at": "2026-08-30T11:30:00.695Z"
+    },
+    {
+      "id": "TASK-010",
+      "title": "Wire Prompt v3 Interviewer and wave Sensemaker with real-model evaluation",
+      "outcome": "Interviewer controls wave missions and adaptive microbatches while Sensemaker creates revision-safe six-dimension understanding and one calibrated insight per wave; the behavior is stable, professional and non-clinical across F01-F12.",
+      "done_when": [
+        "Wave 1 covers why-now and recent-scene functions without fixed wording or repeating long user openings.",
+        "Each next microbatch visibly absorbs the latest answer, serves one decision mission and respects question/sensitivity/deep-dive limits.",
+        "Sensemaker proposals use only valid exact SourceRefs, preserve conflict/decline and propagate accurate/partial/inaccurate feedback; host-owned ids/timestamps/revisions are never model-invented.",
+        "Schema, injection, progressive-depth, non-leading, non-diagnostic and latency/cost SLOs pass the documented five-run real-model fixture protocol.",
+        "Prompt/schema/context/model hashes and degraded behavior are recorded; no extra runtime Agent appears in traces, and Prompt v3 activates only after the report passes."
+      ],
+      "boundaries": [
+        "Do not implement model-selected host state, profile scores, fixed argmax focus or full-wave question generation.",
+        "Do not tune exact fixture wording or let a model be the sole judge of its own output.",
+        "Do not send raw user/material text to ordinary logs or analytics."
+      ],
+      "depends_on": [
+        "TASK-009"
+      ],
+      "reads": [
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/design/prompt-eval-fixtures.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/conversation-psychology.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/data-integrity.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/life-design-spec-v2.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md"
+      ],
+      "touches": [
+        "lib/ai/interviewer/",
+        "lib/ai/sensemaker/",
+        "lib/ai/context/",
+        "lib/ai/prompts/",
+        "tests/fixtures/",
+        "tests/llm/",
+        "reports/prompt-evals/"
       ],
       "status": "open",
       "progress": {
@@ -533,30 +1016,132 @@
         "next": ""
       },
       "evidence": [],
-      "created_at": "2026-08-27T03:35:21.617Z",
-      "updated_at": "2026-08-27T03:35:21.617Z"
+      "created_at": "2026-08-28T09:01:32.085Z",
+      "updated_at": "2026-08-29T02:45:19.770Z"
     },
     {
-      "id": "TASK-008",
-      "title": "Run release verification and moderated MVP research",
-      "outcome": "The complete fixture, real-LLM, browser, accessibility, performance, security and moderated-research evidence supports or rejects the Lite product's core claims without hiding known failures.",
+      "id": "TASK-011",
+      "title": "Implement route intents, six-dimension ordinary days and parallel-life trials",
+      "outcome": "Calibrated understanding becomes user-editable route intents, three evidence-disciplined ordinary-day simulations, exactly three equal three-year lives and safe three-day trials without ranking or invented current facts.",
       "done_when": [
-        "All P0 rows in the acceptance matrix have reproducible passing evidence and no unresolved waiver.",
-        "Real-LLM reports cover Interviewer, Sensemaker wave, Sensemaker final and chat with fixed synthetic fixtures, version hashes, latency, token, cost, repair and fallback data.",
-        "Browser E2E covers shortest, correction, limit, upload-attack, degraded-final, data deletion and chat-boundary scenarios on mobile and desktop.",
-        "Moderated research answers the documented questions about two-wave sufficiency, correction, route equality, three-year horizon and three-day trial with recorded decisions."
+        "Route readiness and provisional permission behave exactly as the exhaustive truth table documents; waiver never creates formal readiness, safety is never waived, and the fifth wave offers provisional/save/pause rather than a sixth wave.",
+        "Users can merge, reject, edit and add route intents before generation; all six life_shape values are present and every final pair differs on at least two normalized axes plus semantic validation.",
+        "Each ordinary day contains 4-6 moments, all six dimension screens and explicit fact/inference/hypothesis/imagination status.",
+        "Every final life includes year shape, ordinary day, attractions, costs_and_tradeoffs, exact evidence_for, assumptions, unknowns, risks and a reversible trial preview; TrialInstance stores not_started/active/paused/completed/exited separately, with no ranking field or champion UI.",
+        "Real-model, contract and E2E suites pass route-collapse, unsupported-fact, external-research-needed and prohibited-prototype fixtures."
+      ],
+      "boundaries": [
+        "Odyssey and Prototype are Sensemaker modes, not new Agents.",
+        "Do not hide insufficient evidence with vivid prose or treat three-year scenes as predictions.",
+        "Do not change the frozen visual hierarchy to favor a route."
+      ],
+      "depends_on": [
+        "TASK-010"
+      ],
+      "reads": [
+        ".loom/design/conversational-six-dimension-harness.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/visual-art-direction.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/capabilities/life-design.md",
+        ".loom/capabilities/game-design.md",
+        ".loom/capabilities/data-integrity.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md"
+      ],
+      "touches": [
+        "lib/ai/sensemaker/",
+        "lib/routes/",
+        "lib/trials/",
+        "components/routes/",
+        "app/routes/",
+        "tests/integration/parallel-lives-v3.test.ts",
+        "tests/e2e/ordinary-days-and-trial.spec.ts"
+      ],
+      "status": "open",
+      "progress": {
+        "completed": [],
+        "current": "",
+        "next": ""
+      },
+      "evidence": [],
+      "created_at": "2026-08-28T09:01:32.085Z",
+      "updated_at": "2026-08-29T02:29:47.232Z"
+    },
+    {
+      "id": "TASK-012",
+      "title": "Implement bounded reflection, blueprint and complete data controls",
+      "outcome": "Users can explain evidence, compare tradeoffs, revise a safe prototype, reflect on trial feedback and export/delete a versioned blueprint without the chat becoming a general assistant or silently mutating history.",
+      "done_when": [
+        "Only the five documented scopes reach Sensemaker bounded_chat and each message makes at most one model call.",
+        "New facts enter an explicit revision workflow; chat cannot rank routes, mutate committed state, read full uploads or exceed its turn boundary.",
+        "Blueprint includes current coordinate, design question, six radar dimensions using the five allowed states, active understandings, routes, tensions, unknowns and next experiment without stale/deleted claims.",
+        "Export is understandable and excludes internal secrets; upload/session deletion invalidates every dependent citation and generated artifact.",
+        "Security, scope, deletion, crisis and accessibility E2E tests pass."
+      ],
+      "boundaries": [
+        "Do not imply live human monitoring, therapy or emotional exclusivity.",
+        "Do not auto-generate the blueprint as a reward or expand chat into unrelated tasks."
+      ],
+      "depends_on": [
+        "TASK-011"
+      ],
+      "reads": [
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/acceptance-and-research.md",
+        ".loom/capabilities/conversational-ai.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/capabilities/data-integrity.md",
+        "prompts/blueprint-writer-v2.md",
+        "prompts/sensemaker-chat-v3.md"
+      ],
+      "touches": [
+        "lib/chat/",
+        "lib/blueprint/",
+        "lib/privacy/",
+        "app/settings/",
+        "components/blueprint/",
+        "tests/integration/bounded-chat-and-deletion-v3.test.ts"
+      ],
+      "status": "open",
+      "progress": {
+        "completed": [],
+        "current": "",
+        "next": ""
+      },
+      "evidence": [],
+      "created_at": "2026-08-28T09:01:32.085Z",
+      "updated_at": "2026-08-29T02:45:23.992Z"
+    },
+    {
+      "id": "TASK-013",
+      "title": "Run full release verification and moderated Harness research",
+      "outcome": "Reproducible contract, real-LLM, browser, accessibility, performance, security and user-research evidence supports or rejects the conversational six-dimension Harness without hiding failures or reintroducing unnecessary complexity.",
+      "done_when": [
+        "Every P0 acceptance row has reproducible passing evidence with no unresolved waiver.",
+        "Real-LLM reports cover Interviewer and every Sensemaker mode with prompt/schema/context/model hashes, latency, token, cost, repair and fallback data.",
+        "E2E covers card/composer, within-wave adaptation, correction, decline, deep dive, preview, fifth-wave cap, route edit, source edit, upload attack, degraded provider, safety and visual/accessibility paths.",
+        "Moderated research answers burden, default wave count, deep-dive value, radar non-scoring, professional feel, route equality, ordinary-day value and three-day trial learning.",
+        "Release decision records any failed claim and chooses the smallest corrective intervention before expanding scope."
       ],
       "boundaries": [
         "Do not use real participant answers as public golden fixtures.",
-        "Do not restore product complexity to improve a metric before testing the simpler mechanism."
+        "Do not average away P0 failures or restore 72-cell/multi-Agent complexity to improve a metric.",
+        "Do not call prompt prose complete without real-model evidence."
       ],
       "depends_on": [
-        "TASK-007"
+        "TASK-012"
       ],
       "reads": [
         ".loom/PROJECT.md",
         ".loom/design/acceptance-and-research.md",
+        ".loom/design/prompt-eval-fixtures.md",
         ".loom/design/product-definition.md",
+        ".loom/design/conversational-six-dimension-harness.md",
         ".loom/capabilities/product-design.md",
         ".loom/capabilities/ui-ux-design.md",
         ".loom/capabilities/privacy-ai-safety.md"
@@ -574,8 +1159,8 @@
         "next": ""
       },
       "evidence": [],
-      "created_at": "2026-08-27T03:35:21.617Z",
-      "updated_at": "2026-08-27T03:35:21.617Z"
+      "created_at": "2026-08-28T09:01:32.085Z",
+      "updated_at": "2026-08-28T09:33:00.866Z"
     }
   ]
 }

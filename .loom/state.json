@@ -4,7 +4,7 @@
     "name": "Lifetide-Lite",
     "status": "building",
     "created_at": "2026-08-27T03:22:20.304Z",
-    "updated_at": "2026-08-27T08:58:02.974Z"
+    "updated_at": "2026-08-31T01:48:39.456Z"
   },
   "understanding": {
     "confirmed": [
@@ -91,6 +91,84 @@
         "text": "The product name is 人生试运行. It does not reuse the 潮生 or Lifetide product name.",
         "source": "conversation",
         "at": "2026-08-27T03:46:27.009Z"
+      },
+      {
+        "id": "F-015",
+        "text": "The original Lifetide-Lite working tree and its current visual implementation are frozen as donor evidence; Harness and prompt redesign proceeds in the clean codex/conversational-harness-v1 worktree before any runtime code changes.",
+        "source": "user direction and inspected git worktrees",
+        "at": "2026-08-28T09:02:57.756Z"
+      },
+      {
+        "id": "F-016",
+        "text": "The canonical interview is a continuous conversation with inline question cards and an always-available free-text composer; submitted cards fold into editable user bubbles.",
+        "source": "user direction",
+        "at": "2026-08-28T09:02:57.758Z"
+      },
+      {
+        "id": "F-017",
+        "text": "AI controls wave mission, question wording, order, depth and follow-up proposals; the host controls schema, safety, question/wave limits, readiness, persistence, stop and recovery.",
+        "source": "user direction refined through architecture review",
+        "at": "2026-08-28T09:02:57.758Z"
+      },
+      {
+        "id": "F-018",
+        "text": "Each wave contains 5-10 questions delivered in adaptive 1-3-question microbatches; the default is three waves, the hard maximum is five, and at most two eligible deep-dive waves count inside that maximum.",
+        "source": "user direction",
+        "at": "2026-08-28T09:02:57.758Z"
+      },
+      {
+        "id": "F-019",
+        "text": "The six-dimension decision radar—traits, motivation, capabilities, relationships, environment and narrative—is the main breadth standard; runtime states are unseen, signaled, grounded, conflicted and declined with no score or percentage.",
+        "source": "user direction and architecture decision",
+        "at": "2026-08-28T09:02:57.759Z"
+      },
+      {
+        "id": "F-020",
+        "text": "Runtime keeps exactly two model roles, Interviewer and Sensemaker; route, ordinary-day, prototype, blueprint and bounded chat are Sensemaker modes rather than autonomous Agents.",
+        "source": "user direction and prompt architecture",
+        "at": "2026-08-28T09:02:57.759Z"
+      },
+      {
+        "id": "F-021",
+        "text": "Three equal three-year lives and three-day reversible trials remain the product horizon; ordinary-day six-dimension screening and editable route intents precede formal plan generation.",
+        "source": "user direction",
+        "at": "2026-08-28T09:02:57.759Z"
+      },
+      {
+        "id": "F-022",
+        "text": "The 5-10 per-wave standard applies to decision-relevant elicitation units. A normal wave asks 5-10 questions, but unsolicited user material may precover units with exact source mapping; actual questions remain capped at 10 and are never repeated merely to satisfy a quota.",
+        "source": "whole-system integrity review of user-directed card/free-text equivalence",
+        "at": "2026-08-29T01:33:05.154Z"
+      },
+      {
+        "id": "F-023",
+        "text": "TASK-007's pre-code gate is documentation harmony, executable fixture/protocol specifications, structural prompt lint and Keeper pass; real-model Prompt v3 evaluation occurs after matching runtime surfaces exist and before prompt activation.",
+        "source": "Keeper gap closure and D-020",
+        "at": "2026-08-29T02:27:23.420Z"
+      },
+      {
+        "id": "F-024",
+        "text": "The canonical control plane is one XState v5 machine persisted with an atomic committed transition ledger and current snapshot; the product does not use full event sourcing.",
+        "source": "application architecture capability and D-021",
+        "at": "2026-08-29T02:27:23.421Z"
+      },
+      {
+        "id": "F-025",
+        "text": "Every derived source reference is an exact SourceRef containing logical source_id and immutable source_revision; edits create versions and transactionally stale the dependent closure.",
+        "source": "data integrity capability and D-022",
+        "at": "2026-08-29T02:27:23.421Z"
+      },
+      {
+        "id": "F-026",
+        "text": "Formal readiness and provisional permission are separate: waiver never satisfies formal readiness, and safety is never waivable.",
+        "source": "readiness truth table and D-024",
+        "at": "2026-08-29T02:27:23.421Z"
+      },
+      {
+        "id": "F-027",
+        "text": "ParallelLife keeps attractions, costs_and_tradeoffs and evidence_for; Prototype is a reusable plan, TrialInstance owns trial lifecycle, and insight lifecycle status is separate from language strength.",
+        "source": "schema reconciliation and D-023",
+        "at": "2026-08-29T02:27:23.421Z"
       }
     ],
     "assumptions": [
@@ -104,14 +182,14 @@
       {
         "id": "A-002",
         "text": "The first implementation will reuse infrastructure and licensed assets conceptually but will not share runtime code with the existing Lifetide repository until an explicit engineering decision is made.",
-        "status": "active",
+        "status": "retired",
         "source": "agent",
         "at": "2026-08-27T03:24:21.998Z"
       },
       {
         "id": "A-003",
         "text": "Three-year alternative lives are a better consumer horizon than the source method's five-year Odyssey Plans; each route ends in a three-day reversible trial.",
-        "status": "active",
+        "status": "retired",
         "source": "agent",
         "at": "2026-08-27T03:24:21.998Z"
       }
@@ -138,7 +216,7 @@
     ]
   },
   "keeper": {
-    "status": "passed",
+    "status": "skipped",
     "attempts": [
       {
         "run_id": "keeper-lite-001",
@@ -241,10 +319,158 @@
         ],
         "gaps": [],
         "at": "2026-08-27T03:59:26.326Z"
+      },
+      {
+        "run_id": "7e12419f-e1ab-4cbf-823b-f8fac27f727a",
+        "prepared_digest": "f1ced5bc6636fdf8a701b525aaa5e0ed7dbeee434855b353140de7d557fc0361",
+        "verdict": "needs_revision",
+        "summary": "The product intent, two-role Harness, wave limits, six-dimension stance, safety boundary, prompt family, and donor-code diagnosis are largely coherent, but a fresh engineering Agent cannot responsibly start TASK-008. The work map still selects open TASK-007, and the frozen disk truth leaves core TASK-008 decisions undefined or contradictory: pre-code prompt evaluation is circular with TASK-010; the state/event persistence protocol has no executable transition or event-envelope contract; exact source revision identity is lost in several reference fields; route-readiness waiver semantics lack a truth table; canonical schemas drift from recorded decisions and capability requirements; and TASK-008 omits the exact donor reads and runnable contract-test command needed to preserve existing behavior.",
+        "evidence": [
+          "`rtk loom context --keeper` restored attempt 5 and the frozen digest; `rtk loom check` returned healthy structurally, but does not resolve the semantic contradictions above.",
+          "`rtk loom task next` returns TASK-007, whose status is open and evidence is empty; `rtk loom task get TASK-008` confirms it depends on TASK-007 and declares only seven design/capability reads.",
+          "All `.loom/tasks.json`, `.loom/state.json`, task update and harness JSON files parse successfully with Node, so the verdict is not caused by corrupt state.",
+          "`.loom/PROJECT.md` and all ten linked design documents were opened from disk; all eight capability dossiers and all eight prompt files were opened. The intended result is a guest-first mobile Next.js conversation with 3 default/5 maximum waves, 5-10 elicitation units, 1-3-question microbatches, six qualitative radar states, route intents, ordinary-day screening, three equal three-year lives and reversible three-day trials.",
+          "The professional fields currently represented are product design, UI/UX, visual art direction, game design, conversational AI, conversation psychology, life-design methodology, and privacy/AI safety; their project-specific stances are distinct, but statechart/data-integrity engineering is absent.",
+          "The donor diagnosis in `.loom/design/prompt-architecture-brief.md` is supported by current code: `lib/interview/templates.ts` is a fixed four-question Wave 1; `app/api/wave/route.ts` uses `MAX_WAVES=4` and `MAX_QUESTIONS=19`; `lib/ai/interviewer.ts` contains inline v1 prompt text and whole 3-5-question batches; `lib/ai/sensemaker/wave.ts` clears placeholder evidence ids and `build-wave-patch.ts` builds heuristic memory; `lib/ai/sensemaker/final.ts` can synthesize complete fallback lives and `no-evidence`; `package.json` has no XState dependency.",
+          "The stable donor surfaces are concrete and inspectable: `prisma/schema.prisma` stores guest sessions, consent, answers, uploads/chunks, derived content, WorkingMemory, Wave and ModelCallLog; `tests/integration/guest-session.test.ts` and `upload-boundary.test.ts` name the isolation/cleanup/upload behaviors TASK-008 promises to preserve. Tests were not executed because their global setup deletes database rows and the Keeper was instructed not to mutate anything beyond the recorded result.",
+          "A responsible first engineering action would be donor inventory followed by a contract-first state/persistence slice, but no first edit can be selected until the event transition, revision identity and readiness semantics above are frozen. The intended completion artifact is a versioned Zod event/contract layer, XState machine, Prisma migration/persistence adapter and runnable contract/integration tests; the current Task does not yet specify reproducible commands that execute all of those tests."
+        ],
+        "gaps": [
+          {
+            "gap": "The pre-code gate is circular. `.loom/PROJECT.md:106-116` requires prompt eval thresholds before coding, and `.loom/DECISIONS.md:195-201` says the entire Prompt v3 family must be evaluated before any runtime migration. But `.loom/tasks.json:565-609` makes TASK-008 the schema/state migration, while `.loom/tasks.json:663-709` defers real-model Prompt v3 evaluation to TASK-010 after TASK-008 and TASK-009; `prompts/PROMPT-ARCHITECTURE.md:114-123` also says prompt activation waits for matching schema/state plus a real-model report.",
+            "why_it_blocks_start": "A fresh Agent cannot tell whether TASK-008 is authorized now, or whether it must first produce an evaluation that cannot run against the not-yet-implemented schema/context/state machine. Either choice violates a current gate.",
+            "evidence_to_close": "Choose and record one non-circular gate. The likely closure is to state that pre-code requires cross-document harmony, executable fixture specifications, and Keeper pass, while real-model evaluation/activation occurs only after TASK-008/009 provide the matching runtime; update PROJECT, the current decision, acceptance pre-code gate, Prompt Architecture, and task dependencies consistently. Alternatively move a genuinely runnable schema/context/eval slice before TASK-008. Then prepare a changed digest."
+          },
+          {
+            "gap": "The canonical Harness names states and events but does not define the event model TASK-008 is supposed to implement. `.loom/design/conversational-six-dimension-harness.md:256-294` lists top-level states and event names only; `.loom/design/acceptance-and-research.md:82-94` requires a top-level transition table; `.loom/tasks.json:565-609` requires an event model, XState, transactional revisions, pause/resume, degraded and safety behavior. No canonical document defines legal source-state/event/target-state transitions, event envelope and payload schemas, proposal-to-commit correlation, event/snapshot persistence, duplicate-delivery semantics, resume history, or degraded/safety recovery rules. Route-intent, ordinary-day, plan and trial transitions also have no named events.",
+            "why_it_blocks_start": "These are product-integrity decisions, not interchangeable implementation details. Different reasonable implementations would disagree about whether a retry can commit, what RESUMED restores, whether safety_stop is terminal, how a proposed artifact maps to a committed event, and how database revision and XState snapshot stay atomic.",
+            "evidence_to_close": "Add a canonical transition table and versioned `EventEnvelope`/payload contracts covering every documented top-level and nested state, including allowed origin, guards, target, idempotency key, base/session revision, proposal/commit correlation, transaction boundary, persisted event/snapshot form, retry/duplicate handling, pause history, degraded recovery and safety exit policy. Add route/future/trial events or explicitly defer those states from TASK-008. Provide table/property tests generated from that contract."
+          },
+          {
+            "gap": "The exact-revision invariant contradicts several canonical reference shapes. `.loom/design/insight-plan-contracts.md:30-60` says every derived object records exact source revision and defines `EvidenceLink(source_id, source_revision)`, but `RadarDelta.source_ids` at :91-97, `WaveMission.known_source_ids` at :151-160, `ElicitationUnit.source_ids` at :223-229, memory operations such as `reason_source_id` at :290-296, and `RouteReadiness.source_ids` at :344-356 discard revisions. The same file says editing creates a new source revision at :262, but does not define whether `s-11@2` is a new row with the same logical id, a new unique id, or an in-place version; F11 assumes the same logical id across revisions.",
+            "why_it_blocks_start": "TASK-008 must implement exact stale propagation and transactionally preserve revisions. Without a canonical identity/version model, an engineer must invent primary keys, uniqueness constraints, reference validation and deletion behavior, and can easily allow stale evidence to remain active.",
+            "evidence_to_close": "Define the source-version persistence identity explicitly (for example logical source id plus composite revision key, immutable version rows, one active head) and use a single exact `SourceRef`/`EvidenceLink` shape everywhere a source supports or invalidates a derived object. Specify supersede/delete transactions and transitive stale propagation. Add contract tests for `s@1 -> s@2`, cross-tenant refs, deleted heads, retries and rollback."
+          },
+          {
+            "gap": "Route-readiness and provisional waiver semantics are not executable. `.loom/design/conversational-six-dimension-harness.md:92-119` and `.loom/design/adaptive-interview-system.md:207-220` mix formal readiness with the option to proceed provisionally when four dimensions are not grounded. `.loom/design/insight-plan-contracts.md:344-360` exposes `met | unmet | waived_by_user | not_applicable` plus `formal_ready`, but gives no truth table for which gates may be waived, whether a waiver can ever make `formal_ready=true`, or how `not_applicable` is treated.",
+            "why_it_blocks_start": "TASK-008 explicitly owns the readiness Zod contract and guards. A fresh Agent cannot implement the boolean deterministically without guessing whether provisional consent satisfies formal readiness or merely authorizes a separate provisional path.",
+            "evidence_to_close": "Publish a gate truth table/function: required formal gates, allowed `not_applicable` gates, provisional-only waivers, non-waivable safety, output fields such as `formal_ready` and `provisional_allowed`, and fifth-wave behavior. Add exhaustive table tests for all status combinations and explicit user preview/waiver events."
+          },
+          {
+            "gap": "Current user-intent/capability records disagree with the canonical artifact schemas. `.loom/DECISIONS.md:150-157` says the current ParallelLife v2 deliberately removed `gain/loss/evidence` in favor of `attractions/costs_and_tradeoffs/evidence_for`, while `.loom/design/insight-plan-contracts.md:415-443`, `.loom/design/acceptance-and-research.md:65`, and `.loom/tasks.json:716-722` restore `gains/losses/evidence` without a superseding decision. `.loom/DECISIONS.md:132-138` requires stored `trial_status` and `pause_or_exit_note`, while the canonical `Prototype` at `.loom/design/insight-plan-contracts.md:452-471` instead has `adjust_signal/stop_signal` and no trial status. `.loom/capabilities/product-design.md:46` and `.loom/capabilities/privacy-ai-safety.md:53` require insight `status=tentative`, generated/correction state, while canonical `ImmediateInsight` at `.loom/design/insight-plan-contracts.md:299-318` uses `language_strength` and a separate calibration event.",
+            "why_it_blocks_start": "TASK-008 must create Zod schemas and persistence that later Tasks consume. The Agent cannot know whether canonical v3 intentionally supersedes the recorded user decisions, whether compatibility fields must be migrated, or whether capability-required metadata belongs on the insight or a separate artifact/event.",
+            "evidence_to_close": "Record explicit superseding decisions and align DECISIONS, capability dossiers, canonical contracts, prompts and downstream Tasks on one field set. Define migration/compatibility behavior for existing v2 donor artifacts, including trial lifecycle and insight metadata/calibration ownership. Cross-document lint should fail on future field-name/cardinality drift."
+          },
+          {
+            "gap": "TASK-008 is not restartable from its declared reads or verification surface. `.loom/tasks.json:583-600` names only design/capability reads and broad touch directories, even though its next action is donor inventory and its done conditions promise preservation of guest, consent, upload isolation, tenant ownership and cleanup. The necessary donor files are not named: at minimum `package.json`, `pnpm-lock.yaml`, `prisma/schema.prisma`, `app/api/wave/route.ts`, `lib/interview/templates.ts`, `lib/ai/interviewer.ts`, `lib/ai/sensemaker/wave.ts`, `lib/ai/sensemaker/build-wave-patch.ts`, `lib/ai/sensemaker/final.ts`, `lib/working-memory/{types,schema,store,operations}.ts`, `lib/auth/session.ts`, relevant upload/session routes, and donor integration tests. It also expects `tests/contracts/`, but `playwright.config.ts:15-37` runs only e2e and integration patterns and `package.json:7-13` defines no contract/property-test command.",
+            "why_it_blocks_start": "A fresh Agent must discover the migration surface, decide which donor tests constitute preservation evidence, choose a unit/property framework, and invent the completion commands. That violates LOOM's exact-read/exact-evidence handoff requirement and risks silently breaking the stable donor.",
+            "evidence_to_close": "Update TASK-008 with exact source/fixture reads, exact expected file touches or migration artifacts, the first concrete command/edit, the chosen contract/property test runner, scripts/config that actually include `tests/contracts`, and reproducible evidence commands. Name the donor regression set explicitly (`guest-session`, `upload-boundary`, tenant isolation, cleanup, relevant wave tests), plus typecheck/lint/build and migration verification. After the Keeper gaps are absorbed, complete TASK-007 with evidence so `loom task next` selects TASK-008."
+          },
+          {
+            "gap": "The capability map omits the professional field that materially governs TASK-008: application/statechart architecture and transactional data integrity. The existing eight dossiers cover product, UI/UX, visual, game, conversational AI, conversation psychology, life design and privacy/safety, but none owns event-sourcing versus snapshot decisions, XState serialization, optimistic concurrency, idempotency, transaction isolation or failure recovery. Those decisions are currently scattered or absent in `.loom/design/conversational-six-dimension-harness.md`, `.loom/design/platform-and-assets.md` and `.loom/design/insight-plan-contracts.md`.",
+            "why_it_blocks_start": "Conversational AI and privacy can constrain the behavior but cannot substitute for a project-specific state-machine/data-integrity stance. The missing field is exactly where the event, revision and recovery ambiguities arise, so a fresh implementer has no professional decision basis for the highest-risk slice.",
+            "evidence_to_close": "Add separate project-specific capability dossier(s) for application/statechart architecture and, if treated distinctly, database/data-integrity engineering; or explicitly justify and assign those responsibilities to an existing recognized field. Each must state the selected persistence/concurrency approach, rejected alternatives, failure modes and observable proof, and the affected design contract must synthesize those judgments."
+          }
+        ],
+        "at": "2026-08-29T01:43:50.426Z"
+      },
+      {
+        "run_id": "b353dead-a34e-4279-ad5b-fb200cac5046",
+        "prepared_digest": "4b027c6e4bca4a00d6c0ae1bd9d3800d03f4b1b42d20f3e8da097fae74ed4b8d",
+        "verdict": "needs_revision",
+        "summary": "The revision materially closes all seven prior Keeper gaps: the pre-code/activation gates are non-circular, a versioned state and persistence protocol exists, exact SourceRef lifecycle and exhaustive readiness semantics are defined, artifact schemas and donor migration are aligned, TASK-008 names donor reads and runnable evidence, and application-architecture/data-integrity capabilities are present. A fresh Agent still cannot responsibly start TASK-008, however, because the new canonical contracts contradict their own host/model field-ownership rule, omit the semantic owner of the 5-10 elicitation units required at wave open, make a required calibration source optional at the only commit event, do not define persistence for required generated-artifact provenance, exclude an allowed post-exit trial-reflection scope from the transition guard, and publish an L0 exact command that fails under Windows PowerShell 5.1 despite passing under PowerShell 7.",
+        "evidence": [
+          "`rtk loom context --keeper` reported Keeper attempt 6, prepared digest `4b027c6e4bca4a00d6c0ae1bd9d3800d03f4b1b42d20f3e8da097fae74ed4b8d`, 27 confirmed facts, zero assumptions/questions, 11 design documents, 10 distinct capability dossiers and 13 tasks.",
+          "`rtk loom check` returned healthy; `rtk loom task status` returned 13 total / 7 open / 6 done; `rtk loom task next` still selected TASK-007 pending this Keeper result.",
+          "Prior gap 1 is materially closed by `.loom/PROJECT.md`, `.loom/design/acceptance-and-research.md`, `.loom/design/prompt-architecture-brief.md`, `prompts/PROMPT-ARCHITECTURE.md` and TASK-010: structural/contract fixtures precede code, while real-model evaluation and activation follow matching runtime work.",
+          "Prior gaps 2-4 are materially closed by `.loom/design/state-and-persistence-protocol.md` and `.loom/design/insight-plan-contracts.md`: versioned envelopes/ledger/head, legal transitions and recovery, exact SourceRef/SourceVersion/SourceHead lifecycle, stale closure, and an exhaustive formal/provisional readiness function are all present.",
+          "Prior gaps 5-7 are materially closed by `.loom/design/insight-plan-contracts.md` donor-v2 migration and canonical fields, the exact donor reads/commands in `rtk loom task get TASK-008`, and distinct `.loom/capabilities/application-architecture.md` plus `.loom/capabilities/data-integrity.md` dossiers.",
+          "Donor-code claims in `.loom/design/prompt-architecture-brief.md` were verified on disk: `app/api/wave/route.ts` has `MAX_WAVES=4`/`MAX_QUESTIONS=19` and host uncertainty selection; `lib/interview/templates.ts` says fixed Wave 1; runtime prompts remain inline; `lib/ai/sensemaker/wave.ts` uses placeholder evidence IDs; and `lib/ai/sensemaker/final.ts` contains `no-evidence` and fabricated fallback lives.",
+          "`rtk pwsh -NoProfile -File .loom/tools/verify-harness.ps1` passed with `HARNESS_LINT_OK` (`json=14 markdown=31 prompts=6 decisions=19`), while the Windows PowerShell invocation failed before execution with a parser error, demonstrating the unstated shell dependency.",
+          "`rtk rg` and direct UTF-8 reads of `.loom/design/insight-plan-contracts.md`, `.loom/design/state-and-persistence-protocol.md`, `.loom/design/adaptive-interview-system.md`, all Prompt v3 files, `.loom/design/prompt-eval-fixtures.md`, TASK-007 through TASK-013, and the relevant donor code produced the field- and transition-level contradictions listed above."
+        ],
+        "gaps": [
+          {
+            "gap": "The model-facing Interviewer contract still requires host-owned IDs. `.loom/design/insight-plan-contracts.md:288-303` types `InterviewerProposal.mission` as the full `WaveMission`, which requires `id` and `wave_id` at :172-184; its `questions` omit top-level question IDs but retain nested `QuestionOption.id` from :190-199. `.loom/design/adaptive-interview-system.md:146-160` separately defines an incompatible `WaveMissionProposal` containing `mission_id`. This contradicts `prompts/interviewer-v2.md:50-54` (the host assigns IDs) and `prompts/PROMPT-ARCHITECTURE.md:146-158` (model proposals never invent host IDs/timestamps/revisions).",
+            "why_it_blocks_start": "TASK-008 must create the Zod schemas before prompt wiring. A fresh Agent must guess whether the model emits mission, wave and option IDs, whether trusted IDs are injected before validation, or whether the canonical proposal types should omit them; each choice changes validation, idempotency and later Prompt v3 compatibility.",
+            "evidence_to_close": "Define one canonical `WaveMissionProposal` and nested `QuestionOptionProposal` that omit every host-owned ID, make `InterviewerProposal` use them, and align adaptive-interview-system, Prompt Architecture, interviewer prompt and lint. Add a schema test proving model output contains no newly invented host-owned ID while the committed object receives host IDs exactly once."
+          },
+          {
+            "gap": "No contract assigns semantic ownership for the 5-10 elicitation units that must exist when a wave mission commits. `.loom/design/state-and-persistence-protocol.md:139` requires `WAVE_MISSION_COMMITTED` to commit a wave whose mission owns 5-10 units, and `.loom/design/insight-plan-contracts.md:224-250` requires `Wave.elicitation_units`. But neither `InterviewerProposal` at `.loom/design/insight-plan-contracts.md:288-298` nor `WaveMissionProposal` at `.loom/design/adaptive-interview-system.md:146-160` proposes those units; an opening microbatch can supply only 1-3 question targets. The host/model split says semantic question targets belong to Interviewer, not a deterministic host heuristic.",
+            "why_it_blocks_start": "At the first `WAVE_MISSION_COMMITTED` transition, TASK-008 cannot construct the required Wave without either inventing 2-9 future decision targets in the host, weakening the transition invariant, or dynamically adding units through an event that does not exist.",
+            "evidence_to_close": "Choose and document one executable lifecycle: either the open-wave proposal supplies 5-10 ID-free unit proposals that the host IDs and commits atomically, or units are added through explicitly named guarded events with a clear close invariant. Align the state table, event payloads, Interviewer schema/prompt and property tests."
+          },
+          {
+            "gap": "Calibration source ownership is contradictory. `.loom/design/insight-plan-contracts.md:367-374` requires every `Calibration` to contain `source_ref`, and the propagation rules treat calibration/correction as evidence. Yet `.loom/design/state-and-persistence-protocol.md:194` defines `CalibrationSubmitted` with `source?: SourceVersion`, while `CALIBRATION_SUBMITTED` is the only transition that can record the verdict and its source. No preceding event creates that calibration source.",
+            "why_it_blocks_start": "The TASK-008 transaction cannot deterministically satisfy the required `Calibration.source_ref` when `source` is absent, and a fresh implementer must guess whether verdict-only calibration is a source, whether only correction text creates one, or whether a separate write is allowed outside the event transaction.",
+            "evidence_to_close": "Make the event payload and source lifecycle agree: require and atomically insert a calibration `SourceVersion` for every verdict, or make `source_ref` conditional with an explicit alternate provenance rule and event. Add verdict-without-text, correction, duplicate delivery and rollback tests."
+          },
+          {
+            "gap": "Required generated-artifact provenance has no persisted canonical shape. `prompts/PROMPT-ARCHITECTURE.md:112-123` and `.loom/design/insight-plan-contracts.md:669-677` require every generated artifact to store prompt contract revision/hash, schema hash, context-builder version, model/provider/config and fixture-suite version. `.loom/design/state-and-persistence-protocol.md:87-106` gives the ephemeral `ProposalEnvelope` only `prompt_hash`, `schema_hash`, `context_hash` and `model_config_hash`; it omits prompt contract revision, context-builder version, provider/model fields and fixture-suite version, and explicitly says proposals are not domain facts. The committed artifact types do not add a shared provenance record.",
+            "why_it_blocks_start": "TASK-008 owns persistence and artifact field ownership. The Agent must invent whether provenance is embedded per artifact, stored in a shared immutable generation record, copied from the proposal, or lost after TTL; this affects audits, activation and TASK-010 report reproducibility.",
+            "evidence_to_close": "Define one persisted `GenerationProvenance`/generation-call record with every required field, its foreign-key relationship to each generated artifact, and the atomic copy from proposal to commit. Align ProposalEnvelope, event metadata/domain types and add a persistence/replay test."
+          },
+          {
+            "gap": "The transition table excludes one of the five canonical bounded-chat scopes after a trial is exited. `.loom/design/state-and-persistence-protocol.md:160` permits `BOUNDED_REFLECTION_OPENED` only for explain/compare/adjust/blueprint, omitting `reflect_on_trial`; `TRIAL_EXITED` returns to `parallel_lives_ready` at :164. But `.loom/design/insight-plan-contracts.md:651-657`, `prompts/sensemaker-chat-v3.md:11-17,43-47`, and TASK-012 require `reflect_on_trial`, explicitly treating early stop as information.",
+            "why_it_blocks_start": "A user who exits early reaches a state from which the canonical guard forbids opening the very reflection mode promised by the prompt and later task. Implementing either the table or the product contract causes a mismatch in XState guards and tests.",
+            "evidence_to_close": "Add `reflect_on_trial` to the appropriate `BOUNDED_REFLECTION_OPENED` guard with an exited/completed trial prerequisite, or define a separate legal transition. Add a state test for exit -> reflection -> committed reflection source."
+          },
+          {
+            "gap": "The claimed dependency-free L0 gate is not reproducible with the documented exact command across the current Windows shell surface. `.loom/design/acceptance-and-research.md` declares `& .\\.loom\\tools\\verify-harness.ps1` as the exact command and TASK-007 claims it passed. `rtk pwsh -NoProfile -File .loom/tools/verify-harness.ps1` prints `HARNESS_LINT_OK`, but `rtk powershell -NoProfile -ExecutionPolicy Bypass -File .loom/tools/verify-harness.ps1` fails with a ParserError/misdecoded UTF-8 text around line 63 because the script is UTF-8 without a Windows PowerShell-compatible encoding marker.",
+            "why_it_blocks_start": "A fresh Agent following the stated exact PowerShell command can receive a parser failure instead of the required pre-code evidence. The document does not specify PowerShell 7 as a prerequisite or command, so the gate's truth depends on an unstated shell choice.",
+            "evidence_to_close": "Either make the script encoding compatible with Windows PowerShell 5.1 and show the exact command prints `HARNESS_LINT_OK`, or change the canonical exact command/prerequisite to `pwsh` and verify it from a fresh shell. Record the exact passing output in TASK-007 evidence."
+          }
+        ],
+        "at": "2026-08-29T07:40:17.141Z"
+      },
+      {
+        "run_id": "f966c850-16ca-4219-a5fa-5c4baf07884b",
+        "prepared_digest": "d8fc839ddb808990c0d0c2bbc3d11b42bd3ca65bec7578915ca95a90a6e2f38f",
+        "verdict": "needs_revision",
+        "summary": "The revision closes the six gaps reported by Keeper attempt 6 and its PowerShell 7 L0 gate is reproducible, but a fresh Agent still cannot implement TASK-008 without inventing persistence, indexing, readiness, provenance, deep-dive lifecycle, and Prisma toolchain decisions.",
+        "evidence": [
+          "`rtk loom context --keeper` reported Keeper attempt 7, frozen digest d8fc839ddb808990c0d0c2bbc3d11b42bd3ca65bec7578915ca95a90a6e2f38f, 27 facts, zero assumptions/questions, 11 design documents, 10 capability dossiers and 13 tasks.",
+          "`rtk loom check` returned healthy; task status was 13 total / 7 open / 6 done, and `rtk loom task get TASK-008` supplied the exact donor reads, first inventory action, dependencies, touches and evidence commands.",
+          "Every TASK-008 declared read exists; a SHA-256/size inventory covered all design/capability/prompt/package/Prisma/route/helper/test files, and donor inspection confirmed SQLite/Prisma tables, guest 24-hour ownership, consent/upload routes, fixed Wave 1, MAX_WAVES=4/MAX_QUESTIONS=19, working-memory helpers and current regression tests.",
+          "The attempt-6 closures are present on disk: ID-free mission/question/option proposals with 5-10 units, required calibration SourceVersion, complete GenerationProvenance fields, exited-trial reflection guard/test, and a PowerShell 7 prerequisite.",
+          "`rtk pwsh -NoProfile -File .loom/tools/verify-harness.ps1` passed exactly with `HARNESS_LINT_OK` and `json=15 markdown=31 prompts=6 decisions=21`.",
+          "A clean dependency materialization via `rtk pnpm install --frozen-lockfile` succeeded but warned that `@prisma/client` build scripts were ignored; subsequent exact checks produced: lint exit 0 with warnings, `pnpm exec prisma validate` command-not-found, typecheck 29 errors, and build failure at TypeScript due the ungenerated Prisma client.",
+          "Installed Next.js 16.3.3 local guidance is present at `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md` and related server/caching guides, so the Next-specific read prerequisite is discoverable once dependencies are installed.",
+          "The capability map preserves distinct product, UI/UX, visual art, game, conversational AI, conversation psychology, life design, privacy/safety, application architecture and data-integrity stances; the verdict is caused by executable contract gaps, not missing professional labels."
+        ],
+        "gaps": [
+          {
+            "gap": "The ID-free elicitation-unit proposal cannot be losslessly or stably committed. `.loom/design/insight-plan-contracts.md:280-284` gives each `ElicitationUnitProposal` `target_dimensions`, but committed `ElicitationUnit` at :271-278 has no such field and no stable order/index. `QuestionProposal.elicitation_unit_index` at :333-344 is also used for `continue_wave`, while `.loom/design/state-and-persistence-protocol.md:142` requires that index to resolve to a committed pending unit after refresh. A relational read has no canonical array order from which to resolve it.",
+            "why_it_blocks_start": "TASK-008 must define the Zod and Prisma shapes before rewiring routes. The Agent must choose whether to discard per-unit dimensions, add undeclared persisted fields/order, sort by an implementation heuristic, or change continue-wave proposals to reference trusted committed IDs; those choices alter context stability, question-to-unit integrity, and migration schema.",
+            "evidence_to_close": "Define one lossless committed unit shape and deterministic mapping for both opening and later microbatches. Either persist `target_dimensions` plus an immutable `order_in_wave` and specify context serialization, or use proposal-local indexes only at open and exact trusted unit IDs for continue. Add refresh/reload and reordered-database-read tests proving the same question resolves to the same unit."
+          },
+          {
+            "gap": "Route readiness defines status-combination truth but not an executable derivation of each `GateStatus` from committed facts. `.loom/design/insight-plan-contracts.md:492-539` exhaustively maps supplied statuses to booleans, yet only partially defines when statuses become `met`. `.loom/design/adaptive-interview-system.md:198-209` additionally requires a material constraint, at least two distinct scene sources and at least two calibrations (or skip), without mapping those facts to the eight canonical gates or explaining whether one explicit skip satisfies the stated two-calibration rule.",
+            "why_it_blocks_start": "TASK-008 owns the readiness contract and the `PARALLEL_LIVES_COMMITTED` guard. A fresh Agent can test the boolean formula only by injecting already-decided statuses; it cannot compute those statuses from persisted sources, radar, calibrations and accepted intents without inventing thresholds and ownership.",
+            "evidence_to_close": "For every readiness field, define a pure host derivation from named committed records and exact SourceRefs, reconcile the two-scene/two-calibration/material-constraint criteria with the canonical gate list, and add fixtures that build facts and assert the derived statuses before asserting formal/provisional booleans."
+          },
+          {
+            "gap": "Model edits to existing claims have no revision-safe generation provenance rule. `.loom/design/insight-plan-contracts.md:145-154` gives `Claim` one `generation_provenance_id` and no artifact revision/history, while `MemoryOperationProposal.update_claim` at :403-410 can change its generated text/evidence. The provenance rules at :29-50 and :773 require generated records to remain attributable, but do not say whether an update retains the old provenance, overwrites it with the new call, or creates a new claim version.",
+            "why_it_blocks_start": "TASK-008 must implement atomic memory operations, stale propagation and immutable generation provenance. Retaining the FK misattributes new content to an old call; replacing it loses origin; mutating in place prevents replay/audit. Each option requires a different schema and propagation algorithm.",
+            "evidence_to_close": "Define immutable artifact revision/history semantics for model-updated claims (or remove model `update_claim` in favor of supersede-and-create), including provenance ownership, dependency edges, stale behavior and replay. Add a two-call test showing both the original and updated content are attributed reproducibly."
+          },
+          {
+            "gap": "The deep-dive proposal has two incompatible model-facing shapes and no single carry-through path. Canonical `InterviewerProposal` in `.loom/design/insight-plan-contracts.md:347-378` uses `mode=propose_deep_dive` with mission, 5-10 units, 1-3 questions and `deep_dive_reason`; `.loom/design/adaptive-interview-system.md:165-178` separately defines `DeepDiveProposal` with `eligible_reason`, `source_refs`, `route_decision_affected` and `proposed_mission`, but no opening questions. The transition flow commits only `{kind, deep_dive_reason}` in `NEXT_WAVE_COMMITTED` (`state-and-persistence-protocol.md:151,207`) before a later `WAVE_MISSION_COMMITTED`, so it does not say whether the proposed mission is discarded, reused, or regenerated.",
+            "why_it_blocks_start": "TASK-008 must implement deep dives 0-2 and proposal/commit separation. The Agent must invent whether there are one or two model calls/schemas, which proposal owns the mission, and how provenance/idempotency applies across `DEEP_DIVE_PROPOSED`, `NEXT_WAVE_COMMITTED` and wave open.",
+            "evidence_to_close": "Choose one explicit deep-dive lifecycle with one canonical schema per call, state what survives `NEXT_WAVE_COMMITTED`, and align adaptive-interview-system, Interviewer prompt, EventPayloadMap and tests for accepted, rejected, retried and refreshed deep-dive proposals."
+          },
+          {
+            "gap": "TASK-008's documented Prisma evidence commands are not executable from a frozen install. `package.json` and `pnpm-lock.yaml` contain `@prisma/client@6.6.0` but no `prisma` CLI. After `pnpm install --frozen-lockfile`, pnpm reports the Prisma client build script was ignored; `pnpm exec prisma validate` fails with `prisma is not recognized`, and `pnpm typecheck`/`pnpm build` fail because `PrismaClient`/`Prisma` were not generated. TASK-008 names `pnpm exec prisma ...` as exact evidence but only explicitly directs adding XState v5, Vitest and fast-check.",
+            "why_it_blocks_start": "A fresh Agent cannot establish a passing donor baseline or run the required validate/migrate commands without deciding to add an undeclared matching Prisma CLI dependency and a pnpm-10-safe client-generation/build-script policy. That dependency and install policy affect the lockfile, CI and every required evidence command.",
+            "evidence_to_close": "Declare the exact Prisma CLI version and deterministic fresh-install/client-generation policy (including pnpm build-script handling), then demonstrate from no `node_modules` that `pnpm install --frozen-lockfile`, `pnpm exec prisma validate`, the documented migrate commands, `pnpm typecheck` and `pnpm build` reach the expected baseline."
+          }
+        ],
+        "at": "2026-08-29T08:00:35.215Z"
       }
     ],
-    "prepared_digest": "af9323e61eadf0080b6bb4f2298456d76d98677e5e45244744093ee8e963b362",
-    "prepared_attempt": 4
+    "prepared_digest": "cab86386bb8f8ff5348b06d9e96b3e69232cf1c006eaba3bc0ccc571fcf0a1ec",
+    "prepared_attempt": 8,
+    "skip_reason": "Responsible owner explicitly stopped further Keeper review after seven completed review rounds; every material attempt-7 finding has been absorbed into canonical contracts/tests/TASK-008, deterministic L0 passes, and further open-ended review has diminishing value. Proceed to implementation without claiming an independent Keeper pass."
   },
   "decision_ids": [
     "D-001",
@@ -255,6 +481,16 @@
     "D-006",
     "D-007",
     "D-008",
-    "D-009"
+    "D-009",
+    "D-010",
+    "D-011",
+    "D-012",
+    "D-013",
+    "D-014",
+    "D-015",
+    "D-016",
+    "D-017",
+    "D-018",
+    "D-019"
   ]
 }

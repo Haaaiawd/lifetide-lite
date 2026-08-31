@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Pause, Play, X, Check, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { PixelIcon } from "@/components/art/PixelIcon";
 import type { Route } from "@/lib/fixtures";
 import type { TrialStatus } from "@/lib/working-memory/types";
 
@@ -63,7 +64,10 @@ export function RouteCover({
     >
       <header>
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-3xl font-bold text-cobalt">{route.number}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-3xl font-bold text-cobalt">{route.number}</span>
+            <PixelIcon name="compass" size={20} className="text-cobalt" />
+          </div>
           <h2 className="font-serif text-lg">{route.title}</h2>
         </div>
         <p className="mt-2 font-serif text-base italic leading-snug text-ink line-clamp-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PixelIcon } from "@/components/art/PixelIcon";
 import { ChoiceCard } from "./ChoiceCard";
 import type { InterviewQuestion } from "@/lib/working-memory/types";
 
@@ -90,7 +91,10 @@ export function QuestionFrame({ question, index, total, onSubmit, onSkip }: Ques
       className="mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col justify-between"
     >
       <header className="flex items-center justify-between pt-2">
-        <span className="font-mono text-sm text-cobalt">WAVE {question.wave_id.replace("w", "")}</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-sm text-cobalt">
+          <PixelIcon name="circleQuestion" size={14} className="text-cobalt" />
+          WAVE {question.wave_id.replace("w", "")}
+        </span>
         <span className="text-sm text-ink-muted">
           第 {index}/{total} 题
         </span>

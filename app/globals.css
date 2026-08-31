@@ -54,6 +54,11 @@ body {
   background-position: -1px -1px;
 }
 
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

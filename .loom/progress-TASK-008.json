@@ -1,0 +1,30 @@
+{
+  "progress": {
+    "completed": [
+      "Created migration inventory `.loom/implementation/TASK-008-migration-inventory.md` before schema/API edits",
+      "Repaired package install baseline: pnpm 10.24.0, Prisma CLI/Client 6.6.0, onlyBuiltDependencies for @prisma/client",
+      "Verified fresh worktree frozen install and Prisma generate/validate",
+      "Implemented canonical v3 contracts (lib/state/contracts.ts, lib/state/events.ts)",
+      "Implemented XState v5 harness machine (lib/state/machine.ts)",
+      "Implemented deriveRouteReadiness() (lib/state/derive-route-readiness.ts)",
+      "Implemented revision-safe Prisma schema and migrations",
+      "Implemented transactional commit service with idempotency, revision conflict, guard detection and PERSISTENCE_ERROR handling (lib/db/commit.ts)",
+      "Added Vitest, fast-check, property and unit tests",
+      "Restored TASK-008 after TASK-009 prompt reframe completed",
+      "Implemented domain-record persistence helpers for WaveMission, ElicitationUnit, Microbatch, Question, Answer, SourceVersion, ImmediateInsight, Calibration and RouteIntent",
+      "Committed Wave 1 template to the XState ledger with canonical elicitation units, microbatch and questions (lib/interview/templates.ts, app/api/wave/route.ts)",
+      "Migrated app/api/session, app/api/session/consent, app/api/wave, app/api/feedback and app/api/final through lib/db/commitEvent for the full canonical conversation flow",
+      "Fixed XState actor snapshot persistence to restore from full persisted snapshot instead of state value only",
+      "Migrated POST /api/wave to emit ANSWER_SUBMITTED, WAVE_END_COMMITTED and INSIGHT_COMMITTED events",
+      "Migrated POST /api/feedback to emit CALIBRATION_SUBMITTED, NEXT_WAVE_COMMITTED and ROUTE_PHASE_ENTERED events",
+      "Migrated POST /api/final to emit ROUTE_PHASE_ENTERED, ROUTE_INTENT_CANDIDATES_COMMITTED, ORDINARY_DAY_SCREENING_STARTED, ORDINARY_DAYS_COMMITTED and PARALLEL_LIVES_COMMITTED events",
+      "Taught GET /api/wave to consult SessionStateHead before generating, resuming or stopping",
+      "Fixed commitEvent guard detection to accept internal XState transitions that increment context revision",
+      "Added tests for idempotency, revision conflict, invalid state, answer sequence and PERSISTENCE_ERROR rollback (tests/unit/commit-event.test.ts)",
+      "Added XState ledger end-to-end integration test (tests/integration/harness-state.test.ts)",
+      "Verified full Playwright integration suite (30 passed), e2e mobile/desktop (18 passed), typecheck, build and lint (0 errors)"
+    ],
+    "current": "The canonical XState event ledger is the control plane for the full conversation flow through parallel lives. Domain records are persisted transactionally and the full two-wave + final plan flow is covered by an end-to-end ledger test.",
+    "next": "Add strict source-reference validation in lib/db/commit.ts, domain persistence for ordinary days/parallel lives when models are added, append-and-supersede correction persistence, and remaining property/fault tests for deep dives, provider failure and trial reflection."
+  }
+}
