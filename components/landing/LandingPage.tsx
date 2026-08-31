@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { PixelIcon } from "@/components/art/PixelIcon";
+import { HeroMark } from "./HeroMark";
 
 export function LandingPage() {
   const reduce = useReducedMotion();
@@ -17,6 +18,8 @@ export function LandingPage() {
       </header>
 
       <section className="flex flex-1 flex-col items-start justify-center gap-8">
+        <HeroMark />
+
         <h1 className="max-w-[18ch] font-serif text-[30px] leading-[1.12] tracking-tight md:text-[42px] lg:text-[54px]">
           回答几个短问题，看见三种可试玩的人生
         </h1>
