@@ -1,9 +1,7 @@
-Fix PR #1 review findings: accurate canonical calibration, route acceptance, resume restoration, payload validation, and nested session ownership.
+Remove Three.js voxel mascot from landing page and drop unused dependencies.
 
-- app/api/feedback/route.ts: inaccurate verdict now commits CALIBRATION_SUBMITTED instead of CALIBRATION_SKIPPED, preserving correction and preferred direction.
-- lib/state/machine.ts: SESSION_PAUSED/PROVIDER_FAILED now store the current state; SESSION_RESUMED/PROVIDER_RECOVERED restore via a resuming state with history-based transitions.
-- lib/db/commit.ts: add event-specific Zod payload validation and recursive nested session_id ownership checks.
-- app/api/final/route.ts: emit ROUTE_INTENTS_ACCEPTED for three accepted candidates before ordinary-day/parallel-life commits, enforce provisional/formal wave gate, and map plan evidence to contract EvidenceLink.
-- tests/unit/commit-event.test.ts and harness-machine.test.ts: update assertions for new validation and add resume regression test.
+- components/landing/LandingPage.tsx: remove VoxelMascotClient usage.
+- Delete components/landing/VoxelMascot.tsx and VoxelMascotClient.tsx.
+- package.json / pnpm-lock.yaml: remove @react-three/drei, @react-three/fiber, three, @types/three.
 
 Verification: typecheck, build, lint (0 errors), test:contracts (31/31), and Playwright e2e+integration (48/48) all pass.
