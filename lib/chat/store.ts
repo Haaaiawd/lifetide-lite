@@ -33,7 +33,7 @@ export async function loadOrCreateChatThread(
       const result = boundedChatThreadSchema.safeParse(parsed);
       if (result.success) {
         const thread = result.data as BoundedChatThread;
-        if (thread.final_plan_revision === plan.memory_revision) {
+        if (thread.final_plan_revision === (plan.memory_revision ?? 0)) {
           return thread;
         }
       } else {
@@ -45,7 +45,7 @@ export async function loadOrCreateChatThread(
   const newThread: BoundedChatThread = {
     id: makeThreadId(),
     session_id: sessionId,
-    final_plan_revision: plan.memory_revision,
+    final_plan_revision: plan.memory_revision ?? 0,
     turns_used: 0,
     status: "active",
     local_notes: [],

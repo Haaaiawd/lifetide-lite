@@ -49,9 +49,9 @@ test.describe("Upload boundary", () => {
     const res = await request.post(`${baseURL}/api/uploads`, {
       multipart: {
         file: {
-          name: "resume.pdf",
-          mimeType: "application/pdf",
-          buffer: Buffer.from("%PDF fake content"),
+          name: "malware.exe",
+          mimeType: "application/x-msdownload",
+          buffer: Buffer.from("MZ fake executable"),
         },
       },
     });
@@ -72,7 +72,7 @@ test.describe("Upload boundary", () => {
         file: {
           name: "huge.txt",
           mimeType: "text/plain",
-          buffer: Buffer.from("x".repeat(3 * 1024 * 1024)),
+          buffer: Buffer.from("x".repeat(11 * 1024 * 1024)),
         },
       },
     });

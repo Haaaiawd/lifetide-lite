@@ -1,0 +1,80 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-016",
+      "title": "Runtime prompt and contract v3 full alignment",
+      "outcome": "The runtime loads every model prompt from the canonical `prompts/*.md` files and the code schemas, working-memory structures, memory operations and model call outputs strictly follow the v3 contract in `lib/state/contracts.ts`. No hardcoded prompt prose remains in `lib/ai/*.ts`.",
+      "done_when": [
+        "A prompt loader in `lib/ai/prompts/` reads the markdown files under `prompts/` and returns the canonical operational text for Interviewer, Sensemaker wave, Sensemaker futures/final, Prototype and Chat; no prompt markdown is edited.",
+        "`lib/ai/interviewer.ts` replaces its inline `makePrompt()` with the loader, passes the v3 input envelope and uses `interviewerProposalSchema` for all three modes (open_wave, continue_wave, propose_deep_dive).",
+        "`lib/ai/sensemaker/wave.ts` replaces its inline `insightSchema` with `waveSensemakerProposalSchema`; the model returns `operations` and `insight`, and the host applies the operations after validation.",
+        "`lib/ai/sensemaker/final.ts` (and any futures/ordinary-day helpers) use the canonical v3 prompts and the `FinalPlan` / parallel-life schema from `lib/state/contracts.ts`.",
+        "`lib/ai/sensemaker/chat.ts` uses the canonical v3 chat prompt and `sensemakerChatOutputSchema`.",
+        "`lib/working-memory/types.ts` and `schema.ts` are aligned with v3: ImmediateInsight has `user_told_me`, `current_reading`, `important_unknown`, `radar_deltas`, `route_impact`, `evidence` as `EvidenceLink[]` and `language_strength`; MemoryOperation uses v3 op names (`add_claim`, `update_radar`, etc.).",
+        "`lib/working-memory/operations.ts` handles every v3 MemoryOperation, including `add_claim`, `supersede_claim`, `invalidate_claim`, `add_constraint`, `update_radar`, `add_route_intent_seed`, `mark_stale`.",
+        "`build-wave-patch.ts` is retired or rewritten so that evidence, claims, constraints, route intents and radar deltas come from the model proposal; host owns id assignment, validation and fallback.",
+        "`app/api/wave/route.ts`, `app/api/feedback/route.ts` and `app/play/page.tsx` consume the new v3 wave output shape without breaking guest session and consent flow.",
+        "All integration, contract and E2E tests pass; fixtures and test answers are updated to match the new v3 schemas and question IDs."
+      ],
+      "boundaries": [
+        "Do not edit `prompts/*.md`; they are the canonical v3 source.",
+        "Do not invent new v4 contracts; use `lib/state/contracts.ts` as the v3 authority.",
+        "Do not make the model assign host-owned ids, timestamps or provenance; host assigns them after the proposal is accepted.",
+        "Do not silently fall back to hardcoded plan text; a degraded model output must be visibly provisional or empty.",
+        "Preserve guest session, upload privacy, consent and visual system as-is."
+      ],
+      "depends_on": [
+        "TASK-009"
+      ],
+      "reads": [
+        ".loom/design/prompt-architecture-brief.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/conversational-six-dimension-harness.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md",
+        "prompts/blueprint-writer-v2.md",
+        "prompts/sensemaker-chat-v3.md",
+        "lib/state/contracts.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/working-memory/operations.ts",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "lib/ai/client.ts",
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/play/page.tsx"
+      ],
+      "touches": [
+        "lib/ai/prompts/",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "lib/ai/client.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/working-memory/operations.ts",
+        "lib/ai/sensemaker/build-wave-patch.ts",
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/play/page.tsx",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "progress": {
+        "completed": [],
+        "current": "Planning the v3 runtime alignment",
+        "next": "Build the prompt loader and reconcile working-memory types with v3 contracts"
+      }
+    }
+  ]
+}

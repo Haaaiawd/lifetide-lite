@@ -1,40 +1,183 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import { InsightSlip } from "@/components/insight/InsightSlip";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { LoadingProgress } from "@/components/LoadingProgress";
 import { RouteCarousel } from "@/components/routes/RouteCarousel";
+import { Conversation, type ConversationItem } from "@/components/play/Conversation";
+import { WaitingBubble } from "@/components/play/WaitingBubble";
+import { PortraitCard } from "@/components/portrait/PortraitCard";
 import type { Route } from "@/lib/fixtures";
 import { toInsightView } from "@/lib/plans/insight-view";
 import { toRouteView } from "@/lib/plans/route-view";
 import type { InterviewQuestion, ImmediateInsight, ParallelLife } from "@/lib/working-memory/types";
-
-const QuestionFrame = dynamic(() => import("@/components/interview/QuestionFrame").then((m) => m.QuestionFrame), {
-  ssr: false,
-});
+import type { PersonaPortrait } from "@/lib/portrait/types";
 
 const REQUIRED_CONSENTS = [{ type: "ai", given: true }];
 
-type Step = "loading" | "consent" | "question" | "insight" | "stop" | "routes";
+type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "portrait" | "routes" | "waiting";
+
+type ProgressInfo = {
+  waveIndex: number;
+  hasPortrait: boolean;
+  hasFinalPlan: boolean;
+  lastStep: "fresh" | "question" | "stop" | "portrait" | "routes";
+};
 
 export default function PlayPage() {
+  const reduce = useReducedMotion();
   const [step, setStep] = useState<Step>("loading");
+  const [items, setItems] = useState<ConversationItem[]>([]);
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, { value?: string | string[] | number; skipped: boolean }>>({});
-  const [insight, setInsight] = useState<ImmediateInsight | null>(null);
   const [waveIndex, setWaveIndex] = useState(1);
   const [waveId, setWaveId] = useState<string>("w1");
-  const [stop, setStop] = useState<{ can_generate: boolean; provisional: boolean; reason: string } | null>(null);
+  const [insight, setInsight] = useState<ImmediateInsight | null>(null);
   const [routes, setRoutes] = useState<Route[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
+  const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
+  const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
+  const [streamingPortrait, setStreamingPortrait] = useState<{ essence?: string; trait_summary?: string } | null>(null);
+  const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  // Prefetch: after insight is done, we fire GET /api/wave in the background
+  // so the next wave's questions are ready by the time the user clicks continue.
+  // The promise is stored in a ref; the result is cached in prefetchedWave.
+  const prefetchRef = useRef<Promise<{ questions: InterviewQuestion[]; wave_id: string; wave_index: number; stop?: boolean } | null> | null>(null);
 
   useEffect(() => {
-    loadWave();
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
+    // 1. Check auth + progress
+    fetch("/api/progress")
+      .then((r) => {
+        if (r.status === 401) {
+          // Not authenticated — redirect to login
+          window.location.href = "/login";
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (!data) return;
+
+        // Not authenticated (guest fallback in API but we require auth for /play)
+        if (!data.authenticated) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const progress = data.progress as ProgressInfo;
+        setProgressInfo(progress);
+
+        // If user has progress, show resume prompt
+        if (progress.lastStep !== "fresh") {
+          setStep("resume");
+        } else {
+          // Fresh user — start consent flow
+          loadWave(true);
+        }
+      })
+      .catch(() => {
+        setStep("consent");
+      });
   }, []);
 
-  const loadWave = async () => {
-    setStep("loading");
+  function newId(): string {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  const appendItem = (item: ConversationItem) => {
+    setItems((prev) => [...prev, item]);
+  };
+
+  const replaceActiveQuestion = (answeredId: string, answerValue: string | string[] | number, skipped: boolean) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === answeredId && it.type === "question"
+          ? { ...it, isActive: false, answer: { value: answerValue, skipped } }
+          : it
+      )
+    );
+  };
+
+  // Helper: apply wave data to state and render first question
+  const applyWaveData = (data: { questions: InterviewQuestion[]; wave_id: string; wave_index: number }) => {
+    setQuestions(data.questions);
+    setWaveIndex(data.wave_index);
+    setWaveId(data.wave_id);
+    setQuestionIndex(0);
+    setAnswers({});
+    setInsight(null);
+
+    appendItem({
+      id: newId(),
+      type: "bot",
+      text: `第 ${data.wave_index} 波，来看看几个关键问题。`,
+    });
+
+    if (data.questions.length > 0) {
+      appendItem({
+        id: newId(),
+        type: "question",
+        question: data.questions[0],
+        total: data.questions.length,
+        isActive: true,
+      });
+    }
+
+    setStep("question");
+  };
+
+  // Fire a prefetch GET /api/wave and store the promise.
+  // Called right after insight is shown, so the next wave generates
+  // while the user is still reading.
+  const startPrefetch = () => {
+    if (prefetchRef.current) return;
+    prefetchRef.current = fetch("/api/wave?prefetch=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || data.stop) return null;
+        return data as { questions: InterviewQuestion[]; wave_id: string; wave_index: number };
+      })
+      .catch(() => null);
+  };
+
+  const loadWave = async (isInitial = false) => {
+    // Initial load uses full-screen loading (no conversation to show yet).
+    // Subsequent loads use the waiting animation at the bottom of the conversation.
+    if (isInitial) {
+      setStep("loading");
+    }
+
+    // If a prefetch is in flight, wait for it with a waiting animation.
+    if (prefetchRef.current) {
+      setWaitingVariant("wave");
+      setStep("waiting");
+      try {
+        const data = await prefetchRef.current;
+        prefetchRef.current = null;
+        if (data) {
+          applyWaveData(data);
+          return;
+        }
+        // Prefetch returned stop or null — fall through to normal fetch
+      } catch {
+        prefetchRef.current = null;
+        // Fall through to normal fetch
+      }
+    }
+
+    // No prefetch available — fetch with waiting animation
+    setWaitingVariant("wave");
+    setStep("waiting");
     try {
       const res = await fetch("/api/wave");
       if (res.status === 403) {
@@ -45,18 +188,18 @@ export default function PlayPage() {
       const data = await res.json();
 
       if (data.stop) {
-        setStop(data);
+        appendItem({
+          id: newId(),
+          type: "bot",
+          text: data.can_generate
+            ? `已经聊了 ${waveIndex} 波，可以生成个人画像了，也可以继续补充。`
+            : "我们再补充一轮，可能会更清楚。",
+        });
         setStep("stop");
         return;
       }
 
-      setQuestions(data.questions);
-      setWaveIndex(data.wave_index);
-      setWaveId(data.wave_id);
-      setQuestionIndex(0);
-      setAnswers({});
-      setInsight(null);
-      setStep("question");
+      applyWaveData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setStep("consent");
@@ -65,15 +208,17 @@ export default function PlayPage() {
 
   const currentQuestion = questions[questionIndex];
 
-  const submitWave = async (answersToSubmit: Record<string, { value?: string | string[] | number; skipped: boolean }>) => {
+  const submitWave = async () => {
     if (!currentQuestion) return;
-    setStep("loading");
+    setWaitingVariant("insight");
+    setStreamingInsight(null);
+    setStep("waiting");
     const payload = {
       wave_id: currentQuestion.wave_id,
       answers: questions.map((q) => ({
         question_id: q.id,
-        value: answersToSubmit[q.id]?.value,
-        skipped: answersToSubmit[q.id]?.skipped ?? false,
+        value: answers[q.id]?.value,
+        skipped: answers[q.id]?.skipped ?? false,
       })),
     };
 
@@ -84,10 +229,70 @@ export default function PlayPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Wave submission failed: ${res.status}`);
-      const data = await res.json();
-      setInsight(data.insight);
-      setWaveIndex(data.wave_index);
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let doneData: { wave_id: string; wave_index: number; revision: number; insight: ImmediateInsight } | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from buffer
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const eventBlock of events) {
+          const lines = eventBlock.split("\n");
+          let eventType = "";
+          let dataLine = "";
+          for (const line of lines) {
+            if (line.startsWith("event: ")) eventType = line.slice(7);
+            else if (line.startsWith("data: ")) dataLine = line.slice(6);
+          }
+          if (!eventType || !dataLine) continue;
+
+          try {
+            const data = JSON.parse(dataLine);
+            if (eventType === "partial") {
+              setStreamingInsight(data);
+            } else if (eventType === "done") {
+              doneData = data;
+            } else if (eventType === "error") {
+              throw new Error(data.error ?? "Stream error");
+            }
+          } catch (parseErr) {
+            // Ignore malformed events
+          }
+        }
+      }
+
+      if (!doneData) throw new Error("Stream ended without done event");
+      const insightView = toInsightView(doneData.insight, doneData.wave_index);
+      setInsight(doneData.insight);
+      setWaveIndex(doneData.wave_index);
+      setStreamingInsight(null);
+
+      appendItem({
+        id: newId(),
+        type: "bot",
+        text: "好，我已经整理好一条理解，你看看哪里需要调：",
+      });
+      appendItem({
+        id: newId(),
+        type: "insight",
+        insight: insightView,
+        isActive: true,
+      });
+
       setStep("insight");
+
+      // Start prefetching the next wave while the user reads the insight.
+      // The server allows GET during awaiting_calibration state.
+      startPrefetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setStep("question");
@@ -95,76 +300,176 @@ export default function PlayPage() {
   };
 
   const advance = (nextAnswers: Record<string, { value?: string | string[] | number; skipped: boolean }>) => {
-    setAnswers(nextAnswers);
+    if (!currentQuestion) return;
+
     if (questionIndex < questions.length - 1) {
+      const next = questions[questionIndex + 1];
+      appendItem({
+        id: newId(),
+        type: "question",
+        question: next,
+        total: questions.length,
+        isActive: true,
+      });
       setQuestionIndex((i) => i + 1);
     } else {
-      submitWave(nextAnswers);
+      submitWave();
     }
   };
 
-  const handleAnswer = (value: string | string[] | number) => {
+  const handleQuestionSubmit = (id: string, value: string | string[] | number) => {
     if (!currentQuestion) return;
+    replaceActiveQuestion(id, value, false);
     const nextAnswers = { ...answers, [currentQuestion.id]: { value, skipped: false } };
+    setAnswers(nextAnswers);
     advance(nextAnswers);
   };
 
-  const handleSkip = () => {
+  const handleQuestionSkip = (id: string) => {
     if (!currentQuestion) return;
+    replaceActiveQuestion(id, "", true);
     const nextAnswers = { ...answers, [currentQuestion.id]: { skipped: true } };
+    setAnswers(nextAnswers);
     advance(nextAnswers);
   };
 
-  const handleContinue = async (feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }) => {
+  const handleInsightContinue = async (
+    id: string,
+    feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }
+  ) => {
     if (!insight) return;
 
-    const verdictMap: Record<string, string> = {
-      accurate: "accurate",
-      partial: "partly_accurate",
-      inaccurate: "inaccurate",
-    };
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id && it.type === "insight"
+          ? { ...it, isActive: false, feedback: { accuracy: feedback.accuracy, note: feedback.note } }
+          : it
+      )
+    );
 
+    appendItem({
+      id: newId(),
+      type: "user",
+      text: `我标记为：${feedback.accuracy}${feedback.note ? ` · ${feedback.note}` : ""}${feedback.direction ? ` · 想继续：${feedback.direction}` : ""}`,
+    });
+
+    setWaitingVariant("wave");
+    setStep("waiting");
     try {
       await fetch("/api/feedback", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           wave_id: waveId,
-          verdict: verdictMap[feedback.accuracy] ?? feedback.accuracy,
+          verdict: feedback.accuracy,
           correction: feedback.note,
           next_interest: feedback.direction,
         }),
       });
 
       if (waveIndex === 1) {
-        // Provisional final generation after Wave 1.
-        await handleGenerateFinal();
+        appendItem({
+          id: newId(),
+          type: "bot",
+          text: "如果愿意，可以上传文件或粘贴文字，帮助我进一步理解你。",
+        });
+        appendItem({
+          id: newId(),
+          type: "material",
+          isActive: true,
+        });
+        setStep("material");
         return;
       }
 
-      const res = await fetch("/api/wave");
-      if (!res.ok) throw new Error(`Failed to load next step: ${res.status}`);
-      const data = await res.json();
-
-      if (data.stop) {
-        setStop(data);
-        setStep("stop");
-      } else {
-        setQuestions(data.questions);
-        setWaveIndex(data.wave_index);
-        setWaveId(data.wave_id);
-        setQuestionIndex(0);
-        setAnswers({});
-        setInsight(null);
-        setStep("question");
-      }
+      await loadWave();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+      setStep("insight");
     }
   };
 
+  const handleMaterialSubmit = (id: string, material: { uploadIds: string[]; pastedText?: string }) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id && it.type === "material" ? { ...it, isActive: false, uploadIds: material.uploadIds, pastedText: material.pastedText } : it
+      )
+    );
+    loadWave();
+  };
+
+  const handleMaterialSkip = (id: string) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id && it.type === "material" ? { ...it, isActive: false } : it
+      )
+    );
+    loadWave();
+  };
+
+  // Generate persona portrait via SSE, then show portrait card.
+  // User clicks "继续生成路线" on the portrait to proceed to final plan.
   const handleGenerateFinal = async () => {
-    setStep("loading");
+    setWaitingVariant("portrait");
+    setStreamingPortrait(null);
+    setStep("waiting");
+    try {
+      const res = await fetch("/api/portrait", { method: "POST" });
+      if (!res.ok) throw new Error(`Portrait generation failed: ${res.status}`);
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let doneData: { portrait: PersonaPortrait } | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const eventBlock of events) {
+          const lines = eventBlock.split("\n");
+          let eventType = "";
+          let dataLine = "";
+          for (const line of lines) {
+            if (line.startsWith("event: ")) eventType = line.slice(7);
+            else if (line.startsWith("data: ")) dataLine = line.slice(6);
+          }
+          if (!eventType || !dataLine) continue;
+
+          try {
+            const data = JSON.parse(dataLine);
+            if (eventType === "partial") {
+              setStreamingPortrait(data);
+            } else if (eventType === "done") {
+              doneData = data;
+            } else if (eventType === "error") {
+              throw new Error(data.error ?? "Stream error");
+            }
+          } catch {
+            // Ignore malformed events
+          }
+        }
+      }
+
+      if (!doneData) throw new Error("Stream ended without done event");
+      setPortrait(doneData.portrait);
+      setStreamingPortrait(null);
+      setStep("portrait");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setStep("stop");
+    }
+  };
+
+  // After portrait is shown, user clicks "继续" to generate the final plan.
+  const handlePortraitContinue = async () => {
+    setWaitingVariant("final");
+    setStep("waiting");
     try {
       const res = await fetch("/api/final", { method: "POST" });
       if (!res.ok) throw new Error(`Final generation failed: ${res.status}`);
@@ -174,15 +479,128 @@ export default function PlayPage() {
       setStep("routes");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
-      setStep("stop");
+      setStep("portrait");
     }
   };
 
+  const handleReset = async () => {
+    try {
+      await fetch("/api/session/reset", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    window.location.reload();
+  };
+
   if (step === "loading") {
+    return <LoadingProgress />;
+  }
+
+  if (step === "resume" && progressInfo) {
+    const stepLabel: Record<string, string> = {
+      question: "正在回答问题",
+      stop: "可以生成画像了",
+      portrait: "已生成人格画像",
+      routes: "已生成三条路线",
+      fresh: "刚开始",
+    };
+
+    const handleContinue = async () => {
+      setStep("loading");
+      // Restore state based on progress
+      if (progressInfo.hasFinalPlan) {
+        // Load final plan and show routes
+        try {
+          const res = await fetch("/api/final");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.lives) {
+              const lives = data.lives as ParallelLife[];
+              setRoutes(lives.map((life, i) => toRouteView(life, i)));
+              setStep("routes");
+              return;
+            }
+          }
+        } catch {}
+      }
+      if (progressInfo.hasPortrait) {
+        // Load portrait and show portrait step
+        try {
+          const res = await fetch("/api/portrait");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.portrait) {
+              setPortrait(data.portrait as PersonaPortrait);
+              setStep("portrait");
+              return;
+            }
+          }
+        } catch {}
+      }
+      // Otherwise go to stop (can generate portrait)
+      if (progressInfo.waveIndex > 0) {
+        setWaveIndex(progressInfo.waveIndex);
+        appendItem({
+          id: newId(),
+          type: "bot",
+          text: `已经聊了 ${progressInfo.waveIndex} 波，可以生成个人画像了，也可以继续补充。`,
+        });
+        setStep("stop");
+        return;
+      }
+      // Fallback: fresh start
+      loadWave(true);
+    };
+
+    const handleRestart = async () => {
+      setStep("loading");
+      try {
+        await fetch("/api/progress/reset", { method: "POST" });
+        setProgressInfo(null);
+        setPortrait(null);
+        setRoutes(null);
+        setItems([]);
+        setInsight(null);
+        loadWave(true);
+      } catch {
+        setError("重置失败，请重试");
+        setStep("resume");
+      }
+    };
+
     return (
-      <div className="mx-auto flex w-full max-w-2xl min-h-[100dvh] items-center justify-center">
-        <p className="font-mono text-sm text-cobalt">整理中</p>
-      </div>
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col items-center justify-center gap-6 p-6"
+      >
+        <div className="border-2 border-ink bg-paper-raised p-6 shadow-md w-full">
+          <h1 className="font-serif text-xl mb-2">欢迎回来</h1>
+          <p className="text-sm text-ink-muted mb-4">
+            你上次做到了 <span className="font-medium text-ink">第 {progressInfo.waveIndex} 波</span>
+            {progressInfo.hasPortrait && " · 已生成画像"}
+            {progressInfo.hasFinalPlan && " · 已生成路线"}
+            ，状态：{stepLabel[progressInfo.lastStep] ?? "进行中"}。
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full border-2 border-ink bg-cobalt px-5 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+            >
+              继续上次
+            </button>
+            <button
+              type="button"
+              onClick={handleRestart}
+              className="w-full border-2 border-ink bg-white px-5 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+            >
+              从头开始新一轮
+            </button>
+          </div>
+        </div>
+      </motion.div>
     );
   }
 
@@ -217,62 +635,39 @@ export default function PlayPage() {
         >
           同意 AI 处理我的回答，继续（上传材料稍后可选）
         </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+        >
+          卡住或想重新测试？清除当前会话
+        </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     );
   }
 
-  if (step === "question" && currentQuestion) {
+  if (step === "portrait" && portrait) {
     return (
-      <div className="mx-auto w-full max-w-2xl pb-6 pt-2">
-        <QuestionFrame
-          key={currentQuestion.id}
-          question={currentQuestion}
-          index={questionIndex + 1}
-          total={questions.length}
-          onSubmit={handleAnswer}
-          onSkip={handleSkip}
-        />
-      </div>
-    );
-  }
-
-  if (step === "insight" && insight) {
-    return (
-      <div className="mx-auto w-full max-w-2xl p-4 pt-6">
-        <InsightSlip insight={toInsightView(insight, waveIndex)} onContinue={handleContinue} />
-      </div>
-    );
-  }
-
-  if (step === "stop" && stop) {
-    return (
-      <div className="mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col items-center justify-center gap-4 p-6">
-        <h1 className="font-serif text-xl">已经聊了 {waveIndex} 波</h1>
-        <p className="text-center text-ink-muted">
-          {stop.provisional
-            ? "现在生成的三条路线会是暂定的，你仍可继续补充。"
-            : "我们已经收集了足够的信息来生成三条平行的三年路线。"}
-        </p>
-        <div className="flex gap-3">
-          {stop.can_generate && (
-            <button
-              type="button"
-              onClick={handleGenerateFinal}
-              className="border-2 border-ink bg-cobalt px-6 py-4 text-lg font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
-            >
-              生成三条路线
-            </button>
-          )}
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <PortraitCard portrait={portrait} />
+        <div className="mt-6 flex flex-col gap-3">
           <button
             type="button"
-            onClick={loadWave}
-            className="border-2 border-ink bg-white px-6 py-4 text-lg font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+            onClick={handlePortraitContinue}
+            className="w-full border-2 border-ink bg-cobalt px-5 py-3.5 text-center text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
           >
-            继续下一波
+            看完了，继续生成三条路线
           </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+          >
+            从头开始新一轮
+          </button>
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     );
   }
@@ -285,5 +680,73 @@ export default function PlayPage() {
     );
   }
 
-  return null;
+  if (step === "waiting") {
+    return (
+      <div className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden">
+        <Conversation
+          items={items}
+          onQuestionSubmit={handleQuestionSubmit}
+          onQuestionSkip={handleQuestionSkip}
+          onInsightContinue={handleInsightContinue}
+          onMaterialSubmit={handleMaterialSubmit}
+          onMaterialSkip={handleMaterialSkip}
+        />
+        <div className="shrink-0 p-4">
+          <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden">
+      <Conversation
+        items={items}
+        onQuestionSubmit={handleQuestionSubmit}
+        onQuestionSkip={handleQuestionSkip}
+        onInsightContinue={handleInsightContinue}
+        onMaterialSubmit={handleMaterialSubmit}
+        onMaterialSkip={handleMaterialSkip}
+      />
+
+      {step === "stop" && (
+        <motion.div
+          initial={reduce ? false : { y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="shrink-0 border-t-2 border-ink bg-paper p-4"
+        >
+          <div className="flex flex-col gap-4 p-2">
+            <p className="text-center text-ink-muted">
+              我们已经收集了足够的信息，可以生成三条平行的三年路线。
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleGenerateFinal}
+                className="flex-1 border-2 border-ink bg-cobalt px-4 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+              >
+                生成个人画像
+              </button>
+              <button
+                type="button"
+                onClick={() => loadWave()}
+                className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+              >
+                继续下一波
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+            >
+              从头开始新一轮
+            </button>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
 }

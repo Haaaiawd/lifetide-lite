@@ -10,6 +10,13 @@
   --color-success: #2D7D46;
   --color-success-soft: #DDEEDF;
   --color-danger: #B83A2F;
+  --color-danger-soft: #F5DDD8;
+  --color-amber: #C97B2F;
+  --color-amber-soft: #F5E6D3;
+  --color-teal: #2A8A8A;
+  --color-teal-soft: #D9EDED;
+  --color-purple: #7B5BB8;
+  --color-purple-soft: #E8DEF5;
   --color-border: var(--ink);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", "Source Han Serif SC", serif;
@@ -29,6 +36,13 @@
   --success: #2D7D46;
   --success-soft: #DDEEDF;
   --danger: #B83A2F;
+  --danger-soft: #F5DDD8;
+  --amber: #C97B2F;
+  --amber-soft: #F5E6D3;
+  --teal: #2A8A8A;
+  --teal-soft: #D9EDED;
+  --purple: #7B5BB8;
+  --purple-soft: #E8DEF5;
   --grid: rgba(23, 23, 23, 0.075);
 }
 

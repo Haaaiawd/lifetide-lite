@@ -1,0 +1,8 @@
+{
+  "reason": "Blocked by TASK-016: runtime prompt and contract v3 alignment must be completed before Wave 1 onboarding can use the v3 wave prompt and avoid hardcoded prompt prose.",
+  "recovery_conditions": [
+    "Complete TASK-016.",
+    "Verify prompt loader and v3 wave output are stable.",
+    "Re-run integration and E2E suites."
+  ]
+}

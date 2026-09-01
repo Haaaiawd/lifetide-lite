@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { postWaveSSE } from "./sse-helpers";
 import type { FinalPlan, WorkingMemory } from "@/lib/working-memory/types";
 
 if ("loadEnvFile" in process) {
@@ -32,17 +33,18 @@ async function runTwoWaves(request: any, sessionId: string) {
   const wave1Res = await request.get(`${baseURL}/api/wave`);
   const wave1 = await wave1Res.json();
 
-  await request.post(`${baseURL}/api/wave`, {
-    headers: { "content-type": "application/json" },
-    data: JSON.stringify({
-      wave_id: wave1.wave_id,
-      answers: [
-        { question_id: "w1q1", value: "w1q1-b" },
-        { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-        { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-        { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
-      ],
-    }),
+  await postWaveSSE(request, baseURL, {
+    wave_id: wave1.wave_id,
+    answers: [
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
+    ],
   });
 
   await request.post(`${baseURL}/api/feedback`, {
@@ -53,12 +55,9 @@ async function runTwoWaves(request: any, sessionId: string) {
   const wave2Res = await request.get(`${baseURL}/api/wave`);
   const wave2 = await wave2Res.json();
 
-  await request.post(`${baseURL}/api/wave`, {
-    headers: { "content-type": "application/json" },
-    data: JSON.stringify({
-      wave_id: wave2.wave_id,
-      answers: wave2.questions.map((q: any) => ({ question_id: q.id, value: `回答：${q.text.slice(0, 20)}` })),
-    }),
+  await postWaveSSE(request, baseURL, {
+    wave_id: wave2.wave_id,
+    answers: wave2.questions.map((q: any) => ({ question_id: q.id, value: `回答：${q.text.slice(0, 20)}` })),
   });
 
   const stopRes = await request.get(`${baseURL}/api/wave`);
@@ -87,7 +86,7 @@ test.describe("Parallel lives and prototype contract", () => {
     expect(finalRes.status()).toBe(200);
     const plan: FinalPlan = await finalRes.json();
 
-    expect(plan.schema_version).toBe("parallel-lives.v2");
+    expect(plan.schema_version).toBe("parallel-lives.v3.ui");
     expect(plan.session_id).toBe(session.id);
     expect(plan.provisional).toBe(false);
     expect(plan.framing).toBeTruthy();
@@ -98,7 +97,11 @@ test.describe("Parallel lives and prototype contract", () => {
 
     const memory = await loadMemory(session.id);
     expect(memory).not.toBeNull();
-    const activeEvidenceIds = new Set(memory!.evidence.filter((e) => e.status === "active").map((e) => e.id));
+    const activeEvidenceIds = new Set(
+      memory!.source_heads
+        .filter((h) => h.status === "active")
+        .map((h) => h.source_id)
+    );
 
     for (const life of plan.lives) {
       expect(life.id).toBeTruthy();
@@ -116,7 +119,7 @@ test.describe("Parallel lives and prototype contract", () => {
       expect(life.risks.length).toBeGreaterThanOrEqual(1);
 
       for (const link of life.evidence_for) {
-        expect(activeEvidenceIds.has(link.evidence_id)).toBe(true);
+        expect(activeEvidenceIds.has(link.source_id)).toBe(true);
       }
 
       expect(life.trial.hypothesis).toBeTruthy();
@@ -175,17 +178,18 @@ test.describe("Parallel lives and prototype contract", () => {
     await giveConsent(request);
 
     const wave1 = await (await request.get(`${baseURL}/api/wave`)).json();
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({
-        wave_id: wave1.wave_id,
-        answers: [
-          { question_id: "w1q1", value: "w1q1-b" },
-          { question_id: "w1q2", value: "有能量的时刻。" },
-          { question_id: "w1q3", value: "消耗的片段。" },
-          { question_id: "w1q4", value: "每周四小时。" },
-        ],
-      }),
+    await postWaveSSE(request, baseURL, {
+      wave_id: wave1.wave_id,
+      answers: [
+        { question_id: "w1q1", value: "小林" },
+        { question_id: "w1q2", value: "杭州" },
+        { question_id: "w1q3", value: "w1q3-infp" },
+        { question_id: "w1q4", value: "w1q4-flex" },
+        { question_id: "w1q5", value: "w1q5-direction" },
+        { question_id: "w1q6", value: "w1q6-solo" },
+        { question_id: "w1q7", value: "w1q7-work" },
+        { question_id: "w1q8", value: "有能量的时刻和消耗的片段" },
+      ],
     });
 
     const finalRes = await request.post(`${baseURL}/api/final`);

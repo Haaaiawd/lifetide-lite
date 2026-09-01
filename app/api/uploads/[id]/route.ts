@@ -4,27 +4,41 @@ import { safeUploadById } from "@/lib/uploads/api-response";
 import { loadWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { prisma } from "@/lib/db/prisma";
 import { UPLOAD_STATUS } from "@/lib/uploads/config";
-import type { EvidenceNote, SourceRef, WorkingMemory } from "@/lib/working-memory/types";
+import type { WorkingMemory } from "@/lib/working-memory/types";
 import type { NextRequest } from "next/server";
 
-function invalidateUploadEvidence(memory: WorkingMemory, uploadId: string): void {
-  const correction: SourceRef = {
-    kind: "user_correction",
-    correction_id: `deleted-upload-${uploadId}`,
-    wave_id: "system",
-  };
-  for (const evidence of memory.evidence as EvidenceNote[]) {
-    const fromUpload = evidence.source_refs.some(
-      (ref) => ref.kind === "upload_chunk" && ref.document_id === uploadId
-    );
-    if (fromUpload) {
-      evidence.status = "invalidated";
-      evidence.invalidated_by = correction;
+async function invalidateUploadEvidence(memory: WorkingMemory, uploadId: string): Promise<void> {
+  const chunks = await prisma.uploadChunk.findMany({
+    where: { uploadId },
+    select: { id: true },
+  });
+
+  const sourceIds = new Set(chunks.map((c) => c.id));
+
+  // Mark the corresponding source heads as deleted so future sensemakers
+  // cannot use them as active evidence.
+  for (const head of memory.source_heads) {
+    if (sourceIds.has(head.source_id)) {
+      head.status = "deleted";
+      head.deleted_at = new Date().toISOString();
+      head.active_revision = undefined;
     }
   }
+
+  // Any claim or constraint that rested on a now-deleted source becomes stale.
   for (const claim of memory.claims) {
-    if (claim.evidence_ids.some((id) => memory.evidence.some((e) => e.id === id && e.status === "invalidated"))) {
-      claim.status = "invalidated";
+    if (claim.status !== "active") continue;
+    const hasStaleEvidence = claim.evidence.some((link) => sourceIds.has(link.source_id));
+    if (hasStaleEvidence) {
+      claim.status = "stale";
+    }
+  }
+
+  for (const constraint of memory.constraints) {
+    if (constraint.status !== "active") continue;
+    const hasStaleEvidence = constraint.evidence.some((link) => sourceIds.has(link.source_id));
+    if (hasStaleEvidence) {
+      constraint.status = "stale";
     }
   }
 }
@@ -72,7 +86,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const memory = await loadWorkingMemory(session.id);
   if (memory) {
-    invalidateUploadEvidence(memory, id);
+    await invalidateUploadEvidence(memory, id);
     await saveWorkingMemory(session.id, memory);
   }
 

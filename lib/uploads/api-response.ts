@@ -23,6 +23,10 @@ export type SafeUpload = {
   status: string;
   error: string | null;
   chunks?: { index: number; source: string; text: string }[];
+  preview?: {
+    text: string;
+    pageImages: string[];
+  };
 };
 
 export async function safeUploadById(id: string, includeChunks = true): Promise<SafeUpload | null> {
@@ -33,5 +37,27 @@ export async function safeUploadById(id: string, includeChunks = true): Promise<
       : safeUploadSelect,
   });
   if (!upload) return null;
-  return upload as SafeUpload;
+
+  const derived = await prisma.derivedContent.findFirst({
+    where: { uploadId: id, kind: "extract_preview" },
+    select: { payload: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const result: SafeUpload = upload as SafeUpload;
+  if (derived) {
+    try {
+      const payload = JSON.parse(derived.payload);
+      if (payload.text !== undefined || payload.pageImages !== undefined) {
+        result.preview = {
+          text: String(payload.text ?? ""),
+          pageImages: Array.isArray(payload.pageImages) ? payload.pageImages.map(String) : [],
+        };
+      }
+    } catch {
+      // ignore malformed derived payload
+    }
+  }
+
+  return result;
 }

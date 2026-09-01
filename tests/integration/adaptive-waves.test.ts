@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { postWaveSSE } from "./sse-helpers";
 import type { WorkingMemory } from "@/lib/working-memory/types";
 import { rankActiveUncertainties } from "@/lib/interview/uncertainty";
 
@@ -49,17 +50,17 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     expect(wave1.wave_index).toBe(1);
 
     const answers1 = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    const post1 = await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave1.wave_id, answers: answers1 }),
-    });
-    expect(post1.status()).toBe(201);
+    await postWaveSSE(request, baseURL, { wave_id: wave1.wave_id, answers: answers1 });
 
     // Submit accurate feedback so next ranking uses current uncertainty.
     await request.post(`${baseURL}/api/feedback`, {
@@ -111,16 +112,17 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     const wave1 = await wave1Res.json();
 
     const answers1 = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave1.wave_id, answers: answers1 }),
-    });
+    await postWaveSSE(request, baseURL, { wave_id: wave1.wave_id, answers: answers1 });
 
     await request.post(`${baseURL}/api/feedback`, {
       headers: { "content-type": "application/json" },
@@ -137,10 +139,7 @@ test.describe("Adaptive waves and deterministic stopping", () => {
 
     const answers2 = wave2.questions.map((q: any) => ({ question_id: q.id, value: `回答：${q.text.slice(0, 20)}` }));
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave2.wave_id, answers: answers2 }),
-    });
+    await postWaveSSE(request, baseURL, { wave_id: wave2.wave_id, answers: answers2 });
 
     const stopRes = await request.get(`${baseURL}/api/wave`);
     const stop = await stopRes.json();
@@ -185,12 +184,9 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     const wave1Res = await request.get(`${baseURL}/api/wave`);
     const wave1 = await wave1Res.json();
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({
-        wave_id: wave1.wave_id,
-        answers: wave1.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
-      }),
+    await postWaveSSE(request, baseURL, {
+      wave_id: wave1.wave_id,
+      answers: wave1.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
     });
 
     await request.post(`${baseURL}/api/feedback`, {
@@ -227,12 +223,9 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     const wave1Res = await request.get(`${baseURL}/api/wave`);
     const wave1 = await wave1Res.json();
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({
-        wave_id: wave1.wave_id,
-        answers: wave1.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
-      }),
+    await postWaveSSE(request, baseURL, {
+      wave_id: wave1.wave_id,
+      answers: wave1.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
     });
 
     await request.post(`${baseURL}/api/feedback`, {
@@ -244,12 +237,9 @@ test.describe("Adaptive waves and deterministic stopping", () => {
       const waveRes = await request.get(`${baseURL}/api/wave`);
       const wave = await waveRes.json();
       if (wave.stop) break;
-      await request.post(`${baseURL}/api/wave`, {
-        headers: { "content-type": "application/json" },
-        data: JSON.stringify({
-          wave_id: wave.wave_id,
-          answers: wave.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
-        }),
+      await postWaveSSE(request, baseURL, {
+        wave_id: wave.wave_id,
+        answers: wave.questions.map((q: any) => ({ question_id: q.id, skipped: true })),
       });
       await request.post(`${baseURL}/api/feedback`, {
         headers: { "content-type": "application/json" },

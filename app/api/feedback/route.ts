@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
 import { requireGuestSession, hasConsent } from "@/lib/auth/session";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyInsightFeedback } from "@/lib/working-memory/operations";
@@ -46,16 +47,33 @@ export async function POST(request: NextRequest) {
 
   const memory = await loadOrCreateWorkingMemory(session.id);
 
+  // Find provenance IDs for this wave so we can match claims accurately.
+  // Claims created during this wave share the same generation_provenance_id
+  // as the ImmediateInsight generated for this wave.
+  const waveInsights = await prisma.immediateInsight.findMany({
+    where: { sessionId: session.id, waveId: wave_id },
+    select: { generationProvenanceId: true },
+  });
+  const waveProvenanceIds = new Set(waveInsights.map((i) => i.generationProvenanceId));
+
+  const feedbackId = randomUUID();
+  const preferred_direction: "continue_here" | "change_direction" | "preview" | "pause" | undefined =
+    next_interest === "继续" ? "continue_here" :
+    next_interest === "预览" ? "preview" :
+    next_interest === "暂停" ? "pause" : undefined;
+
   const feedback = {
-    id: randomUUID(),
+    id: feedbackId,
+    insight_id: wave_id,
     wave_id,
     verdict: verdict as InsightVerdict,
-    correction,
-    next_interest,
+    source_ref: { source_id: feedbackId, source_revision: 1 },
+    correction_text: correction,
+    preferred_direction,
     created_at: new Date().toISOString(),
   };
 
-  const { memory: nextMemory, invalidated } = applyInsightFeedback(memory, feedback);
+  const { memory: nextMemory, invalidated } = applyInsightFeedback(memory, feedback, waveProvenanceIds);
   await saveWorkingMemory(session.id, nextMemory);
 
   // Commit calibration to the XState ledger and decide next phase.

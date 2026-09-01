@@ -5,16 +5,19 @@ export function toInsightView(
   wave: number,
   memory?: WorkingMemory | null
 ): InsightView {
-  const evidence = insight.evidence_ids.map((id) => {
-    const note = memory?.evidence.find((e) => e.id === id);
-    return note ? `${note.statement.slice(0, 40)}` : id.slice(0, 8);
-  });
+  const activeHeads = new Set(
+    memory?.source_heads.filter((h) => h.status === "active").map((h) => h.source_id) ?? []
+  );
+  const evidence = insight.evidence
+    .filter((link) => activeHeads.has(link.source_id))
+    .slice(0, 5)
+    .map((link) => link.excerpt?.slice(0, 40) ?? link.source_id.slice(0, 8));
 
   return {
     wave,
-    facts: [insight.observation],
+    facts: [insight.user_told_me],
     evidence,
-    interpretation: insight.interpretation,
-    uncertainty: insight.uncertainty,
+    interpretation: insight.current_reading,
+    uncertainty: insight.important_unknown,
   };
 }

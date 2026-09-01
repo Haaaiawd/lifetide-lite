@@ -1,0 +1,34 @@
+{
+  "reads": [
+    ".loom/design/journey-and-interaction.md",
+    ".loom/design/insight-plan-contracts.md",
+    ".loom/capabilities/privacy-ai-safety.md",
+    ".loom/design/product-definition.md",
+    ".loom/capabilities/application-architecture.md",
+    "app/play/page.tsx",
+    "app/api/final/route.ts",
+    "lib/ai/sensemaker/final.ts",
+    "lib/working-memory/types.ts",
+    "lib/working-memory/schema.ts",
+    "lib/db/persist-wave.ts",
+    "prisma/schema.prisma",
+    "tests/integration/parallel-lives.test.ts",
+    "tests/integration/harness-state.test.ts"
+  ],
+  "touches": [
+    "app/play/page.tsx",
+    "app/plan/page.tsx",
+    "app/report/[token]/page.tsx",
+    "app/api/final/route.ts",
+    "lib/ai/sensemaker/final.ts",
+    "lib/mail/",
+    "lib/working-memory/types.ts",
+    "lib/working-memory/schema.ts",
+    "lib/db/persist-wave.ts",
+    "prisma/schema.prisma",
+    ".env.example",
+    ".env.local",
+    "tests/integration/parallel-lives.test.ts",
+    "tests/integration/harness-state.test.ts"
+  ]
+}

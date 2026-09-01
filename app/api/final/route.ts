@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { requireGuestSession, hasConsent } from "@/lib/auth/session";
+import { resolveSession, hasConsent } from "@/lib/auth/resolve";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
-import { runSensemakerFinal } from "@/lib/ai/sensemaker/final";
+import { runSensemakerFinal, buildPrototypesForPlan } from "@/lib/ai/sensemaker/final";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { makeEnvelope } from "@/lib/state/envelope";
 import { hashObject } from "@/lib/utils/hash";
+import { getProviderConfig } from "@/lib/ai/client";
 import type {
   RoutePhaseEntered,
   RouteIntentCandidatesCommitted,
@@ -14,13 +15,69 @@ import type {
   OrdinaryDaysCommitted,
   ParallelLivesCommitted,
 } from "@/lib/state/events";
-import type { RouteIntent, ParallelLife, ParallelLivesPlan, OrdinaryDay, EvidenceLink as ContractEvidenceLink, RadarDimension } from "@/lib/state/contracts";
+import type { RouteIntent, Prototype, ParallelLife, ParallelLivesPlan, OrdinaryDay, EvidenceLink as ContractEvidenceLink, RadarDimension } from "@/lib/state/contracts";
+import type { FinalPlan, SensemakerFinalInput, ParallelLife as UIParallelLife } from "@/lib/working-memory/types";
 import type { NextRequest } from "next/server";
 
-export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+function toUiPlan(
+  plan: ParallelLivesPlan,
+  prototypes: Prototype[],
+  promptVersion: string,
+  config: { provider: string; model: string }
+): FinalPlan {
+  const prototypeByTrialId = new Map<string, Prototype>(prototypes.map((p) => [p.trial_id, p]));
+
+  const lives = plan.lives.map((life) => {
+    const trial = prototypeByTrialId.get(life.trial_id)!;
+    return {
+      ...life,
+      trial,
+    } as UIParallelLife;
+  });
+
+  return {
+    schema_version: "parallel-lives.v3.ui",
+    id: plan.id,
+    session_id: plan.session_id,
+    generation_provenance_id: plan.generation_provenance_id,
+    provisional: plan.provisional,
+    framing: plan.framing,
+    lives: lives as [UIParallelLife, UIParallelLife, UIParallelLife],
+    shared_values: plan.shared_values,
+    real_tradeoff: plan.real_tradeoff,
+    open_questions: plan.open_questions,
+    created_at: new Date().toISOString(),
+    prompt_version: promptVersion,
+    model_config_id: `${config.provider}/${config.model}`,
+  };
+}
+
+// GET /api/final — return existing plan if already generated.
+export async function GET(request: NextRequest) {
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
+  }
+
+  if (!hasConsent(session.consents, "ai")) {
+    return NextResponse.json({ error: "AI consent required", missing: ["ai"] }, { status: 403 });
+  }
+
+  const memory = await loadOrCreateWorkingMemory(session.id);
+  if (!memory.finalPlan) {
+    return NextResponse.json({ error: "Plan not yet generated" }, { status: 404 });
+  }
+
+  const config = getProviderConfig();
+  const prototypes = buildPrototypesForPlan(session.id, memory.finalPlan, memory.finalPlan.generation_provenance_id);
+  const uiPlan = toUiPlan(memory.finalPlan, prototypes, "sensemaker.final.v3", config);
+  return NextResponse.json(uiPlan);
+}
+
+export async function POST(request: NextRequest) {
+  const { session } = await resolveSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   if (!hasConsent(session.consents, "ai")) {
@@ -29,16 +86,31 @@ export async function POST(request: NextRequest) {
 
   const memory = await loadOrCreateWorkingMemory(session.id);
 
-  // Idempotent replay: if a plan is already stored for this session, return it.
+  // Idempotent replay: if a plan is already stored for this session, map and return it.
   if (memory.finalPlan) {
-    return NextResponse.json(memory.finalPlan);
+    const config = getProviderConfig();
+    const prototypes = buildPrototypesForPlan(session.id, memory.finalPlan, memory.finalPlan.generation_provenance_id);
+    const uiPlan = toUiPlan(memory.finalPlan, prototypes, "sensemaker.final.v3", config);
+    return NextResponse.json(uiPlan);
   }
 
   if (memory.last_wave_index === 0) {
     return NextResponse.json({ error: "Complete at least Wave 1 before generating plans" }, { status: 400 });
   }
 
-  const plan = await runSensemakerFinal(session.id, memory);
+  const config = getProviderConfig();
+  const provisional = memory.last_wave_index < 2;
+  const stopReason = provisional ? "sufficient" : "sufficient";
+
+  const input: SensemakerFinalInput = {
+    schema_version: "sensemaker.final.input.v3",
+    memory,
+    stop_reason: stopReason,
+    provisional,
+    prompt_version: "sensemaker.final.v3",
+  };
+
+  const plan = await runSensemakerFinal(input);
 
   if (!plan.provisional && memory.last_wave_index < 2) {
     return NextResponse.json(
@@ -65,10 +137,10 @@ export async function POST(request: NextRequest) {
       schema_hash: hashObject(plan),
       context_builder_version: "final-v1",
       context_hash: hashObject({ session_id: session.id }),
-      provider: "fixture",
-      model: "fixture",
-      model_config_json: {},
-      model_config_hash: hashObject({}),
+      provider: config.provider,
+      model: config.model,
+      model_config_json: { provider: config.provider, model: config.model },
+      model_config_hash: hashObject({ provider: config.provider, model: config.model }),
       fixture_suite_version: "final-v1",
       created_at: new Date().toISOString(),
     };
@@ -93,38 +165,27 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const provenanceId = randomUUID();
+  const provenanceId = plan.generation_provenance_id;
   const provenance = {
     id: provenanceId,
     session_id: session.id,
     proposal_id: provenanceId,
     correlation_id: randomUUID(),
     prompt_contract_revision: 3 as const,
-    prompt_file_hash: hashObject("prompts/prototype-designer-v2.md"),
+    prompt_file_hash: hashObject("prompts/odyssey-generator-v2.md"),
     schema_hash: hashObject(plan),
-    context_builder_version: "sensemaker-final-v2",
+    context_builder_version: "sensemaker-final-v3",
     context_hash: hashObject({ memory }),
-    provider: "fixture",
-    model: "fixture",
-    model_config_json: {},
-    model_config_hash: hashObject({}),
-    fixture_suite_version: "sensemaker-final-v2",
+    provider: config.provider,
+    model: config.model,
+    model_config_json: { provider: config.provider, model: config.model },
+    model_config_hash: hashObject({ provider: config.provider, model: config.model }),
+    fixture_suite_version: "sensemaker-final-v3",
     created_at: new Date().toISOString(),
   };
 
-  const evidenceLinks = (life: typeof plan.lives[0]): ContractEvidenceLink[] => {
-    return life.evidence_for.map((ev) => ({
-      source_id: ev.evidence_id,
-      source_revision: 1,
-      excerpt: ev.supports,
-      epistemic_status: "user_stated" as const,
-      evidence_shape: "abstract_statement" as const,
-      relevance: ev.supports,
-    }));
-  };
-
   const intents: RouteIntent[] = plan.lives.map((life) => ({
-    id: life.id,
+    id: life.route_intent_id,
     generation_provenance_id: provenance.id,
     title_hint: life.title,
     life_shape: {
@@ -136,7 +197,7 @@ export async function POST(request: NextRequest) {
       resources: life.year_3,
     },
     real_cost: life.costs_and_tradeoffs[0] ?? "待明确",
-    evidence: evidenceLinks(life),
+    evidence: life.evidence_for,
     status: "seed",
   }));
 
@@ -217,19 +278,19 @@ export async function POST(request: NextRequest) {
     schema_hash: hashObject(plan.lives.map((l) => l.ordinary_day)),
     context_builder_version: "odyssey-ordinary-day-v1",
     context_hash: hashObject({ session_id: session.id, accepted_intent_ids: acceptedIntentIds }),
-    provider: "fixture",
-    model: "fixture",
-    model_config_json: {},
-    model_config_hash: hashObject({}),
+    provider: config.provider,
+    model: config.model,
+    model_config_json: { provider: config.provider, model: config.model },
+    model_config_hash: hashObject({ provider: config.provider, model: config.model }),
     fixture_suite_version: "odyssey-ordinary-day-v1",
     created_at: new Date().toISOString(),
   };
 
   const days: [OrdinaryDay, OrdinaryDay, OrdinaryDay] = plan.lives.map((life, idx) => {
-    const intentEvidence = intents[idx].evidence?.[0] as ContractEvidenceLink | undefined;
-    const evidence: ContractEvidenceLink[] = intentEvidence
+    const firstEvidence = intents[idx].evidence[0] as ContractEvidenceLink | undefined;
+    const evidence: ContractEvidenceLink[] = firstEvidence
       ? [{
-          ...intentEvidence,
+          ...firstEvidence,
           relevance: "说明该普通一天如何从路线意向推演而来",
           excerpt: "从路线意向生成的普通一天",
         }]
@@ -279,42 +340,13 @@ export async function POST(request: NextRequest) {
     console.error("Failed to commit ORDINARY_DAYS_COMMITTED:", daysResult.message);
   }
 
-  const lives: ParallelLife[] = plan.lives.map((life, idx) => ({
-    id: life.id,
-    route_intent_id: intents[idx].id,
-    generation_provenance_id: provenance.id,
-    title: life.title,
-    core_experience: life.core_experience,
-    year_1: life.year_1,
-    year_2: life.year_2,
-    year_3: life.year_3,
-    ordinary_day: life.ordinary_day,
-    attractions: life.attractions,
-    costs_and_tradeoffs: life.costs_and_tradeoffs,
-    evidence_for: evidenceLinks(life),
-    assumptions: life.assumptions,
-    uncertainties: life.uncertainties,
-    risks: life.risks,
-    trial_id: randomUUID(),
-  }));
-
-  const livesPlan: ParallelLivesPlan = {
-    id: randomUUID(),
-    session_id: session.id,
-    generation_provenance_id: provenance.id,
-    schema_version: "parallel-lives.v3",
-    provisional: plan.provisional,
-    framing: plan.framing,
-    lives,
-    shared_values: plan.shared_values,
-    real_tradeoff: plan.real_tradeoff,
-    open_questions: plan.open_questions,
-  };
+  // Strip the runtime prototypes before storing / committing the canonical ParallelLivesPlan.
+  const { prototypes: _prototypes, ...rawPlan } = plan;
 
   const livesPayload: ParallelLivesCommitted = {
     proposal_id: provenance.proposal_id,
     generation_provenance: provenance,
-    plan: livesPlan,
+    plan: rawPlan,
   };
   const livesEnvelope = makeEnvelope("PARALLEL_LIVES_COMMITTED", {
     session_id: session.id,
@@ -330,9 +362,11 @@ export async function POST(request: NextRequest) {
     console.error("Failed to commit PARALLEL_LIVES_COMMITTED:", livesResult.message);
   }
 
-  // Persist the final plan so reload or re-clicks return the same result.
-  memory.finalPlan = plan;
+  // Persist the raw v3 plan so reload or re-clicks return the same result.
+  memory.finalPlan = rawPlan;
   await saveWorkingMemory(session.id, memory);
 
-  return NextResponse.json(plan);
+  const uiPlan = toUiPlan(plan, plan.prototypes, input.prompt_version, config);
+
+  return NextResponse.json(uiPlan);
 }

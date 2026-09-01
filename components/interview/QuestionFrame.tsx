@@ -5,18 +5,51 @@ import { PixelIcon } from "@/components/art/PixelIcon";
 import { ChoiceCard } from "./ChoiceCard";
 import type { InterviewQuestion } from "@/lib/working-memory/types";
 
+const URL_RE = /https?:\/\/[^\s]+/g;
+
+function LinkifiedText({ text, className }: { text: string; className?: string }) {
+  const segments: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = URL_RE.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push(<span key={lastIndex}>{text.slice(lastIndex, match.index)}</span>);
+    }
+    const url = match[0];
+    segments.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cobalt underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex < text.length) {
+    segments.push(<span key={lastIndex}>{text.slice(lastIndex)}</span>);
+  }
+  return <p className={className}>{segments}</p>;
+}
+
 export type QuestionFrameProps = {
   question: InterviewQuestion;
   index: number;
   total: number;
   onSubmit: (value: string | string[] | number) => void;
   onSkip: () => void;
+  variant?: "page" | "card";
 };
 
 const CUSTOM_ID = "custom";
 const CUSTOM_LABEL = "其他（可输入）";
 
-export function QuestionFrame({ question, index, total, onSubmit, onSkip }: QuestionFrameProps) {
+export function QuestionFrame({ question, index, total, onSubmit, onSkip, variant = "page" }: QuestionFrameProps) {
+  const isCard = variant === "card";
   const [selected, setSelected] = useState<string[]>([]);
   const [customText, setCustomText] = useState("");
   const [text, setText] = useState("");
@@ -88,7 +121,7 @@ export function QuestionFrame({ question, index, total, onSubmit, onSkip }: Ques
         e.preventDefault();
         handleSubmit();
       }}
-      className="mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col justify-between"
+      className={`mx-auto flex w-full max-w-2xl flex-col justify-between ${isCard ? "max-h-none py-2" : "min-h-[100dvh]"}`}
     >
       <header className="flex items-center justify-between pt-2">
         <span className="inline-flex items-center gap-1.5 font-mono text-sm text-cobalt">
@@ -100,13 +133,13 @@ export function QuestionFrame({ question, index, total, onSubmit, onSkip }: Ques
         </span>
       </header>
 
-      <section className="flex flex-1 flex-col gap-6 pt-10">
+      <section className={`flex flex-1 flex-col gap-6 ${isCard ? "pt-4" : "pt-10"}`}>
         <div>
           <h2 className="font-serif text-xl leading-snug md:text-2xl">
             {question.text}
           </h2>
           {question.why_this_matters && (
-            <p className="mt-2 text-sm text-ink-muted">{question.why_this_matters}</p>
+            <LinkifiedText text={question.why_this_matters} className="mt-2 text-sm text-ink-muted" />
           )}
         </div>
 
@@ -165,7 +198,7 @@ export function QuestionFrame({ question, index, total, onSubmit, onSkip }: Ques
         )}
       </section>
 
-      <footer className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper py-4 pb-6">
+      <footer className={`z-10 border-t-2 border-ink bg-paper py-4 pb-6 ${isCard ? "relative mt-6" : "sticky bottom-0"}`}>
         <div className="flex items-center gap-3">
           <button
             type="submit"

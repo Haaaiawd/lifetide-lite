@@ -1,0 +1,25 @@
+{
+  "depends_on": [
+    "TASK-009",
+    "TASK-014",
+    "TASK-016"
+  ],
+  "done_when": [
+    "The stop step in `app/play/page.tsx` (or a dedicated `/plan` page) collects an email, validates it, and submits to `POST /api/final`.",
+    "`POST /api/final` accepts an optional email, returns 202 immediately, and uses `next/after` (or an equivalent background continuation) to call the v3 final Sensemaker without blocking the HTTP response.",
+    "The generated `FinalPlan` is persisted with a new `report_token`; if a plan already exists for the session, the existing token is returned instead of regenerating.",
+    "A new `lib/mail/` module provides a configurable mailer with a local dev fallback (console/transporter via env SMTP) and a `sendReportLink(email, token, url)` helper.",
+    "A new `app/report/[token]/page.tsx` route renders the `FinalPlan` from the token; it does not require a cookie or login.",
+    "The report email contains a Chinese subject, a short message, and a link like `https://<host>/report/<token>`.",
+    "Token lookup is idempotent and 404s cleanly for unknown tokens.",
+    "Integration and contract tests cover: email collection, async final, report token access, missing token 404, and idempotent final.",
+    "`pnpm typecheck`, `build`, `lint`, `test:contracts` and `test:e2e` all pass."
+  ],
+  "boundaries": [
+    "Do not build a full user-account or password system; token link is the first version.",
+    "Do not store email as a searchable user identity; store it only as the delivery address for the report.",
+    "Do not expose session secret or guest-token in the email link.",
+    "Keep the report page read-only and shareable: the recipient can view but not mutate the plan.",
+    "Do not edit or hardcode prompt prose for the final generation; rely on TASK-016 for prompt loading."
+  ]
+}

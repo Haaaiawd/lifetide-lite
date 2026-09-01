@@ -1,0 +1,21 @@
+{
+  "depends_on": [
+    "TASK-009",
+    "TASK-016"
+  ],
+  "done_when": [
+    "`lib/interview/templates.ts` defines 7-8 simple onboarding questions with single_choice, multi_choice and short_text; every question allows skip and custom input; the name question explicitly says an alias is OK.",
+    "`buildWave1Canonical` maps the new questions to elicitation units, target dimensions and provenance without breaking the Wave runtime contract.",
+    "Wave 1 does not call a deep sensemaker interpretation; it either produces a host-assembled bridge/acknowledgment or reuses the v3 wave prompt (provided by TASK-016) and degrades gracefully when evidence is thin.",
+    "The post-Wave 1 UI (`app/play/page.tsx` or `InsightSlip`) shows a soft, optional upload invitation for resume / MBTI / other, and the existing upload consent and UploadPanel remain usable.",
+    "Existing integration tests that reference w1q1-w1q4 are updated, or a compatibility shim keeps old answer shapes from failing.",
+    "`pnpm typecheck`, `build`, `lint`, `test:contracts` and `test:e2e` all pass."
+  ],
+  "boundaries": [
+    "No profiling, scoring, or hidden questionnaire logic.",
+    "Do not require real name, phone, ID or any high-sensitivity PII.",
+    "Upload remains optional and gated by the existing upload consent.",
+    "Do not edit or hardcode prompt prose; rely on TASK-016 for prompt loading.",
+    "Wave 1 stays a fixed template; no AI interviewer call for Wave 1."
+  ]
+}

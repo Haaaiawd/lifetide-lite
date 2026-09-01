@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { makeWave1Questions, WAVE_1_VERSION } from "@/lib/interview/templates";
+import { postWaveSSE } from "./sse-helpers";
 import type { WorkingMemory } from "@/lib/working-memory/types";
 
 if ("loadEnvFile" in process) {
@@ -34,7 +35,7 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     await prisma.$disconnect();
   });
 
-  test("Wave 1 returns a versioned 4-question template with skip and produces no Interviewer call", async ({
+  test("Wave 1 returns a versioned 8-question template with skip and produces no Interviewer call", async ({
     browser,
   }) => {
     const ctx = await browser.newContext();
@@ -84,40 +85,40 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const wave = await waveRes.json();
 
     const answers = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q3", value: "每天回复大量消息，让我没有时间想真正重要的事。" },
-      { question_id: "w1q4", value: "每周最多能抽出四小时做新尝试。" },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    const post = await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
-    expect(post.status()).toBe(201);
-    const body = await post.json();
+    const { doneData } = await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
+    const body = doneData as any;
 
     expect(body.wave_id).toBe("w1");
     expect(body.insight).toBeDefined();
-    expect(body.insight.observation).toBeDefined();
-    expect(body.insight.interpretation).toBeDefined();
-    expect(body.insight.uncertainty).toBeDefined();
-    expect(body.insight.evidence_ids.length).toBeGreaterThanOrEqual(1);
-    expect(body.insight.confidence).toMatch(/^(low|medium|high)$/);
+    expect(body.insight.user_told_me).toBeDefined();
+    expect(body.insight.current_reading).toBeDefined();
+    expect(body.insight.important_unknown).toBeDefined();
+    expect(body.insight.evidence.length).toBeGreaterThanOrEqual(1);
 
     const storedAnswers = await prisma.answer.count({ where: { sessionId: session.id } });
-    expect(storedAnswers).toBe(4);
+    expect(storedAnswers).toBe(8);
 
     const memory = await loadMemory(session.id);
     expect(memory).not.toBeNull();
     expect(memory!.last_wave_index).toBe(1);
-    expect(memory!.evidence.length).toBeGreaterThanOrEqual(1);
+    expect(memory!.source_versions.length).toBeGreaterThanOrEqual(1);
     expect(memory!.claims.length).toBeGreaterThanOrEqual(1);
 
-    for (const eid of body.insight.evidence_ids) {
-      const evidence = memory!.evidence.find((e) => e.id === eid);
-      expect(evidence).toBeDefined();
-      expect(evidence!.status).toBe("active");
+    const activeHeads = new Set(
+      memory!.source_heads.filter((h) => h.status === "active").map((h) => h.source_id)
+    );
+    for (const link of body.insight.evidence) {
+      expect(activeHeads.has(link.source_id)).toBe(true);
     }
 
     await ctx.close();
@@ -137,11 +138,7 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
 
     const answers = wave.questions.map((q: { id: string }) => ({ question_id: q.id, skipped: true }));
 
-    const post = await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
-    expect(post.status()).toBe(201);
+    await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
 
     const memory = await loadMemory(session.id);
     expect(memory).not.toBeNull();
@@ -165,16 +162,17 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const wave = await waveRes.json();
 
     const answers = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
+    await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
 
     const before = await loadMemory(session.id);
     const activeClaimsBefore = before!.claims.filter((c) => c.status === "active").length;
@@ -197,11 +195,10 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const activeClaimsAfter = after!.claims.filter((c) => c.status === "active").length;
     expect(activeClaimsAfter).toBeLessThan(activeClaimsBefore);
 
-    // A correction from inaccurate feedback should be added as user_confirmed evidence.
-    const correctionEvidence = after!.evidence.find(
-      (e) => e.epistemic === "user_confirmed" && e.source_refs.some((s) => s.kind === "insight_feedback")
+    // A correction from inaccurate feedback should be recorded on the feedback itself.
+    expect(after!.recent_feedback[0].correction_text).toBe(
+      "我不是方向不清，而是有两个方向都让我动心。"
     );
-    expect(correctionEvidence).toBeDefined();
 
     await ctx.close();
   });
@@ -219,16 +216,17 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const wave = await waveRes.json();
 
     const answers = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
+    await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
 
     const before = await loadMemory(session.id);
     const activeClaimsBefore = before!.claims.filter((c) => c.status === "active").length;
@@ -246,10 +244,10 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const activeClaimsAfter = after!.claims.filter((c) => c.status === "active").length;
     expect(activeClaimsAfter).toBe(activeClaimsBefore);
 
-    const highConfidenceAfter = after!.claims.filter(
-      (c) => c.status === "active" && c.confidence === "high"
+    const partlyCalibratedAfter = after!.claims.filter(
+      (c) => c.status === "active" && c.calibration === "partly_accurate"
     ).length;
-    expect(highConfidenceAfter).toBeLessThanOrEqual(before!.claims.filter((c) => c.confidence === "high").length);
+    expect(partlyCalibratedAfter).toBeGreaterThanOrEqual(1);
 
     await ctx.close();
   });
@@ -267,16 +265,17 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const wave = await waveRes.json();
 
     const answers = [
-      { question_id: "w1q1", value: "w1q1-b" },
-      { question_id: "w1q2", value: ["w1q2-a", "w1q2-e"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b"] },
+      { question_id: "w1q1", value: "小林" },
+      { question_id: "w1q2", value: "杭州" },
+      { question_id: "w1q3", value: "w1q3-infp" },
+      { question_id: "w1q4", value: "w1q4-flex" },
+      { question_id: "w1q5", value: "w1q5-direction" },
+      { question_id: "w1q6", value: "w1q6-solo" },
+      { question_id: "w1q7", value: "w1q7-work" },
+      { question_id: "w1q8", value: "最近在考虑要不要换工作方向" },
     ];
 
-    await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
+    await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
 
     const before = await loadMemory(session.id);
     const activeClaimsBefore = before!.claims.filter((c) => c.status === "active").length;
@@ -320,10 +319,7 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
     const wave = await waveRes.json();
     const answers = wave.questions.map((q: { id: string }) => ({ question_id: q.id, skipped: true }));
 
-    await bob.request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
+    await postWaveSSE(bob.request, baseURL, { wave_id: wave.wave_id, answers });
 
     const bSession = await (await bob.request.get(`${baseURL}/api/session`)).json();
     const bMemory = await loadMemory(bSession.id);
@@ -359,26 +355,29 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
 
     const answers = [
       { question_id: "w1q1", value: "我觉得是工作生活边界" },
-      { question_id: "w1q2", value: ["w1q2-a", "我还没有找到合适的节奏"] },
-      { question_id: "w1q3", value: "上周独自整理了一份流程文档，发现写完很有秩序感。" },
-      { question_id: "w1q4", value: ["w1q4-a", "w1q4-b", "我需要照顾家庭"] },
+      { question_id: "w1q2", value: "成都" },
+      { question_id: "w1q3", value: "w1q3-entp" },
+      { question_id: "w1q4", value: "我还没有找到合适的节奏" },
+      { question_id: "w1q5", value: "w1q5-talk" },
+      { question_id: "w1q6", value: "我需要照顾家庭" },
+      { question_id: "w1q7", value: "w1q7-own" },
+      { question_id: "w1q8", value: "最近整理了一份流程文档，发现写完很有秩序感" },
     ];
 
-    const post = await request.post(`${baseURL}/api/wave`, {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ wave_id: wave.wave_id, answers }),
-    });
-    expect(post.status()).toBe(201);
+    await postWaveSSE(request, baseURL, { wave_id: wave.wave_id, answers });
 
     const memory = await loadMemory(session.id);
     expect(memory).not.toBeNull();
 
-    const statements = memory!.evidence.map((e) => e.statement);
-    expect(statements.some((s) => s.includes("工作生活边界"))).toBe(true);
-    expect(statements.some((s) => s.includes("我还没有找到合适的节奏"))).toBe(true);
-    expect(statements.some((s) => s.includes("我需要照顾家庭"))).toBe(true);
-    expect(statements.some((s) => s.includes("有投入感"))).toBe(true);
-    expect(statements.some((s) => s.includes("时间上限"))).toBe(true);
+    // The answer values are stored as SourceVersions pointing to the question cards.
+    expect(memory!.source_versions.filter((sv) => sv.kind === "question_answer").length).toBe(8);
+
+    const storedAnswers = await prisma.answer.findMany({ where: { sessionId: session.id } });
+    const values = storedAnswers.map((a) => a.value);
+    expect(values.some((s) => s?.includes("工作生活边界") ?? false)).toBe(true);
+    expect(values.some((s) => s?.includes("我还没有找到合适的节奏") ?? false)).toBe(true);
+    expect(values.some((s) => s?.includes("我需要照顾家庭") ?? false)).toBe(true);
+    expect(values.some((s) => s?.includes("有秩序感") ?? false)).toBe(true);
 
     await ctx.close();
   });

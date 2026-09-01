@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireGuestSession, hasConsent } from "@/lib/auth/session";
-import { isAllowedMimeType, getParser, UPLOAD_MAX_SIZE, UPLOAD_STATUS } from "@/lib/uploads/config";
-import { parseUploadContent } from "@/lib/uploads/parse";
+import { isAllowedMimeType, getParser, UPLOAD_MAX_SIZE, MAX_UPLOAD_FILES, UPLOAD_STATUS } from "@/lib/uploads/config";
+import { extractFromBuffer } from "@/lib/uploads/extract";
+import { textToChunks } from "@/lib/uploads/parse";
 import { safeUploadById } from "@/lib/uploads/api-response";
 import { prisma } from "@/lib/db/prisma";
 import type { NextRequest } from "next/server";
@@ -15,8 +16,26 @@ function mimeFromExtension(ext: string): string | null {
   if (ext === ".txt") return "text/plain";
   if (ext === ".md") return "text/markdown";
   if (ext === ".json") return "application/json";
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".gif") return "image/gif";
   return null;
 }
+
+const ALLOWED_TYPES = [
+  "text/plain",
+  "text/markdown",
+  "application/json",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+];
 
 export async function POST(request: NextRequest) {
   const session = await requireGuestSession(request);
@@ -48,7 +67,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "File type not allowed",
-        allowed: ["text/plain", "text/markdown", "application/json"],
+        allowed: ALLOWED_TYPES,
         received: mimeType,
       },
       { status: 415 }
@@ -62,9 +81,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const existingCount = await prisma.upload.count({
+    where: { sessionId: session.id, status: { not: UPLOAD_STATUS.DELETED } },
+  });
+  if (existingCount >= MAX_UPLOAD_FILES) {
+    return NextResponse.json(
+      { error: "Too many upload files", maxFiles: MAX_UPLOAD_FILES },
+      { status: 413 }
+    );
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const rawBase64 = buffer.toString("base64");
-  const raw = buffer.toString("utf-8");
 
   // Create record in scanning state
   const upload = await prisma.upload.create({
@@ -78,7 +106,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // "Malware / parse" boundary: we only parse, never execute the content.
   const parser = getParser(mimeType);
   if (!parser) {
     await prisma.upload.update({
@@ -94,24 +121,44 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const chunks = parseUploadContent(raw, parser);
+    const { previewText, pageImages } = await extractFromBuffer(buffer, mimeType, parser);
 
-    await prisma.$transaction([
-      prisma.upload.update({
+    // Text-like files are immediately ready; images and PDFs need user confirmation.
+    const needsConfirmation = parser === "image" || parser === "pdf";
+
+    if (!needsConfirmation) {
+      const chunks = textToChunks(previewText);
+      await prisma.$transaction([
+        prisma.upload.update({
+          where: { id: upload.id },
+          data: { status: UPLOAD_STATUS.READY },
+        }),
+        ...chunks.map((chunk) =>
+          prisma.uploadChunk.create({
+            data: {
+              uploadId: upload.id,
+              index: chunk.index,
+              source: chunk.source,
+              text: chunk.text,
+            },
+          })
+        ),
+      ]);
+    } else {
+      await prisma.derivedContent.create({
+        data: {
+          sessionId: session.id,
+          uploadId: upload.id,
+          kind: "extract_preview",
+          payload: JSON.stringify({ text: previewText, pageImages }),
+          supportStatus: "supported",
+        },
+      });
+      await prisma.upload.update({
         where: { id: upload.id },
-        data: { status: UPLOAD_STATUS.READY },
-      }),
-      ...chunks.map((chunk) =>
-        prisma.uploadChunk.create({
-          data: {
-            uploadId: upload.id,
-            index: chunk.index,
-            source: chunk.source,
-            text: chunk.text,
-          },
-        })
-      ),
-    ]);
+        data: { status: UPLOAD_STATUS.PREVIEW_READY },
+      });
+    }
 
     const safeUpload = await safeUploadById(upload.id, true);
     return NextResponse.json({ upload: safeUpload }, { status: 201 });

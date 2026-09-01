@@ -727,7 +727,7 @@
         "tests/unit/",
         "tests/integration/harness-state.test.ts"
       ],
-      "status": "active",
+      "status": "blocked",
       "progress": {
         "completed": [
           "Created migration inventory `.loom/implementation/TASK-008-migration-inventory.md` before schema/API edits",
@@ -754,8 +754,8 @@
           "Wired persistAnswer, persistInsight and persistRouteIntents domain record persistence",
           "Verified final integration suite (29 passed), contract/unit tests (23 passed), typecheck, build and lint (0 errors)"
         ],
-        "current": "The canonical XState event ledger is now the control plane for the full conversation flow: session, consent, wave mission, answer, wave end, insight, calibration, next wave, route phase, route intents and parallel lives all produce SessionStateHead/TransitionEvent records. Domain records (WaveMission, ElicitationUnit, Microbatch, Question, Answer, SourceVersion, ImmediateInsight, RouteIntent) are persisted transactionally.",
-        "next": "Add targeted fault/recovery tests (revision conflicts, idempotency replay, stale base revision, transaction rollback, provider recovery) and source-reference validation; then close evidence and prepare PR."
+        "current": "blocked: Owner introduced new scope (email report delivery and onboarding Wave 1) before the original TASK-008 could be formally closed.",
+        "next": "Complete TASK-014 and TASK-015.; Re-run full verification suite.; Verify guest/privacy and canonical state machine still pass."
       },
       "evidence": [
         {
@@ -813,14 +813,15 @@
         }
       ],
       "created_at": "2026-08-27T03:35:21.617Z",
-      "updated_at": "2026-08-31T01:48:39.453Z",
+      "updated_at": "2026-09-01T02:04:58.093Z",
       "block": {
-        "reason": "Refocused to TASK-009 prompt-system reframe; TASK-008 core skeleton landed and verified, full route/API wiring to be completed after prompt architecture is restored.",
+        "reason": "Owner introduced new scope (email report delivery and onboarding Wave 1) before the original TASK-008 could be formally closed.",
         "recovery_conditions": [
-          "TASK-009 prompt architecture and health audit complete",
-          "Return to TASK-008 to finish API route migration, full domain-record persistence, safety/recovery fault tests and evidence closure"
+          "Complete TASK-014 and TASK-015.",
+          "Re-run full verification suite.",
+          "Verify guest/privacy and canonical state machine still pass."
         ],
-        "at": "2026-08-30T06:13:44.650Z"
+        "at": "2026-09-01T02:04:58.092Z"
       },
       "reopened_at": "2026-08-30T11:30:05.436Z"
     },
@@ -1161,6 +1162,222 @@
       "evidence": [],
       "created_at": "2026-08-28T09:01:32.085Z",
       "updated_at": "2026-08-28T09:33:00.866Z"
+    },
+    {
+      "id": "TASK-014",
+      "title": "Onboarding Wave 1: basic info with optional alias and upload invitation",
+      "outcome": "Wave 1 becomes a fixed, friendly onboarding form with 7-8 low-stakes questions. Users may use an alias/fake name, share city and living situation, current role and education, and are invited—but not required—to upload a resume, MBTI or other supporting material at the end.",
+      "done_when": [
+        "`lib/interview/templates.ts` defines 7-8 simple onboarding questions with single_choice, multi_choice and short_text; every question allows skip and custom input; the name question explicitly says an alias is OK.",
+        "`buildWave1Canonical` maps the new questions to elicitation units, target dimensions and provenance without breaking the Wave runtime contract.",
+        "Wave 1 does not call a deep sensemaker interpretation; it either produces a host-assembled bridge/acknowledgment or reuses the v3 wave prompt (provided by TASK-016) and degrades gracefully when evidence is thin.",
+        "The post-Wave 1 UI (`app/play/page.tsx` or `InsightSlip`) shows a soft, optional upload invitation for resume / MBTI / other, and the existing upload consent and UploadPanel remain usable.",
+        "Existing integration tests that reference w1q1-w1q4 are updated, or a compatibility shim keeps old answer shapes from failing.",
+        "`pnpm typecheck`, `build`, `lint`, `test:contracts` and `test:e2e` all pass."
+      ],
+      "boundaries": [
+        "No profiling, scoring, or hidden questionnaire logic.",
+        "Do not require real name, phone, ID or any high-sensitivity PII.",
+        "Upload remains optional and gated by the existing upload consent.",
+        "Do not edit or hardcode prompt prose; rely on TASK-016 for prompt loading.",
+        "Wave 1 stays a fixed template; no AI interviewer call for Wave 1."
+      ],
+      "depends_on": [
+        "TASK-009",
+        "TASK-016"
+      ],
+      "reads": [
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/design/product-definition.md",
+        "lib/interview/templates.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "components/insight/InsightSlip.tsx",
+        "app/play/page.tsx",
+        "app/api/wave/route.ts",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/e2e/visual-prototype.spec.ts"
+      ],
+      "touches": [
+        "lib/interview/templates.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "components/insight/InsightSlip.tsx",
+        "app/play/page.tsx",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/e2e/visual-prototype.spec.ts"
+      ],
+      "status": "blocked",
+      "progress": {
+        "completed": [],
+        "current": "blocked: Blocked by TASK-016: runtime prompt and contract v3 alignment must be completed before Wave 1 onboarding can use the v3 wave prompt and avoid hardcoded prompt prose.",
+        "next": "Complete TASK-016.; Verify prompt loader and v3 wave output are stable.; Re-run integration and E2E suites."
+      },
+      "evidence": [],
+      "created_at": "2026-09-01T02:03:56.107Z",
+      "updated_at": "2026-09-01T02:13:17.232Z",
+      "block": {
+        "reason": "Blocked by TASK-016: runtime prompt and contract v3 alignment must be completed before Wave 1 onboarding can use the v3 wave prompt and avoid hardcoded prompt prose.",
+        "recovery_conditions": [
+          "Complete TASK-016.",
+          "Verify prompt loader and v3 wave output are stable.",
+          "Re-run integration and E2E suites."
+        ],
+        "at": "2026-09-01T02:13:17.231Z"
+      }
+    },
+    {
+      "id": "TASK-015",
+      "title": "Async Final Plan delivery by email and shareable token link",
+      "outcome": "When the user reaches the plan/Odyssey stage, the app jumps to a dedicated email-collection screen, immediately acknowledges submission, runs Final Plan generation in the background, and sends the user an email with a secure, opaque link to view the report on a standalone /report/[token] page.",
+      "done_when": [
+        "The stop step in `app/play/page.tsx` (or a dedicated `/plan` page) collects an email, validates it, and submits to `POST /api/final`.",
+        "`POST /api/final` accepts an optional email, returns 202 immediately, and uses `next/after` (or an equivalent background continuation) to call the v3 final Sensemaker without blocking the HTTP response.",
+        "The generated `FinalPlan` is persisted with a new `report_token`; if a plan already exists for the session, the existing token is returned instead of regenerating.",
+        "A new `lib/mail/` module provides a configurable mailer with a local dev fallback (console/transporter via env SMTP) and a `sendReportLink(email, token, url)` helper.",
+        "A new `app/report/[token]/page.tsx` route renders the `FinalPlan` from the token; it does not require a cookie or login.",
+        "The report email contains a Chinese subject, a short message, and a link like `https://<host>/report/<token>`.",
+        "Token lookup is idempotent and 404s cleanly for unknown tokens.",
+        "Integration and contract tests cover: email collection, async final, report token access, missing token 404, and idempotent final.",
+        "`pnpm typecheck`, `build`, `lint`, `test:contracts` and `test:e2e` all pass."
+      ],
+      "boundaries": [
+        "Do not build a full user-account or password system; token link is the first version.",
+        "Do not store email as a searchable user identity; store it only as the delivery address for the report.",
+        "Do not expose session secret or guest-token in the email link.",
+        "Keep the report page read-only and shareable: the recipient can view but not mutate the plan.",
+        "Do not edit or hardcode prompt prose for the final generation; rely on TASK-016 for prompt loading."
+      ],
+      "depends_on": [
+        "TASK-009",
+        "TASK-014",
+        "TASK-016"
+      ],
+      "reads": [
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/capabilities/privacy-ai-safety.md",
+        ".loom/design/product-definition.md",
+        ".loom/capabilities/application-architecture.md",
+        "app/play/page.tsx",
+        "app/api/final/route.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/db/persist-wave.ts",
+        "prisma/schema.prisma",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "touches": [
+        "app/play/page.tsx",
+        "app/plan/page.tsx",
+        "app/report/[token]/page.tsx",
+        "app/api/final/route.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/mail/",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/db/persist-wave.ts",
+        "prisma/schema.prisma",
+        ".env.example",
+        ".env.local",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "status": "open",
+      "progress": {
+        "completed": [],
+        "current": "Drafting task file",
+        "next": "Add email collection and report token flow"
+      },
+      "evidence": [],
+      "created_at": "2026-09-01T02:03:56.108Z",
+      "updated_at": "2026-09-01T02:13:03.310Z"
+    },
+    {
+      "id": "TASK-016",
+      "title": "Runtime prompt and contract v3 full alignment",
+      "outcome": "The runtime loads every model prompt from the canonical `prompts/*.md` files and the code schemas, working-memory structures, memory operations and model call outputs strictly follow the v3 contract in `lib/state/contracts.ts`. No hardcoded prompt prose remains in `lib/ai/*.ts`.",
+      "done_when": [
+        "A prompt loader in `lib/ai/prompts/` reads the markdown files under `prompts/` and returns the canonical operational text for Interviewer, Sensemaker wave, Sensemaker futures/final, Prototype and Chat; no prompt markdown is edited.",
+        "`lib/ai/interviewer.ts` replaces its inline `makePrompt()` with the loader, passes the v3 input envelope and uses `interviewerProposalSchema` for all three modes (open_wave, continue_wave, propose_deep_dive).",
+        "`lib/ai/sensemaker/wave.ts` replaces its inline `insightSchema` with `waveSensemakerProposalSchema`; the model returns `operations` and `insight`, and the host applies the operations after validation.",
+        "`lib/ai/sensemaker/final.ts` (and any futures/ordinary-day helpers) use the canonical v3 prompts and the `FinalPlan` / parallel-life schema from `lib/state/contracts.ts`.",
+        "`lib/ai/sensemaker/chat.ts` uses the canonical v3 chat prompt and `sensemakerChatOutputSchema`.",
+        "`lib/working-memory/types.ts` and `schema.ts` are aligned with v3: ImmediateInsight has `user_told_me`, `current_reading`, `important_unknown`, `radar_deltas`, `route_impact`, `evidence` as `EvidenceLink[]` and `language_strength`; MemoryOperation uses v3 op names (`add_claim`, `update_radar`, etc.).",
+        "`lib/working-memory/operations.ts` handles every v3 MemoryOperation, including `add_claim`, `supersede_claim`, `invalidate_claim`, `add_constraint`, `update_radar`, `add_route_intent_seed`, `mark_stale`.",
+        "`build-wave-patch.ts` is retired or rewritten so that evidence, claims, constraints, route intents and radar deltas come from the model proposal; host owns id assignment, validation and fallback.",
+        "`app/api/wave/route.ts`, `app/api/feedback/route.ts` and `app/play/page.tsx` consume the new v3 wave output shape without breaking guest session and consent flow.",
+        "All integration, contract and E2E tests pass; fixtures and test answers are updated to match the new v3 schemas and question IDs."
+      ],
+      "boundaries": [
+        "Do not edit `prompts/*.md`; they are the canonical v3 source.",
+        "Do not invent new v4 contracts; use `lib/state/contracts.ts` as the v3 authority.",
+        "Do not make the model assign host-owned ids, timestamps or provenance; host assigns them after the proposal is accepted.",
+        "Do not silently fall back to hardcoded plan text; a degraded model output must be visibly provisional or empty.",
+        "Preserve guest session, upload privacy, consent and visual system as-is."
+      ],
+      "depends_on": [
+        "TASK-009"
+      ],
+      "reads": [
+        ".loom/design/prompt-architecture-brief.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/state-and-persistence-protocol.md",
+        ".loom/design/conversational-six-dimension-harness.md",
+        "prompts/PROMPT-ARCHITECTURE.md",
+        "prompts/interviewer-v2.md",
+        "prompts/sensemaker-wave-v2.md",
+        "prompts/odyssey-generator-v2.md",
+        "prompts/prototype-designer-v2.md",
+        "prompts/blueprint-writer-v2.md",
+        "prompts/sensemaker-chat-v3.md",
+        "lib/state/contracts.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/working-memory/operations.ts",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "lib/ai/client.ts",
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/play/page.tsx"
+      ],
+      "touches": [
+        "lib/ai/prompts/",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/ai/sensemaker/chat.ts",
+        "lib/ai/client.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/working-memory/operations.ts",
+        "lib/ai/sensemaker/build-wave-patch.ts",
+        "app/api/wave/route.ts",
+        "app/api/feedback/route.ts",
+        "app/play/page.tsx",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "status": "active",
+      "progress": {
+        "completed": [],
+        "current": "Planning the v3 runtime alignment",
+        "next": "Build the prompt loader and reconcile working-memory types with v3 contracts"
+      },
+      "evidence": [],
+      "created_at": "2026-09-01T02:12:49.108Z",
+      "updated_at": "2026-09-01T02:13:19.072Z"
     }
   ]
 }

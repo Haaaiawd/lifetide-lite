@@ -1,0 +1,12 @@
+{
+  "status": "open",
+  "progress": {
+    "completed": [
+      "Real-LLM integration with aiping/Qwen3.7-Plus verified: sensemaker_wave and sensemaker_final both succeed.",
+      "Typecheck, build, lint, test:contracts and test:e2e all pass.",
+      "Canonical conversation state machine, XState guards, evidence contracts and route readiness preserved."
+    ],
+    "current": "Paused while owner scopes new delivery and onboarding work.",
+    "next": "Re-evaluate closure after TASK-014 and TASK-015 land."
+  }
+}
