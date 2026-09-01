@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { requireGuestSession, getSessionByToken, hasConsent, GUEST_TOKEN_COOKIE } from "./session";
 import { getAuthUser } from "./user";
@@ -18,8 +19,18 @@ export async function resolveSession(request: NextRequest) {
     if (session) {
       return { session, isAuthed: true, user: authUser };
     }
-    // User exists but no session bound yet — create a fresh one
-    return { session: null, isAuthed: true, user: authUser };
+    // User exists but no session bound yet — create a fresh one and bind it
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const newSession = await prisma.session.create({
+      data: {
+        token,
+        userId: authUser.id,
+        expiresAt,
+      },
+      include: { consents: true, answers: true, uploads: true, derived: true, workingMemory: true },
+    });
+    return { session: newSession, isAuthed: true, user: authUser };
   }
 
   // 2. Fallback to guest session
