@@ -56,7 +56,11 @@ function extractTextFromJson(json: string): string[] {
   }
 }
 
-export function parseUploadContent(raw: string, parser: "text" | "markdown" | "json"): ParsedChunk[] {
+export function textToChunks(text: string): ParsedChunk[] {
+  return splitIntoChunks(text);
+}
+
+export function parseUploadContent(raw: string, parser: "text" | "markdown" | "json" | "docx" | "image" | "pdf"): ParsedChunk[] {
   if (parser === "json") {
     const texts = extractTextFromJson(raw);
     return texts

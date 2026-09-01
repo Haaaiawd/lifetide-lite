@@ -6,19 +6,81 @@ import { buildWaveFromProposal, persistWaveMissionAndArtifacts } from "@/lib/db/
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { hashObject } from "@/lib/utils/hash";
 import { makeEnvelope } from "@/lib/state/envelope";
-import type { WaveMissionCommitted, AnswerSubmitted, WaveEndCommitted, InsightCommitted, SessionStarted } from "@/lib/state/events";
-import type { Answer } from "@/lib/state/contracts";
+import { getProviderConfig } from "@/lib/ai/client";
+import type {
+  WaveMissionCommitted,
+  AnswerSubmitted,
+  WaveEndCommitted,
+  InsightCommitted,
+  SessionStarted,
+} from "@/lib/state/events";
+import type { Answer, SourceVersion, SourceHead } from "@/lib/state/contracts";
 import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
-import { runSensemakerWave } from "@/lib/ai/sensemaker/wave";
+import { runSensemakerWave, runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
+import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
 import { runInterviewer } from "@/lib/ai/interviewer";
 import { selectedUncertainty, rankActiveUncertainties } from "@/lib/interview/uncertainty";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyMemoryOperations } from "@/lib/working-memory/operations";
-import type { InterviewAnswer, InterviewQuestion, InterviewerInput, WorkingMemory } from "@/lib/working-memory/types";
+import { recomputeUncertaintyPriority } from "@/lib/working-memory/types";
+import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty, WorkingMemory } from "@/lib/working-memory/types";
 import type { NextRequest } from "next/server";
 
-const MAX_WAVES = 4;
-const MAX_QUESTIONS = 19;
+const MAX_WAVES = 5;
+const MAX_QUESTIONS = 50;
+
+function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolean {
+  if (sv.untrusted) return false;
+  const head = memory.source_heads.find((h) => h.source_id === sv.source_id);
+  return head?.status === "active" && head.active_revision === sv.revision;
+}
+
+function activeSourceVersions(memory: WorkingMemory): SourceVersion[] {
+  return memory.source_versions.filter((sv) => isActiveSourceVersion(memory, sv));
+}
+
+function seedUncertaintyIfEmpty(
+  memory: WorkingMemory,
+  waveIndex: number,
+  importantUnknown: string,
+  evidence: { source_id: string; source_revision: number }[],
+): void {
+  if (memory.uncertainties.length > 0) return;
+
+  const routeIntentIds = memory.route_intents
+    .filter((r) => r.status === "seed" || r.status === "accepted")
+    .map((r) => r.id)
+    .slice(0, 3);
+
+  const factors = {
+    plan_impact: 3,
+    evidence_gap: 2,
+    user_salience: 3,
+    reversibility_value: 2,
+    sensitivity_cost: 0,
+    repetition_cost: 0,
+  } as const;
+
+  const uncertainty: Uncertainty = {
+    id: randomUUID(),
+    question: importantUnknown,
+    plan_consequence: "答案会决定路线更偏向组织内延续、邻近转向还是释放型探索。",
+    related_evidence: evidence.map((e) => ({
+      source_id: e.source_id,
+      source_revision: e.source_revision,
+      epistemic_status: "working_inference",
+      evidence_shape: "abstract_statement",
+      relevance: "本波 insight 提出的关键未知",
+    })),
+    related_route_intent_ids: routeIntentIds as [string, ...string[]],
+    factors,
+    priority: recomputeUncertaintyPriority(factors),
+    created_wave: waveIndex,
+    status: "active",
+  };
+
+  memory.uncertainties.push(uncertainty);
+}
 
 export async function GET(request: NextRequest) {
   const { session, isNew } = await getOrCreateGuestSession(request);
@@ -88,7 +150,23 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (inAwaitingCalibration || inSynthesizing) {
+  if (inSynthesizing) {
+    const response = NextResponse.json({
+      stop: true,
+      can_generate: true,
+      provisional: false,
+      reason: "synthesizing",
+    });
+    if (isNew) attachGuestCookie(response, session.token);
+    return response;
+  }
+
+  // Allow GET during awaiting_calibration only when prefetch=1 is set.
+  // This lets the client generate the next wave while the user reads the insight.
+  // Normal GET (without prefetch) still returns stop, preserving the
+  // submit → feedback → next-wave flow for tests and non-prefetch clients.
+  const isPrefetch = new URL(request.url).searchParams.get("prefetch") === "1";
+  if (inAwaitingCalibration && !isPrefetch) {
     const response = NextResponse.json({
       stop: true,
       can_generate: true,
@@ -124,6 +202,7 @@ export async function GET(request: NextRequest) {
     const inAwaitingAnswers = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "awaiting_answers";
 
     if (!inAwaitingAnswers) {
+      const config = getProviderConfig();
       const provenanceId = randomUUID();
       const provenance = {
         id: provenanceId,
@@ -135,10 +214,10 @@ export async function GET(request: NextRequest) {
         schema_hash: hashObject(makeWave1Questions()),
         context_builder_version: "template-v1",
         context_hash: hashObject({ wave_id: WAVE_1_ID, wave_index: 1 }),
-        provider: "fixture",
-        model: "fixture",
-        model_config_json: {},
-        model_config_hash: hashObject({}),
+        provider: config.provider,
+        model: config.model,
+        model_config_json: { provider: config.provider, model: config.model },
+        model_config_hash: hashObject({ provider: config.provider, model: config.model }),
         fixture_suite_version: "template-v1",
         created_at: new Date().toISOString(),
       };
@@ -241,14 +320,35 @@ export async function GET(request: NextRequest) {
     for (const q of qs) recentQuestionTexts.push(q.text);
   }
 
-  const relevantEvidence = memory.evidence.filter((e) => e.status === "active").slice(0, 8);
+  const relevantEvidence = activeSourceVersions(memory)
+    .filter((sv) => sv.kind === "question_answer")
+    .slice(0, 8);
   const relevantConstraints = memory.constraints.filter((c) => c.status === "active").slice(0, 4);
   const latestFeedback = memory.recent_feedback[memory.recent_feedback.length - 1];
 
   const burden = await computeBurden(session.id, memory);
 
+  const uploadsWithChunks = await prisma.upload.findMany({
+    where: { sessionId: session.id, status: "ready" },
+    include: { chunks: true },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  const uploadChunks = uploadsWithChunks.flatMap((u) =>
+    u.chunks.map((c) => ({
+      document_id: u.id,
+      chunk_id: c.id,
+      ordinal: c.index,
+      text: c.text,
+      content_hash: hashObject(c.text),
+      trust: "untrusted_user_data" as const,
+      injection_pattern_detected: false,
+    }))
+  );
+
   const interviewerInput: InterviewerInput = {
-    schema_version: "interviewer.input.v1",
+    schema_version: "interviewer.input.v3",
     session_id: session.id,
     next_wave_id: `w${nextIndex}`,
     next_wave_index: nextIndex,
@@ -259,6 +359,7 @@ export async function GET(request: NextRequest) {
     relevant_constraints: relevantConstraints,
     latest_feedback: latestFeedback,
     recent_question_texts: recentQuestionTexts.slice(-8),
+    upload_chunks: uploadChunks.length > 0 ? uploadChunks : undefined,
     burden,
     prompt_version: "v0-draft",
   };
@@ -279,6 +380,7 @@ export async function GET(request: NextRequest) {
   // Persist canonical v3 wave artifacts through the XState ledger.
   const proposal = interviewerOutput.proposal;
   if (proposal.mode === "open_wave") {
+    const config = getProviderConfig();
     const wave = buildWaveFromProposal(
       `w${nextIndex}`,
       nextIndex,
@@ -297,10 +399,10 @@ export async function GET(request: NextRequest) {
       schema_hash: hashObject(interviewerOutput.proposal),
       context_builder_version: "interviewer-v3",
       context_hash: hashObject(interviewerInput),
-      provider: "fixture",
-      model: "fixture",
-      model_config_json: {},
-      model_config_hash: hashObject({}),
+      provider: config.provider,
+      model: config.model,
+      model_config_json: { provider: config.provider, model: config.model },
+      model_config_hash: hashObject({ provider: config.provider, model: config.model }),
       fixture_suite_version: "interviewer-v3",
       created_at: new Date().toISOString(),
     };
@@ -428,11 +530,11 @@ export async function POST(request: NextRequest) {
       skipped: createdAnswer.skipped,
       created_from: "card",
     };
-    const answerSource = {
+    const answerSource: SourceVersion = {
       source_id: sourceId,
       session_id: session.id,
       revision: 1,
-      kind: "question_answer" as const,
+      kind: "question_answer",
       created_at: createdAnswer.submitted_at,
       untrusted: false,
       text_ref: question.id,
@@ -456,154 +558,185 @@ export async function POST(request: NextRequest) {
   const memory = await loadOrCreateWorkingMemory(session.id);
   const waveIndex = parseWaveIndex(wave_id);
 
-  const output = await runSensemakerWave({
-    schema_version: "sensemaker.wave.input.v1",
-    session_id: session.id,
-    wave_id,
-    wave_index: waveIndex,
-    focus_uncertainty_id: wave.focus_uncertainty_id ?? undefined,
-    questions,
-    answers: createdAnswers,
-    memory,
-    expected_revision: memory.revision,
-    prompt_version: "v0-draft",
-  });
-
-  if (output.expected_revision !== memory.revision + 1) {
-    return NextResponse.json({ error: "WorkingMemory revision mismatch" }, { status: 409 });
+  // Register the new source versions in WorkingMemory before the sensemaker reads them.
+  for (const createdAnswer of createdAnswers) {
+    const question = questionById.get(createdAnswer.question_id)!;
+    const sourceVersion: SourceVersion = {
+      source_id: createdAnswer.id,
+      session_id: session.id,
+      revision: 1,
+      kind: "question_answer",
+      created_at: createdAnswer.submitted_at,
+      untrusted: false,
+      text_ref: question.id,
+    };
+    const sourceHead: SourceHead = {
+      session_id: session.id,
+      source_id: createdAnswer.id,
+      active_revision: 1,
+      status: "active",
+    };
+    memory.source_versions.push(sourceVersion);
+    memory.source_heads.push(sourceHead);
   }
 
-  const nextMemory = applyMemoryOperations(memory, output.operations, { wave_id });
-  await saveWorkingMemory(session.id, nextMemory);
-
-  // Commit wave end and insight to the XState ledger.
   const endProvenanceId = randomUUID();
-  const endProvenance = {
-    id: endProvenanceId,
-    session_id: session.id,
-    proposal_id: endProvenanceId,
-    correlation_id: randomUUID(),
-    prompt_contract_revision: 3 as const,
-    prompt_file_hash: hashObject("prompts/sensemaker-wave-v2.md"),
-    schema_hash: hashObject(output),
-    context_builder_version: "sensemaker-wave-v1",
-    context_hash: hashObject({ session_id: session.id, wave_id, answers: createdAnswers }),
-    provider: "fixture",
-    model: "fixture",
-    model_config_json: {},
-    model_config_hash: hashObject({}),
-    fixture_suite_version: "sensemaker-wave-v1",
-    created_at: new Date().toISOString(),
-  };
-  const waveEndPayload: WaveEndCommitted = {
-    proposal_id: endProvenance.proposal_id,
-    generation_provenance: endProvenance,
-    wave_id,
-    stop_reason: "mission_sufficient",
-  };
-  const waveEndEnvelope = makeEnvelope("WAVE_END_COMMITTED", {
-    session_id: session.id,
-    actor: "host",
-    base_revision: baseRevision,
-    idempotency_key: `wave-end-${session.id}-${wave_id}`,
-    correlation_id: endProvenance.correlation_id,
-    proposal_id: endProvenance.proposal_id,
-    payload: waveEndPayload,
-  });
-  const waveEndResult = await commitEvent(session.id, waveEndEnvelope);
-  if (waveEndResult.ok) {
-    baseRevision = waveEndResult.nextRevision;
+  const endProvenanceCorrelationId = randomUUID();
 
-    const insightProvenanceId = randomUUID();
-    const insightProvenance = {
-      id: insightProvenanceId,
-      session_id: session.id,
-      proposal_id: insightProvenanceId,
-      correlation_id: randomUUID(),
-      prompt_contract_revision: 3 as const,
-      prompt_file_hash: hashObject("prompts/sensemaker-wave-v2.md"),
-      schema_hash: hashObject(output.insight),
-      context_builder_version: "sensemaker-wave-v1",
-      context_hash: hashObject({ memory: nextMemory, wave_id }),
-      provider: "fixture",
-      model: "fixture",
-      model_config_json: {},
-      model_config_hash: hashObject({}),
-      fixture_suite_version: "sensemaker-wave-v1",
-      created_at: new Date().toISOString(),
-    };
-    const raw = output.insight as any;
-    const insightEvidence: any[] = createdAnswers.slice(0, 1).map((a) => ({
-      source_id: a.id,
-      source_revision: 1,
-      excerpt: typeof a.value === "string" ? a.value : "",
-      epistemic_status: "user_stated",
-      evidence_shape: "concrete_scene",
-      relevance: "支撑当前洞察",
-    }));
-    if (insightEvidence.length === 0) {
-      insightEvidence.push({
-        source_id: "system",
-        source_revision: 1,
-        excerpt: raw.observation ?? "无直接证据",
-        epistemic_status: "user_stated",
-        evidence_shape: "concrete_scene",
-        relevance: "系统默认证据",
-      });
-    }
-    const insightProposal: any = {
-      wave_id,
-      user_told_me: raw.observation ?? "用户完成本波问题",
-      current_reading: raw.interpretation ?? "信息仍不足以形成明确理解",
-      important_unknown: raw.uncertainty ?? "还需要更多具体经历",
-      radar_deltas: [],
-      route_impact: "继续聚焦当前决策",
-      evidence: insightEvidence,
-      status: "proposed",
-      language_strength: raw.confidence === "high" ? "well_supported" : "tentative",
-    };
-    const sensemakerProposal: any = {
-      base_revision: memory.revision,
-      operations: output.operations,
-      insight: insightProposal,
-    };
-    const insightPayload: InsightCommitted = {
-      proposal_id: insightProvenance.proposal_id,
-      generation_provenance: insightProvenance,
-      proposal: sensemakerProposal,
-      insight_status: "generated",
-    };
-    const insightEnvelope = makeEnvelope("INSIGHT_COMMITTED", {
-      session_id: session.id,
-      actor: "sensemaker",
-      base_revision: baseRevision,
-      idempotency_key: `insight-${session.id}-${wave_id}`,
-      correlation_id: insightProvenance.correlation_id,
-      proposal_id: insightProvenance.proposal_id,
-      payload: insightPayload,
-    });
-    const insightResult = await commitEvent(session.id, insightEnvelope);
-    if (!insightResult.ok) {
-      console.error("Failed to commit INSIGHT_COMMITTED:", insightResult.message);
-    }
-  } else {
-    console.error("Failed to commit WAVE_END_COMMITTED:", waveEndResult.message);
-  }
+  // Stream partial insight text to the client via SSE while AI is generating.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const sendSSE = (event: string, data: unknown) => {
+        controller.enqueue(encoder.encode(`event: ${event}\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
 
-  await prisma.wave.update({
-    where: { id: wave.id },
-    data: { status: "synthesized" },
-  });
+      try {
+        const output = await runSensemakerWaveStream(
+          {
+            schema_version: "sensemaker.wave.input.v3",
+            session_id: session.id,
+            wave_id,
+            wave_index: waveIndex,
+            focus_uncertainty_id: wave.focus_uncertainty_id ?? undefined,
+            questions,
+            answers: createdAnswers,
+            memory,
+            expected_revision: memory.revision,
+            prompt_version: "v0-draft",
+          },
+          (partial) => {
+            sendSSE("partial", partial);
+          }
+        );
 
-  return NextResponse.json(
-    {
-      wave_id,
-      wave_index: waveIndex,
-      revision: nextMemory.revision,
-      insight: output.insight,
+        if (output.expected_revision !== memory.revision + 1) {
+          sendSSE("error", { error: "WorkingMemory revision mismatch" });
+          controller.close();
+          return;
+        }
+
+        const nextMemory = applyMemoryOperations(memory, output.operations, {
+          wave_id,
+          generation_provenance_id: endProvenanceId,
+        });
+
+        if (nextMemory.uncertainties.length === 0) {
+          seedUncertaintyIfEmpty(
+            nextMemory,
+            waveIndex,
+            output.insight.important_unknown,
+            output.insight.evidence
+          );
+        }
+
+        await saveWorkingMemory(session.id, nextMemory);
+
+        const config = getProviderConfig();
+        const promptFileHash = wave_id === "w1" ? hashObject("lib/ai/sensemaker/wave1") : hashObject("prompts/sensemaker-wave-v2.md");
+        const endProvenance = {
+          id: endProvenanceId,
+          session_id: session.id,
+          proposal_id: endProvenanceId,
+          correlation_id: endProvenanceCorrelationId,
+          prompt_contract_revision: 3 as const,
+          prompt_file_hash: promptFileHash,
+          schema_hash: hashObject(output),
+          context_builder_version: "sensemaker-wave-v3",
+          context_hash: hashObject({ session_id: session.id, wave_id, answers: createdAnswers }),
+          provider: config.provider,
+          model: config.model,
+          model_config_json: { provider: config.provider, model: config.model },
+          model_config_hash: hashObject({ provider: config.provider, model: config.model }),
+          fixture_suite_version: "sensemaker-wave-v3",
+          created_at: new Date().toISOString(),
+        };
+
+        const waveEndPayload: WaveEndCommitted = {
+          proposal_id: endProvenance.proposal_id,
+          generation_provenance: endProvenance,
+          wave_id,
+          stop_reason: "mission_sufficient",
+        };
+        const waveEndEnvelope = makeEnvelope("WAVE_END_COMMITTED", {
+          session_id: session.id,
+          actor: "host",
+          base_revision: baseRevision,
+          idempotency_key: `wave-end-${session.id}-${wave_id}`,
+          correlation_id: endProvenance.correlation_id,
+          proposal_id: endProvenance.proposal_id,
+          payload: waveEndPayload,
+        });
+        const waveEndResult = await commitEvent(session.id, waveEndEnvelope);
+        if (waveEndResult.ok) {
+          baseRevision = waveEndResult.nextRevision;
+
+          const insightProposal = {
+            base_revision: output.base_revision,
+            operations: output.operations,
+            insight: output.insight,
+          };
+          const insightPayload: InsightCommitted = {
+            proposal_id: endProvenance.proposal_id,
+            generation_provenance: endProvenance,
+            proposal: insightProposal,
+            insight_status: "generated",
+          };
+          const insightEnvelope = makeEnvelope("INSIGHT_COMMITTED", {
+            session_id: session.id,
+            actor: "sensemaker",
+            base_revision: baseRevision,
+            idempotency_key: `insight-${session.id}-${wave_id}`,
+            correlation_id: endProvenance.correlation_id,
+            proposal_id: endProvenance.proposal_id,
+            payload: insightPayload,
+          });
+          const insightResult = await commitEvent(session.id, insightEnvelope);
+          if (!insightResult.ok) {
+            console.error("Failed to commit INSIGHT_COMMITTED:", insightResult.message);
+          }
+        } else {
+          console.error("Failed to commit WAVE_END_COMMITTED:", waveEndResult.message);
+        }
+
+        await prisma.wave.update({
+          where: { id: wave.id },
+          data: { status: "synthesized" },
+        });
+
+        const fullInsight = {
+          ...output.insight,
+          id: randomUUID(),
+          wave_id,
+          generation_provenance_id: endProvenanceId,
+          generated_at: now.toISOString(),
+          status: "generated" as const,
+        };
+
+        sendSSE("done", {
+          wave_id,
+          wave_index: waveIndex,
+          revision: nextMemory.revision,
+          insight: fullInsight,
+        });
+        controller.close();
+      } catch (err) {
+        console.error("Wave SSE stream error:", err);
+        sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
+        controller.close();
+      }
     },
-    { status: 201 }
-  );
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }
 
 function parseWaveIndex(waveId: string): number {
@@ -616,23 +749,24 @@ export async function countSessionQuestions(sessionId: string): Promise<number> 
 }
 
 export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): { stop: boolean; canGenerate: boolean; provisional: boolean; reason: string } {
-  const hasRouteSeeds = memory.route_seeds.filter((r) => r.status === "active").length >= 3;
-  const hasEvidence = memory.evidence.filter((e) => e.status === "active").length >= 1;
+  const activeRouteIntents = memory.route_intents.filter((r) => r.status === "seed" || r.status === "accepted");
+  const hasRouteIntents = activeRouteIntents.length >= 3;
+  const hasEvidence = activeSourceVersions(memory).length >= 1;
 
   if (memory.last_wave_index >= MAX_WAVES) {
-    return { stop: true, canGenerate: hasRouteSeeds, provisional: false, reason: "wave_limit" };
+    return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "wave_limit" };
   }
 
   if (answeredQuestions >= MAX_QUESTIONS) {
-    return { stop: true, canGenerate: hasRouteSeeds, provisional: false, reason: "question_limit" };
+    return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "question_limit" };
   }
 
-  // Sufficient for final after at least one adaptive wave.
-  if (memory.last_wave_index >= 2 && hasRouteSeeds && hasEvidence) {
+  // Sufficient for final after at least the default three waves.
+  if (memory.last_wave_index >= 3 && hasRouteIntents && hasEvidence) {
     return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
   }
 
-  return { stop: false, canGenerate: hasRouteSeeds, provisional: false, reason: "continue" };
+  return { stop: false, canGenerate: hasRouteIntents, provisional: false, reason: "continue" };
 }
 
 async function computeBurden(sessionId: string, memory: WorkingMemory) {

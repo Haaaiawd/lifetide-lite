@@ -1,0 +1,27 @@
+{
+  "reads": [
+    ".loom/design/adaptive-interview-system.md",
+    ".loom/design/journey-and-interaction.md",
+    ".loom/capabilities/privacy-ai-safety.md",
+    ".loom/design/product-definition.md",
+    "lib/interview/templates.ts",
+    "lib/ai/sensemaker/wave.ts",
+    "components/insight/InsightSlip.tsx",
+    "app/play/page.tsx",
+    "app/api/wave/route.ts",
+    "tests/integration/wave-one.test.ts",
+    "tests/integration/adaptive-waves.test.ts",
+    "tests/integration/parallel-lives.test.ts",
+    "tests/e2e/visual-prototype.spec.ts"
+  ],
+  "touches": [
+    "lib/interview/templates.ts",
+    "lib/ai/sensemaker/wave.ts",
+    "components/insight/InsightSlip.tsx",
+    "app/play/page.tsx",
+    "tests/integration/wave-one.test.ts",
+    "tests/integration/adaptive-waves.test.ts",
+    "tests/integration/parallel-lives.test.ts",
+    "tests/e2e/visual-prototype.spec.ts"
+  ]
+}

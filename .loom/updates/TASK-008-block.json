@@ -1,7 +1,8 @@
 {
-  "reason": "Refocused to TASK-009 prompt-system reframe; TASK-008 core skeleton landed and verified, full route/API wiring to be completed after prompt architecture is restored.",
+  "reason": "Owner introduced new scope (email report delivery and onboarding Wave 1) before the original TASK-008 could be formally closed.",
   "recovery_conditions": [
-    "TASK-009 prompt architecture and health audit complete",
-    "Return to TASK-008 to finish API route migration, full domain-record persistence, safety/recovery fault tests and evidence closure"
+    "Complete TASK-014 and TASK-015.",
+    "Re-run full verification suite.",
+    "Verify guest/privacy and canonical state machine still pass."
   ]
 }

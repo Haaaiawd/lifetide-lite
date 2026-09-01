@@ -48,11 +48,11 @@ export function InsightBubble({ insight, onContinue }: InsightBubbleProps) {
       </div>
 
       <p className="text-base leading-snug line-clamp-3">
-        {insight.interpretation}
+        {insight.current_reading}
       </p>
 
       <p className="mt-2 text-sm leading-relaxed text-ink-muted line-clamp-2">
-        {insight.uncertainty}
+        {insight.important_unknown}
       </p>
 
       <div className="mt-4 flex items-center gap-2">

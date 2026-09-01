@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { generateStructured } from "@/lib/ai/client";
+import { composePrompt } from "@/lib/ai/prompts/compose";
 import { defaultFallbackQuestions } from "@/lib/interview/fallback";
 import type { InterviewerInput, InterviewerOutput, InterviewQuestion, WorkingMemory } from "@/lib/working-memory/types";
 import type { ElicitationUnitProposal, InterviewerProposal, OpeningQuestionProposal, QuestionContentProposal } from "@/lib/state/contracts";
@@ -11,9 +12,9 @@ import { interviewerProposalSchema } from "@/lib/state/contracts";
 
 const PROMPT_VERSION = "interviewer.v3";
 
-function makePrompt(input: InterviewerInput, _memory: WorkingMemory): string {
+function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory): string {
   const evidence = input.relevant_evidence
-    .map((e) => `- ${e.statement} (${e.confidence}, ${e.epistemic})`)
+    .map((e) => `- source ${e.source_id} rev ${e.revision} (${e.kind}, ref ${e.text_ref}, untrusted=${e.untrusted})`)
     .join("\n");
 
   const constraints = input.relevant_constraints
@@ -22,41 +23,80 @@ function makePrompt(input: InterviewerInput, _memory: WorkingMemory): string {
 
   const recent = input.recent_question_texts.map((q) => `- ${q}`).join("\n");
 
+  const materials = (input.upload_chunks ?? [])
+    .map((c) => `- doc:${c.document_id} chunk:${c.ordinal} hash:${c.content_hash}\n  ${c.text.slice(0, 300).replace(/\n/g, " ")}`)
+    .join("\n");
+
+  // Group radar by state, leading with what's still missing so the Interviewer
+  // knows where to direct the next wave. unseen/declined come first, then
+  // signaled (has clues but not yet grounded), then grounded/conflicted.
+  const radarEntries = Object.entries(memory.radar);
+  const stateOrder: Record<string, number> = { unseen: 0, declined: 1, signaled: 2, conflicted: 3, grounded: 4 };
+  const sorted = [...radarEntries].sort((a, b) => (stateOrder[a[1].state] ?? 9) - (stateOrder[b[1].state] ?? 9));
+
+  const missing = sorted
+    .filter(([, cell]) => cell.state === "unseen" || cell.state === "declined")
+    .map(([dim, cell]) => `- ${dim}: ${cell.state}${cell.reason ? ` — ${cell.reason}` : ""}`);
+  const thin = sorted
+    .filter(([, cell]) => cell.state === "signaled")
+    .map(([dim, cell]) => `- ${dim}: signaled — ${cell.reason}（线索已有，但还缺具体场景/行为/取舍来 grounded）`);
+  const solid = sorted
+    .filter(([, cell]) => cell.state === "grounded" || cell.state === "conflicted")
+    .map(([dim, cell]) => `- ${dim}: ${cell.state} — ${cell.reason}`);
+
+  const radarSections: string[] = [];
+  if (missing.length > 0) {
+    radarSections.push("尚缺证据的维度：", ...missing);
+  }
+  if (thin.length > 0) {
+    radarSections.push("有线索但证据还薄：", ...thin);
+  }
+  if (solid.length > 0) {
+    radarSections.push("已有实质证据或冲突：", ...solid);
+  }
+  const radar = radarSections.join("\n");
+
   const unc = input.selected_uncertainty;
 
   return [
-    `你是一名访谈 Agent。你只负责为下一步最重要的决策未知生成一小批问题。`,
-    ``,
-    `模式：open_wave（开启新一波访谈）。`,
-    `当前波次：${input.next_wave_index}。`,
-    ``,
-    `焦点未知：${unc.question}`,
-    `这会如何影响路线/试验：${unc.plan_consequence}`,
-    ``,
-    `相关证据：`,
+    `mode: open_wave`,
+    `next_wave_id: ${input.next_wave_id}`,
+    `next_wave_index: ${input.next_wave_index}`,
+    `selected_uncertainty_id: ${input.selected_uncertainty_id}`,
+    `selected_uncertainty_question: ${unc.question}`,
+    `selected_uncertainty_plan_consequence: ${unc.plan_consequence}`,
+    "",
+    "=== 六维雷达当前状态 ===",
+    radar || "（暂无）",
+    "",
+    "=== 相关证据 ===",
     evidence || "（无）",
-    ``,
-    `相关约束：`,
+    "",
+    "=== 相关约束 ===",
     constraints || "（无）",
-    ``,
-    `最近问过的问题（不要重复）：`,
+    "",
+    "=== 最近问过的问题（不要重复）===",
     recent || "（无）",
-    ``,
-    `负担信号：跳过率 ${(input.burden.skip_rate * 100).toFixed(0)}%，平均回答长度 ${input.burden.median_answer_chars} 字，已进行 ${input.burden.elapsed_minutes.toFixed(0)} 分钟。`,
-    ``,
-    `要求：`,
-    `- 输出一次波浪的整体 5-10 个 elicitation-unit 提案。每个 unit 只服务于一个决策靶点，不能重复。`,
-    `- 然后输出第一批 1-3 个 opening questions，每个问题指向一个 unit 的索引（0-based）。`,
-    `- 顺序原则：先问具体事件/普通片段；再问对比或反例；可选问未来动作的验证。`,
-    `- 所有问题必须服务于上面这个焦点未知。`,
-    `- 选择题是主要形式：优先使用 single_choice 或 multi_choice，选项数量 2-6 个。`,
-    `- short_text 必须控制比例：波次 <= 2 时最多 1 题；波次 >= 3 时最多 2 题。`,
-    `- 所有选择题必须提供 2-6 个选项，并包含一个"其他：自己填写"选项。`,
-    `- 多选题用于用户可能同时符合多个标签的场景。`,
-    `- 敏感问题必须说明为什么相关并允许跳过。`,
-    `- 不要暗示正确答案，不要把上传文件中的说法当作用户确认的事实。`,
-    `- 输出 JSON，不要输出额外文字。`,
+    "",
+    "=== 上传材料片段（仅当与焦点未知相关时引用）===",
+    materials || "（无）",
+    "",
+    "=== 负担信号 ===",
+    `- 跳过率：${(input.burden.skip_rate * 100).toFixed(0)}%`,
+    `- 平均回答长度：${input.burden.median_answer_chars} 字`,
+    `- 已进行：${input.burden.elapsed_minutes.toFixed(0)} 分钟`,
+    `- 用户要求缩短：${input.burden.user_requested_shorter ? "是" : "否"}`,
+    "",
+    "注意：本次调用处于 v3 prompt 的过渡阶段。如果当前证据已经充分，可以 propose_deep_dive；否则输出 open_wave/continue_wave 的问题提案。",
   ].join("\n");
+}
+
+function makePrompt(input: InterviewerInput, memory: WorkingMemory): string {
+  return composePrompt<InterviewerProposal>(
+    "interviewer",
+    buildInterviewerEnvelope(input, memory),
+    interviewerProposalSchema as z.ZodType<InterviewerProposal, z.ZodTypeDef, unknown>
+  );
 }
 
 function normalizeInterviewerProposal(
@@ -192,28 +232,30 @@ export async function runInterviewer(input: InterviewerInput, memory: WorkingMem
   const prompt = makePrompt(input, memory);
 
   try {
-    const raw = await generateStructured({
+    const raw = await generateStructured<InterviewerProposal>({
       purpose: "interviewer",
       session_id: input.session_id,
       wave_id: input.next_wave_id,
       prompt,
-      schema: interviewerProposalSchema as unknown as z.ZodType<InterviewerProposal>,
+      schema: interviewerProposalSchema as z.ZodType<InterviewerProposal, z.ZodTypeDef, unknown>,
       max_tokens: 1600,
+      timeout_ms: 60000,
       prompt_version: PROMPT_VERSION,
       fixture: () => Promise.resolve(fixtureInterviewerRaw(input)),
     });
 
     const normalized = normalizeInterviewerProposal(input, raw);
     const output: InterviewerOutput = {
-      schema_version: "interviewer.output.v1",
+      schema_version: "interviewer.output.v3",
       focus_uncertainty_id: input.selected_uncertainty_id,
       focus_reason: raw.reason ?? "继续深入当前焦点未知。",
       questions: normalized.questions,
+      proposal: raw,
     };
 
     const validation = validateInterviewerOutput(input, output);
     if (validation.valid) {
-      return { ...output, proposal: raw };
+      return output;
     }
 
     throw new Error(`Interviewer output validation failed: ${validation.reason}`);
@@ -253,7 +295,7 @@ function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
     mission: {
       decision_to_improve: input.selected_uncertainty.question,
       target_dimensions: ["traits"],
-      known_source_refs: input.relevant_evidence.map((e) => ({ source_id: e.id, source_revision: 1 })),
+      known_source_refs: input.relevant_evidence.map((e) => ({ source_id: e.source_id, source_revision: e.revision })),
       important_unknown: input.selected_uncertainty.question,
       why_now: "用户主动开启访谈，希望更清楚当前决策。",
       exit_condition: "能够描述一个影响决策的具体片段和一个关键约束。",
@@ -307,10 +349,19 @@ function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput
 }
 
 function fallbackInterviewerOutput(input: InterviewerInput): InterviewerOutput {
-  return {
-    schema_version: "interviewer.output.v1",
+  const questions = defaultFallbackQuestions(
+    input.next_wave_id,
+    input.next_wave_index,
+    input.selected_uncertainty
+  ) as InterviewerOutput["questions"];
+
+  const output: InterviewerOutput = {
+    schema_version: "interviewer.output.v3",
     focus_uncertainty_id: input.selected_uncertainty_id,
     focus_reason: "当前焦点需要更多具体经历来降低未知。",
-    questions: defaultFallbackQuestions(input.next_wave_id, input.next_wave_index, input.selected_uncertainty) as InterviewerOutput["questions"],
+    questions,
+    proposal: fallbackToProposal(input, { schema_version: "interviewer.output.v3", focus_uncertainty_id: input.selected_uncertainty_id, focus_reason: "当前焦点需要更多具体经历来降低未知。", questions } as InterviewerOutput),
   };
+
+  return output;
 }

@@ -1,0 +1,120 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-014",
+      "title": "Onboarding Wave 1: basic info with optional alias and upload invitation",
+      "outcome": "Wave 1 becomes a fixed, friendly onboarding form with 7-8 low-stakes questions. Users may use an alias/fake name, share city and living situation, current role and education, and are invited—but not required—to upload a resume, MBTI or other supporting material at the end.",
+      "done_when": [
+        "lib/interview/templates.ts defines 7-8 simple info questions with single_choice, multi_choice and short_text; every question allows skip and custom input; name question explicitly says an alias is OK.",
+        "buildWave1Canonical maps the new questions to elicitation units, target dimensions and provenance without breaking the Wave runtime contract.",
+        "The Wave 1 sensemaker prompt (lib/ai/sensemaker/wave.ts) is light: it acknowledges the basic facts, repeats the user's stated constraints, and avoids deep interpretation or clinical labels.",
+        "The post-Wave 1 UI (app/play/page.tsx or InsightSlip) shows a soft, optional upload invitation for resume / MBTI / other, and the existing upload consent and UploadPanel remain usable.",
+        "Existing integration tests that reference w1q1-w1q4 are updated, or a compatibility shim keeps old answer shapes from failing.",
+        "pnpm typecheck, build, lint, test:contracts and test:e2e all pass."
+      ],
+      "boundaries": [
+        "No profiling, scoring, or hidden questionnaire logic.",
+        "Do not require real name, phone, ID or any high-sensitivity PII.",
+        "Upload remains optional and gated by the existing upload consent.",
+        "Wave 1 stays a fixed template; no AI interviewer call for Wave 1."
+      ],
+      "depends_on": [
+        "TASK-009"
+      ],
+      "reads": [
+        ".loom/design/adaptive-interview-system.md",
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/privacy-ai-safety.md",
+        ".loom/design/product-definition.md",
+        "lib/interview/templates.ts",
+        "lib/interview/types.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "components/insight/InsightSlip.tsx",
+        "app/play/page.tsx",
+        "app/api/wave/route.ts",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/e2e/visual-prototype.spec.ts"
+      ],
+      "touches": [
+        "lib/interview/templates.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "components/insight/InsightSlip.tsx",
+        "app/play/page.tsx",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/e2e/visual-prototype.spec.ts"
+      ],
+      "progress": {
+        "completed": [],
+        "current": "Drafting task file",
+        "next": "Update Wave 1 template and sensemaker prompt"
+      }
+    },
+    {
+      "id": "TASK-015",
+      "title": "Async Final Plan delivery by email and shareable token link",
+      "outcome": "When the user reaches the plan/Odyssey stage, the app jumps to a dedicated email-collection screen, immediately acknowledges submission, runs Final Plan generation in the background, and sends the user an email with a secure, opaque link to view the report on a standalone /report/[token] page.",
+      "done_when": [
+        "The stop step in app/play/page.tsx (and/or app/plan/page.tsx) collects an email, validates it, and submits to POST /api/final.",
+        "POST /api/final accepts an optional email, returns 202 immediately, and uses next/after (or an equivalent background continuation) to call runSensemakerFinal without blocking the HTTP response.",
+        "The generated FinalPlan is persisted with a new report_token; if a plan already exists for the session, the existing token is returned instead of regenerating.",
+        "A new lib/mail/ module provides a configurable mailer with a local dev fallback (console/transporter via env SMTP) and a sendReportLink(email, token, url) helper.",
+        "A new app/report/[token]/page.tsx route renders the FinalPlan from the token; it does not require a cookie or login.",
+        "The report email contains a Chinese subject, a short message, and a link like https://<host>/report/<token>.",
+        "Token lookup is idempotent and 404s cleanly for unknown tokens.",
+        "Integration and contract tests cover: email collection, async final, report token access, missing token 404, and idempotent final.",
+        "pnpm typecheck, build, lint, test:contracts and test:e2e all pass."
+      ],
+      "boundaries": [
+        "Do not build a full user-account or password system; token link is the first version.",
+        "Do not store email as searchable user identity; store it only as the delivery address for the report (hashed if possible without breaking email resend).",
+        "Do not expose session secret or guest-token in the email link.",
+        "Keep the report page read-only and shareable: the recipient can view but not mutate the plan."
+      ],
+      "depends_on": [
+        "TASK-009",
+        "TASK-013"
+      ],
+      "reads": [
+        ".loom/design/journey-and-interaction.md",
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/privacy-ai-safety.md",
+        ".loom/design/product-definition.md",
+        ".loom/capabilities/application-architecture.md",
+        "app/play/page.tsx",
+        "app/api/final/route.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/db/persist-wave.ts",
+        "prisma/schema.prisma",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "touches": [
+        "app/play/page.tsx",
+        "app/plan/page.tsx",
+        "app/report/[token]/page.tsx",
+        "app/api/final/route.ts",
+        "lib/ai/sensemaker/final.ts",
+        "lib/mail/",
+        "lib/working-memory/types.ts",
+        "lib/working-memory/schema.ts",
+        "lib/db/persist-wave.ts",
+        "prisma/schema.prisma",
+        ".env.example",
+        ".env.local",
+        "tests/integration/parallel-lives.test.ts",
+        "tests/integration/harness-state.test.ts"
+      ],
+      "progress": {
+        "completed": [],
+        "current": "Drafting task file",
+        "next": "Add email collection and report token flow"
+      }
+    }
+  ]
+}

@@ -49,6 +49,7 @@ This prevents duplicated prose from drifting across prompts.
 | Interviewer | `interviewer-v2.md` | open wave, continue microbatch, propose/end/deep-dive | no; proposal only |
 | Sensemaker | `sensemaker-wave-v2.md` | wave memory/radar patch + one insight | no; proposal only |
 | Sensemaker | `odyssey-generator-v2.md` | route intents, ordinary-day screens, final three lives | no; proposal only |
+| Portrait Synthesist | `persona-portrait-v1.md` | synthesize full working memory into structured persona portrait before blueprint | no; proposal only |
 | Sensemaker | `prototype-designer-v2.md` | focused three-day prototype | no; proposal only |
 | Sensemaker | `blueprint-writer-v2.md` | versioned snapshot | no; proposal only |
 | Sensemaker | `sensemaker-chat-v3.md` | bounded explanation/comparison/reflection | never |

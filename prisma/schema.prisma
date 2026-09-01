@@ -7,9 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+}
+
+model InviteCode {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  maxUses    Int      @default(5)
+  usedCount  Int      @default(0)
+  note       String?
+  createdAt  DateTime @default(now())
+  createdBy  String?
+  exhausted  Boolean  @default(false)
+
+  @@index([code])
+}
+
 model Session {
   id          String           @id @default(cuid())
   token       String           @unique
+  userId      String?
   createdAt   DateTime         @default(now())
   expiresAt   DateTime
   consents    Consent[]
@@ -32,6 +54,7 @@ model Session {
   immediateInsights ImmediateInsight[]
   calibrations Calibration[]
   routeIntents RouteIntent[]
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Consent {

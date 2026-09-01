@@ -15,7 +15,10 @@ export function toRouteView(life: ParallelLife, index: number, trialStatus: Rout
     ordinaryDay: life.ordinary_day,
     attractions: life.attractions,
     costsAndTradeoffs: life.costs_and_tradeoffs,
-    evidenceFor: life.evidence_for.map((e) => ({ id: e.evidence_id, supports: e.supports })),
+    evidenceFor: life.evidence_for.map((e) => ({
+      id: e.source_id,
+      supports: e.excerpt ?? e.relevance,
+    })),
     assumptions: life.assumptions,
     unknowns: life.uncertainties,
     risks: life.risks,

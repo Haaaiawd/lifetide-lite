@@ -28,7 +28,6 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
   const [direction, setDirection] = useState("");
   const [revealIndex, setRevealIndex] = useState(0);
 
-  // progressive reveal of the three segments
   const segments = [
     {
       label: "你告诉我的",
@@ -70,7 +69,18 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
   useEffect(() => {
     if (reduce) {
       setRevealIndex(segments.length);
+      return;
     }
+    const timers: NodeJS.Timeout[] = [];
+    for (let i = 0; i < segments.length; i++) {
+      const delay = (i * 0.08 + 0.22) * 1000;
+      timers.push(
+        setTimeout(() => {
+          setRevealIndex((r) => Math.min(r + 1, segments.length));
+        }, delay)
+      );
+    }
+    return () => timers.forEach(clearTimeout);
   }, [reduce, segments.length]);
 
   return (
@@ -104,11 +114,6 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
               ease: easeOutQuart,
             }}
             className="border-l-4 border-cobalt pl-4"
-            onAnimationComplete={() => {
-              if (i === revealIndex && !reduce) {
-                setTimeout(() => setRevealIndex((r) => Math.min(r + 1, segments.length)), 240);
-              }
-            }}
           >
             <div className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
               {segment.label}

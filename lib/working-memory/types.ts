@@ -1,22 +1,71 @@
 // Runtime types for the WorkingMemory and Sensemaker contracts.
+// WorkingMemory is the host-owned runtime view of the v3 WorkingUnderstanding,
+// plus a small set of runtime-only fields not present in the v3 contract.
 // See .loom/design/insight-plan-contracts.md
 
-export type Id = string;
+import type {
+  Id,
+  Revision,
+  SourceRef,
+  SourceVersion,
+  SourceHead,
+  EvidenceLink,
+  RadarCell,
+  Claim,
+  Constraint,
+  RouteIntent,
+  WorkingUnderstanding,
+  Question as ContractQuestion,
+  QuestionResponseKind,
+  Calibration,
+  ParallelLivesPlan,
+  ParallelLife as ContractParallelLife,
+  Prototype as ContractPrototype,
+  MemoryOperationProposal,
+  ImmediateInsight as ContractImmediateInsight,
+  ImmediateInsightProposal,
+  WaveSensemakerProposal,
+  InterviewerProposal,
+  ChatScope,
+  GenerationProvenance,
+} from "@/lib/state/contracts";
+import type { PersonaPortrait } from "@/lib/portrait/types";
 
-export type Confidence = "low" | "medium" | "high";
-export type Status = "active" | "invalidated" | "resolved";
-export type SupportStatus = "supported" | "unsupported" | "stale";
+// Re-export the small contract primitives used at runtime.
+export type {
+  Id,
+  Revision,
+  SourceRef,
+  SourceVersion,
+  SourceHead,
+  EvidenceLink,
+  RadarCell,
+  Claim,
+  Constraint,
+  RouteIntent,
+  WorkingUnderstanding,
+  Question as ContractQuestion,
+  QuestionResponseKind,
+  Calibration,
+  ParallelLivesPlan,
+  ParallelLife as ContractParallelLife,
+  Prototype as ContractPrototype,
+  MemoryOperationProposal,
+  ImmediateInsight as ContractImmediateInsight,
+  ImmediateInsightProposal,
+  WaveSensemakerProposal,
+  InterviewerProposal,
+  ChatScope,
+  GenerationProvenance,
+} from "@/lib/state/contracts";
 
-export type SourceRef =
-  | { kind: "answer"; answer_id: Id; question_id: Id; wave_id: Id }
-  | { kind: "insight_feedback"; feedback_id: Id; wave_id: Id }
-  | { kind: "user_correction"; correction_id: Id; wave_id: Id }
-  | { kind: "upload_chunk"; document_id: Id; chunk_id: Id }
-  | { kind: "chat_note"; thread_id: Id; message_id: Id };
-
+// UI-facing response-kind subset. v3 prompt may also produce rank / anchored_scale /
+// scene_text; we treat them as single or short for now until the UI supports them.
 export type ResponseKind = "short_text" | "single_choice" | "multi_choice" | "scale";
 export type Sensitivity = "normal" | "sensitive";
 
+// Host-rendered question. Kept separate from the contract `Question` because the
+// contract requires host-owned provenance fields the UI does not need.
 export type InterviewQuestion = {
   id: Id;
   wave_id: Id;
@@ -51,56 +100,16 @@ export type InterviewAnswer = {
   submitted_at: string;
 };
 
-export type EvidenceNote = {
-  id: Id;
-  statement: string;
-  source_refs: [SourceRef, ...SourceRef[]];
-  epistemic: "user_confirmed" | "user_reported" | "reported_in_document" | "model_inference";
-  relevance: Array<"direction" | "energy" | "constraint" | "route" | "risk">;
-  confidence: Confidence;
-  status: Status;
-  invalidated_by?: SourceRef;
+// Runtime-only: feedback view used by the insight slip and host decision logic.
+// Conceptually a `Calibration` plus the wave it belongs to.
+export type InsightVerdict = "accurate" | "partly_accurate" | "inaccurate";
+export type InsightFeedback = Calibration & {
+  wave_id: Id;
+  created_at: string;
 };
 
-export type Claim = {
-  id: Id;
-  text: string;
-  evidence_ids: [Id, ...Id[]];
-  confidence: Confidence;
-  status: Status;
-  correction_note?: string;
-};
-
-export type ConstraintKind =
-  | "time"
-  | "money"
-  | "health"
-  | "care"
-  | "location"
-  | "relationship"
-  | "legal"
-  | "other";
-
-export type Constraint = {
-  id: Id;
-  text: string;
-  kind: ConstraintKind;
-  flexibility: "fixed_now" | "negotiable" | "unknown";
-  evidence_ids: [Id, ...Id[]];
-  status: Status;
-};
-
-export type RouteSeed = {
-  id: Id;
-  title_hint: string;
-  life_shape: string;
-  distinct_on: string;
-  appeal_evidence_ids: Id[];
-  feasibility_evidence_ids: Id[];
-  uncertainty_ids: Id[];
-  status: Status;
-};
-
+// Runtime-only uncertainty used by focus selection and interviewer input.
+// Not part of the v3 WorkingUnderstanding contract.
 export type UncertaintyFactors = {
   plan_impact: 0 | 1 | 2 | 3;
   evidence_gap: 0 | 1 | 2 | 3;
@@ -114,52 +123,36 @@ export type Uncertainty = {
   id: Id;
   question: string;
   plan_consequence: string;
-  related_evidence_ids: Id[];
-  related_route_seed_ids: Id[];
+  related_evidence: EvidenceLink[];
+  related_route_intent_ids: Id[];
   factors: UncertaintyFactors;
   priority: number;
   created_wave: number;
   status: "active" | "resolved" | "declined";
-  resolution_evidence_ids?: Id[];
+  resolution?: EvidenceLink[];
 };
 
-export type InsightVerdict = "accurate" | "partly_accurate" | "inaccurate";
-
-export type InsightFeedback = {
-  id: Id;
-  wave_id: Id;
-  verdict: InsightVerdict;
-  correction?: string;
-  next_interest?: string;
-  created_at: string;
-};
-
-export type WorkingMemory = {
-  schema_version: "wm.v1";
-  session_id: Id;
-  revision: number;
-  evidence: EvidenceNote[];
-  claims: Claim[];
-  constraints: Constraint[];
-  route_seeds: RouteSeed[];
-  uncertainties: Uncertainty[];
-  recent_feedback: InsightFeedback[];
+// Runtime WorkingMemory = v3 WorkingUnderstanding + host runtime fields.
+export type WorkingMemory = WorkingUnderstanding & {
+  schema_version: "wm.v3";
   last_wave_index: number;
   updated_at: string;
-  finalPlan?: FinalPlan;
+  // Uncertainties are a host runtime structure for focus selection and
+  // interviewer input, not part of the v3 WorkingUnderstanding contract.
+  uncertainties: Uncertainty[];
+  // Feedback received on insights. Not part of the v3 WorkingUnderstanding contract,
+  // but required for route-readiness and stop evaluation.
+  recent_feedback: InsightFeedback[];
+  // Last committed parallel-lives plan, if any.
+  finalPlan?: ParallelLivesPlan;
+  // Persona portrait generated before blueprint, if any.
+  persona_portrait?: PersonaPortrait;
 };
 
-export type ImmediateInsight = {
-  observation: string;
-  interpretation: string;
-  uncertainty: string;
-  evidence_ids: [Id, ...Id[]];
-  confidence: Confidence;
-  kind: "pattern" | "tension" | "constraint" | "possibility";
-  feedback_prompt: string;
-};
+// Immediate insight presented to the user. Uses the v3 contract (host-assigned
+// id, status, etc.), not the model-facing proposal.
+export type ImmediateInsight = ContractImmediateInsight;
 
-// A UI-facing display shape derived from an ImmediateInsight + WorkingMemory.
 export type InsightView = {
   wave: number;
   facts: string[];
@@ -168,11 +161,9 @@ export type InsightView = {
   uncertainty: string;
 };
 
-export type SensemakerWaveOutput = {
-  schema_version: "sensemaker.wave.output.v1";
+export type SensemakerWaveOutput = WaveSensemakerProposal & {
+  // Host-side revision expectation. Not part of the model-facing proposal.
   expected_revision: number;
-  operations: MemoryOperation[];
-  insight: ImmediateInsight;
 };
 
 export type BurdenSignals = {
@@ -183,30 +174,33 @@ export type BurdenSignals = {
 };
 
 export type InterviewerInput = {
-  schema_version: "interviewer.input.v1";
+  schema_version: "interviewer.input.v3";
   session_id: Id;
   next_wave_id: Id;
   next_wave_index: number;
   selected_uncertainty_id: Id;
   ranked_active_uncertainty_ids: [Id, ...Id[]];
   selected_uncertainty: Uncertainty;
-  relevant_evidence: EvidenceNote[];
+  relevant_evidence: SourceVersion[];
   relevant_constraints: Constraint[];
   latest_feedback?: InsightFeedback;
   recent_question_texts: string[];
+  upload_chunks?: UploadChunk[];
   burden: BurdenSignals;
   prompt_version: string;
 };
 
 export type InterviewerOutput = {
-  schema_version: "interviewer.output.v1";
+  schema_version: "interviewer.output.v3";
   focus_uncertainty_id: Id;
   focus_reason: string;
   questions: InterviewQuestion[];
+  // Full v3 proposal, kept for ledger / provenance.
+  proposal: InterviewerProposal;
 };
 
 export type SensemakerWaveInput = {
-  schema_version: "sensemaker.wave.input.v1";
+  schema_version: "sensemaker.wave.input.v3";
   session_id: Id;
   wave_id: Id;
   wave_index: number;
@@ -219,29 +213,39 @@ export type SensemakerWaveInput = {
   prompt_version: string;
 };
 
-export type MemoryOperation =
-  | { op: "add_evidence"; item: Omit<EvidenceNote, "id"> & { temp_id: string } }
-  | { op: "invalidate_evidence"; evidence_id: Id; by: SourceRef }
-  | { op: "upsert_claim"; target_id?: Id; item: Omit<Claim, "id"> & { temp_id?: string } }
-  | { op: "invalidate_claim"; claim_id: Id; correction_note: string }
-  | { op: "upsert_constraint"; target_id?: Id; item: Omit<Constraint, "id"> & { temp_id?: string } }
-  | { op: "upsert_route_seed"; target_id?: Id; item: Omit<RouteSeed, "id"> & { temp_id?: string } }
-  | { op: "upsert_uncertainty"; target_id?: Id; item: Omit<Uncertainty, "id" | "priority"> & { temp_id?: string } }
-  | { op: "resolve_uncertainty"; uncertainty_id: Id; resolution_evidence_ids: Id[] };
+// v3 memory operation type. The host owns ID assignment and status transitions.
+export type MemoryOperation = MemoryOperationProposal;
+
+export type Confidence = "low" | "medium" | "high";
+export type TrialStatus = "not_started" | "active" | "paused" | "completed" | "exited";
 
 export function makeEmptyWorkingMemory(sessionId: Id): WorkingMemory {
+  const now = new Date().toISOString();
   return {
-    schema_version: "wm.v1",
+    schema_version: "wm.v3",
     session_id: sessionId,
     revision: 0,
-    evidence: [],
+    design_question: undefined,
+    design_question_source_refs: [],
+    source_heads: [],
+    source_versions: [],
     claims: [],
     constraints: [],
-    route_seeds: [],
+    radar: {
+      traits: { dimension: "traits", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+      motivation: { dimension: "motivation", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+      capabilities: { dimension: "capabilities", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+      relationships: { dimension: "relationships", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+      environment: { dimension: "environment", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+      narrative: { dimension: "narrative", state: "unseen", reason: "该维度尚无活跃证据", evidence: [], updated_at: now },
+    },
+    route_intents: [],
+    corrections: [],
+    declined_topics: [],
     uncertainties: [],
     recent_feedback: [],
     last_wave_index: 0,
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
 }
 
@@ -260,66 +264,36 @@ export function isValidId(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
-export type EvidenceLink = {
-  evidence_id: Id;
-  supports: string;
-};
+// UI-facing legacy shape for the final plan. It is derived from the v3
+// ParallelLivesPlan + embedded prototypes so the existing RouteCarousel keeps
+// working while the rest of the runtime moves to v3.
+export type Prototype = ContractPrototype;
 
-export type TrialStatus = "not_started" | "active" | "paused" | "completed" | "exited";
-
-// A low-cost, reversible prototype. The UI may call it "试玩" or "最小原型".
-export type Prototype = {
-  hypothesis: string;
-  today_action: string;
-  what_to_observe: string;
-  day_1: string;
-  day_2: string;
-  day_3: string;
-  time_ceiling_hours: number;
-  money_ceiling: string;
-  reversible_because: string;
-  feedback_source: string;
-  continue_signal: string;
-  pause_or_exit_note: string;
-  safety_check: string;
-};
-
-// Sensemaker final output: exactly three equal, evidence-linked parallel lives.
-// See .loom/design/insight-plan-contracts.md § ParallelLife v2
-export type ParallelLife = {
-  id: Id;
-  title: string;
-  core_experience: string;
-  year_1: string;
-  year_2: string;
-  year_3: string;
-  ordinary_day: string;
-  attractions: string[];
-  costs_and_tradeoffs: string[];
-  evidence_for: EvidenceLink[];
-  assumptions: string[];
-  uncertainties: string[];
-  risks: string[];
+export type ParallelLife = ContractParallelLife & {
+  // Runtime convenience: embed the prototype because the UI expects it.
   trial: Prototype;
 };
 
 export type FinalPlan = {
-  schema_version: "parallel-lives.v2";
+  schema_version: "parallel-lives.v3.ui";
+  id: Id;
   session_id: Id;
-  memory_revision: number;
+  generation_provenance_id: Id;
   provisional: boolean;
   framing: string;
   lives: [ParallelLife, ParallelLife, ParallelLife];
   shared_values: string[];
   real_tradeoff: string;
   open_questions: string[];
-  generated_at: string;
+  created_at: string;
   prompt_version: string;
   model_config_id: string;
+  // Host-only revision so chat threads can detect stale plans.
+  memory_revision?: number;
 };
 
 export type SensemakerFinalInput = {
-  schema_version: "sensemaker.final.input.v1";
+  schema_version: "sensemaker.final.input.v3";
   memory: WorkingMemory;
   stop_reason: "sufficient" | "user_requested" | "wave_limit" | "question_limit" | "degraded";
   provisional: boolean;
@@ -349,8 +323,6 @@ export type ContractError = {
   trace_id: Id;
 };
 
-export type ChatScope = "explain" | "compare_tradeoff" | "refine_trial" | "reflect_on_trial";
-
 export type ChatMessage = {
   id: Id;
   role: "user" | "assistant";
@@ -372,7 +344,7 @@ export type BoundedChatThread = {
 };
 
 export type SensemakerChatInput = {
-  schema_version: "sensemaker.chat.input.v1";
+  schema_version: "sensemaker.chat.input.v3";
   scope: ChatScope;
   message: string;
   plan: FinalPlan;
@@ -383,10 +355,12 @@ export type SensemakerChatInput = {
 };
 
 export type SensemakerChatOutput = {
-  schema_version: "sensemaker.chat.output.v1";
+  schema_version: "sensemaker.chat.output.v3";
+  scope: ChatScope;
   response: string;
   cited_evidence_ids: Id[];
   local_note?: string;
   offer_reinterview: boolean;
   close_thread: boolean;
+  suggested_blueprint?: boolean;
 };

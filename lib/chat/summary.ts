@@ -11,10 +11,15 @@ export function buildMemorySummary(memory: WorkingMemory, maxChars = 4000): stri
     .map((c) => `- ${c.text}`)
     .join("\n");
 
-  const evidence = memory.evidence
-    .filter((e) => e.status === "active")
+  const activeHeads = new Set(
+    memory.source_heads
+      .filter((h) => h.status === "active")
+      .map((h) => h.source_id)
+  );
+  const evidence = memory.source_versions
+    .filter((sv) => activeHeads.has(sv.source_id))
     .slice(0, 12)
-    .map((e) => `- ${e.statement}`)
+    .map((sv) => `- [${sv.kind}] ${sv.text_ref}`)
     .join("\n");
 
   const uncertainties = memory.uncertainties
