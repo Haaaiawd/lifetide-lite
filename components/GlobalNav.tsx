@@ -38,9 +38,8 @@ export function GlobalNav() {
   if (pathname === "/login") return null;
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-50">
-      <div className="pointer-events-auto flex items-center gap-2">
-        {/* GitHub Star button — always visible */}
+    <div className="flex items-center gap-2">
+      {/* GitHub Star button — always visible */}
         <a
           href={GITHUB_URL}
           target="_blank"
@@ -117,7 +116,6 @@ export function GlobalNav() {
             登录
           </button>
         )}
-      </div>
     </div>
   );
 }
