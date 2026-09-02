@@ -15,8 +15,18 @@ import type {
   EvidenceLink,
 } from "@/lib/working-memory/types";
 
-function evidenceFromAnswer(answer: SensemakerWaveInput["answers"][number]): EvidenceLink {
-  const value = Array.isArray(answer.value) ? answer.value.join("；") : String(answer.value ?? "");
+function evidenceFromAnswer(
+  answer: SensemakerWaveInput["answers"][number],
+  questions?: SensemakerWaveInput["questions"]
+): EvidenceLink {
+  const rawValues = Array.isArray(answer.value) ? answer.value : [answer.value];
+  const q = questions?.find((qq) => qq.id === answer.question_id);
+  const resolved = rawValues.map((v) => {
+    if (typeof v !== "string") return String(v);
+    const opt = q?.options?.find((o) => o.id === v);
+    return opt?.label ?? v;
+  });
+  const value = resolved.join("；");
   return {
     source_id: answer.id,
     source_revision: 1,
@@ -32,7 +42,14 @@ function buildWaveEnvelope(input: SensemakerWaveInput): string {
     .filter((a) => !a.skipped)
     .map((a) => {
       const q = input.questions.find((qq) => qq.id === a.question_id);
-      const value = Array.isArray(a.value) ? a.value.join("；") : a.value;
+      const rawValue = Array.isArray(a.value) ? a.value : [a.value];
+      // Resolve option IDs to human-readable labels for single/multi choice questions
+      const resolvedValues = rawValue.map((v) => {
+        if (typeof v !== "string") return String(v);
+        const opt = q?.options?.find((o) => o.id === v);
+        return opt?.label ?? v;
+      });
+      const value = resolvedValues.join("；");
       const source = `{source_id: ${a.id}, source_revision: 1}`;
       return [
         `问题：${q ? q.text : a.question_id}`,
@@ -115,7 +132,7 @@ function makePrompt(input: SensemakerWaveInput): string {
 }
 
 function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposal {
-  const answeredLinks = input.answers.filter((a) => !a.skipped).map(evidenceFromAnswer);
+  const answeredLinks = input.answers.filter((a) => !a.skipped).map((a) => evidenceFromAnswer(a, input.questions));
   const links: EvidenceLink[] = answeredLinks.length > 0 ? answeredLinks : [
     {
       source_id: input.wave_id,
