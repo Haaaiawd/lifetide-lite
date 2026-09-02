@@ -34,24 +34,26 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       content: (
         <div className="space-y-2">
           {insight.facts.map((fact, i) => (
-            <p key={i} className="font-serif text-xl leading-snug md:text-2xl">
+            <p key={i} className="text-base leading-relaxed">
               {fact}
             </p>
           ))}
-          <ul className="mt-2 flex flex-wrap gap-2 text-xs text-ink-muted">
-            {insight.evidence.map((ev, i) => (
-              <li key={i} className="border border-ink px-1.5 py-0.5">
-                来源：{ev}
-              </li>
-            ))}
-          </ul>
+          {insight.evidence.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-2 text-xs text-ink-muted">
+              {insight.evidence.map((ev, i) => (
+                <li key={i} className="border border-ink px-1.5 py-0.5">
+                  来源：{ev}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ),
     },
     {
       label: "我目前的理解",
       content: (
-        <p className="font-serif text-2xl leading-snug md:text-3xl">
+        <p className="text-base leading-relaxed">
           {insight.interpretation}
         </p>
       ),
@@ -59,7 +61,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
     {
       label: "还不确定",
       content: (
-        <p className="text-lg leading-relaxed text-ink-muted">
+        <p className="text-base leading-relaxed text-ink-muted">
           {insight.uncertainty}
         </p>
       ),
@@ -115,7 +117,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
             }}
             className="border-l-4 border-cobalt pl-4"
           >
-            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <div className="mb-2 text-sm font-bold tracking-wide text-ink">
               {segment.label}
             </div>
             {segment.content}
