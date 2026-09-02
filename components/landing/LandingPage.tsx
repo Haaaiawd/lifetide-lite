@@ -8,18 +8,18 @@ import { PixelIcon } from "@/components/art/PixelIcon";
 const choices = [
   {
     id: "choose",
-    label: "我正面临一个具体选择，想先看清它",
-    response: "好，那咱们先把这个选择拆开看看——你真正在意的到底是什么。",
+    label: "卡在一个具体选择上，想看清",
+    response: "行，那咱们先把这个选择拆开——你真正在意的，到底是什么。",
   },
   {
     id: "drift",
-    label: "我对现在的方向感到不确定，想重新理解",
-    response: "嗯，这种感觉我懂。咱们先把你现在的状态和卡住的地方理一理，再看有哪些方向值得试试。",
+    label: "方向不太对，想重新想想",
+    response: "嗯，这种感觉我懂。先把你现在的状态理一理，再看有哪些路可以走。",
   },
   {
     id: "browse",
-    label: "我只是先随便看看",
-    response: "完全没问题，先逛逛。随时可以开始，也随时可以退出。",
+    label: "还没到那一步，先逛逛",
+    response: "完全没问题，先逛逛。随时可以开始，也随时可以走。",
   },
 ] as const;
 
@@ -86,7 +86,7 @@ export function LandingPage() {
         </ChatMessage>
 
         <ChatMessage delay={0.4}>
-          先问一句——你现在大概是哪种情况？
+          先说说——你来这儿，是想得到什么？
         </ChatMessage>
 
         <motion.div
