@@ -8,18 +8,18 @@ import { PixelIcon } from "@/components/art/PixelIcon";
 const choices = [
   {
     id: "choose",
-    label: "想看清一个选择",
-    response: "行，那咱们先把这个选择拆开——你真正在意的，到底是什么。",
-  },
-  {
-    id: "drift",
-    label: "想了解自己多一点",
+    label: "多了解自己一点",
     response: "嗯，那咱们聊聊看。先理一理你现在的状态，再看哪些方向值得试试。",
   },
   {
-    id: "browse",
-    label: "想看看未来可能长什么样",
+    id: "drift",
+    label: "看看未来可能长什么样",
     response: "好，那咱们聊几句之后，给你展开几条不同的人生路线看看。",
+  },
+  {
+    id: "browse",
+    label: "随手点进来的，玩玩",
+    response: "哈哈行，先逛逛。什么时候想聊了都行。",
   },
 ] as const;
 
