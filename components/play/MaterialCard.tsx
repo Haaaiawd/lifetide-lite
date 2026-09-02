@@ -213,15 +213,29 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
     Array.from(files).slice(0, remainingFiles).forEach(uploadFile);
   };
 
-  const removeUpload = (tempId: string) => {
-    // If still uploading, abort first
-    setUploads((prev) => prev.map((u) => {
-      if (u.tempId === tempId && u.controller) {
-        u.controller.abort();
-      }
-      return u;
-    }));
+  const removeUpload = async (tempId: string) => {
+    // Find the upload to get its serverId
+    const upload = uploads.find((u) => u.tempId === tempId);
+    if (!upload) return;
+
+    // If still uploading, abort the fetch
+    if (upload.controller) {
+      upload.controller.abort();
+    }
+
+    // Remove from UI immediately
     setUploads((prev) => prev.filter((u) => u.tempId !== tempId));
+
+    // If the file was already uploaded to the server, delete the server record too
+    if (upload.serverId) {
+      try {
+        await fetch(`/api/uploads/${upload.serverId}`, { method: "DELETE" });
+      } catch {
+        // Server-side deletion failed — the record may linger but we've removed it from UI.
+        // Not critical since failed/orphaned records don't block the user if we also
+        // fix the server-side quota check (see uploads route).
+      }
+    }
   };
 
   const uploadTextAsFile = async (text: string): Promise<string | null> => {

@@ -82,8 +82,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Count only uploads that are actually usable (exclude terminal failure states)
   const existingCount = await prisma.upload.count({
-    where: { sessionId: session.id, status: { not: UPLOAD_STATUS.DELETED } },
+    where: {
+      sessionId: session.id,
+      status: { notIn: [UPLOAD_STATUS.DELETED, UPLOAD_STATUS.FAILED, UPLOAD_STATUS.REJECTED] },
+    },
   });
   if (existingCount >= MAX_UPLOAD_FILES) {
     return NextResponse.json(
