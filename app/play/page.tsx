@@ -180,11 +180,15 @@ export default function PlayPage() {
       }
     }
 
-    // No prefetch available — fetch with waiting animation
+    // No prefetch available — fetch with waiting animation.
+    // Use prefetch=1 so that awaiting_calibration state (which occurs after
+    // a wave's insight is committed) allows generating the next wave.
+    // Without this, resuming a session or clicking "继续下一波" from the stop
+    // page would get stuck returning stop:true forever.
     setWaitingVariant("wave");
     setStep("waiting");
     try {
-      const res = await fetch("/api/wave");
+      const res = await fetch("/api/wave?prefetch=1");
       if (res.status === 403) {
         setStep("consent");
         return;
