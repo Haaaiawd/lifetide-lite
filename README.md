@@ -31,6 +31,14 @@
 
 ### 核心体验
 
+<div align="center">
+
+**16-bit 像素小人陪你走过一天** — 天空从黎明到夜晚，街道无限滚动
+
+<img src="docs/screenshots/walk-animation.gif" alt="16-bit pixel walk animation" width="480" />
+
+</div>
+
 <table>
 <tr>
 <td width="50%" align="center">
@@ -44,22 +52,22 @@
 </tr>
 <tr>
 <td width="50%" align="center">
-<b>路线详情 · 一天动画</b><br/>
-<img src="docs/screenshots/animation.gif" alt="一天动画" width="100%" />
-</td>
-<td width="50%" align="center">
 <b>对话式访谈</b><br/>
 <img src="docs/screenshots/06-interview.png" alt="访谈对话" width="100%" />
 </td>
-</tr>
-<tr>
 <td width="50%" align="center">
 <b>登录 / 注册</b><br/>
 <img src="docs/screenshots/04-login.png" alt="登录" width="100%" />
 </td>
+</tr>
+<tr>
 <td width="50%" align="center">
 <b>管理员后台</b><br/>
 <img src="docs/screenshots/05-admin.png" alt="管理后台" width="100%" />
+</td>
+<td width="50%" align="center">
+<b>路线详情</b><br/>
+<img src="docs/screenshots/03-route-detail.png" alt="路线详情" width="100%" />
 </td>
 </tr>
 </table>
@@ -277,6 +285,14 @@ You answer a few rounds of short questions. An AI understands you and generates 
 
 ### Core Experience
 
+<div align="center">
+
+**16-bit pixel traveler walks you through a day** — sky shifts from dawn to night, street scrolls infinitely
+
+<img src="docs/screenshots/walk-animation.gif" alt="16-bit pixel walk animation" width="480" />
+
+</div>
+
 <table>
 <tr>
 <td width="50%" align="center">
@@ -290,12 +306,12 @@ You answer a few rounds of short questions. An AI understands you and generates 
 </tr>
 <tr>
 <td width="50%" align="center">
-<b>Route Detail · Day Animation</b><br/>
-<img src="docs/screenshots/animation.gif" alt="Animation" width="100%" />
-</td>
-<td width="50%" align="center">
 <b>Conversational Interview</b><br/>
 <img src="docs/screenshots/06-interview.png" alt="Interview" width="100%" />
+</td>
+<td width="50%" align="center">
+<b>Login / Register</b><br/>
+<img src="docs/screenshots/04-login.png" alt="Login" width="100%" />
 </td>
 </tr>
 </table>
