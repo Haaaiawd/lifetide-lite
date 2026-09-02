@@ -320,8 +320,19 @@ export async function streamStructured<T>(
 
     const finalObject = await result.object;
     console.log(`[AI STREAM] purpose=${options.purpose} objectKeys=${Object.keys(finalObject ?? {}).join(",")}`);
+    console.log(`[AI STREAM] finalObject preview:`, JSON.stringify(finalObject).slice(0, 500));
 
-    const parsed = finalObject as T;
+    // Validate the final object against the schema.
+    // streamObject can return a partial object that doesn't fully match the schema
+    // (e.g. missing required fields) without throwing. We need to catch this here
+    // so the caller's fallback logic activates instead of silently using empty data.
+    const validated = options.schema.safeParse(finalObject);
+    if (!validated.success) {
+      console.error(`[AI STREAM] Schema validation failed for purpose=${options.purpose}:`, validated.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; "));
+      throw new Error(`AI output schema validation failed: ${validated.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+    }
+
+    const parsed = validated.data as T;
 
     const latency = Date.now() - start;
     const usage = await result.usage;
@@ -337,7 +348,7 @@ export async function streamStructured<T>(
       latency_ms: latency,
     });
 
-    return parsed as T;
+    return parsed;
   } catch (err) {
     clearTimeout(timeoutId);
     await logModelCall({
