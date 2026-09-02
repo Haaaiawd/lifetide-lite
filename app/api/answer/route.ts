@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireGuestSession, hasConsent } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
+import { hasConsent } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   if (!hasConsent(session.consents, "ai")) {

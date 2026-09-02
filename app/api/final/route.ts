@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { resolveSession, hasConsent } from "@/lib/auth/resolve";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
-import { runSensemakerFinal, buildPrototypesForPlan } from "@/lib/ai/sensemaker/final";
+import { runSensemakerFinal, buildPrototypesForPlan, FinalGenerationError } from "@/lib/ai/sensemaker/final";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { makeEnvelope } from "@/lib/state/envelope";
 import { hashObject } from "@/lib/utils/hash";
@@ -42,6 +42,8 @@ function toUiPlan(
     generation_provenance_id: plan.generation_provenance_id,
     provisional: plan.provisional,
     framing: plan.framing,
+    blueprint: plan.blueprint,
+    analysis: plan.analysis,
     lives: lives as [UIParallelLife, UIParallelLife, UIParallelLife],
     shared_values: plan.shared_values,
     real_tradeoff: plan.real_tradeoff,
@@ -110,7 +112,19 @@ export async function POST(request: NextRequest) {
     prompt_version: "sensemaker.final.v3",
   };
 
-  const plan = await runSensemakerFinal(input);
+  let plan;
+  try {
+    plan = await runSensemakerFinal(input);
+  } catch (err) {
+    if (err instanceof FinalGenerationError) {
+      const status = err.reason === "validation" ? 422 : 502;
+      return NextResponse.json(
+        { error: err.message, reason: err.reason, retryable: true },
+        { status },
+      );
+    }
+    throw err;
+  }
 
   if (!plan.provisional && memory.last_wave_index < 2) {
     return NextResponse.json(
@@ -292,19 +306,14 @@ export async function POST(request: NextRequest) {
       ? [{
           ...firstEvidence,
           relevance: "说明该普通一天如何从路线意向推演而来",
-          excerpt: "从路线意向生成的普通一天",
+          excerpt: life.ordinary_day,
         }]
       : [];
     const day: OrdinaryDay = {
       id: randomUUID(),
       route_intent_id: intents[idx].id,
       generation_provenance_id: daysProvenance.id,
-      moments: [
-        `早晨：${life.ordinary_day.slice(0, 20)}...`,
-        `上午：处理${life.title}的核心事务`,
-        `午后：${life.attractions[0] ?? "保持节奏"}`,
-        `晚上：${life.costs_and_tradeoffs[0] ?? "回顾与调整"}`,
-      ],
+      moments: life.day_narrative.scenes.map((s) => s.text),
       screens: {
         traits: "延续当前特质倾向",
         motivation: life.attractions[0] ?? "保持内在驱动",

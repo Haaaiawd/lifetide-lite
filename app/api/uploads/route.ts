@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireGuestSession, hasConsent } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
+import { hasConsent } from "@/lib/auth/session";
 import { isAllowedMimeType, getParser, UPLOAD_MAX_SIZE, MAX_UPLOAD_FILES, UPLOAD_STATUS } from "@/lib/uploads/config";
 import { extractFromBuffer } from "@/lib/uploads/extract";
 import { textToChunks } from "@/lib/uploads/parse";
@@ -38,9 +39,9 @@ const ALLOWED_TYPES = [
 ];
 
 export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   if (!hasConsent(session.consents, "upload")) {

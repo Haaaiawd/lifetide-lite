@@ -1,9 +1,38 @@
-Fix final-phase reload, idempotent final plan, and make landing a conversation.
+Production-ready: Docker deployment, bug fixes, branding, and docs
 
-- app/api/wave/route.ts: GET now returns stop when the XState ledger is in parallel_lives_ready, trial_active, or bounded_reflection, so /play reload no longer falls back to a new wave.
-- app/api/final/route.ts: stores the generated FinalPlan in WorkingMemory and returns it on replay, making "生成三条路线" idempotent.
-- lib/working-memory/types.ts & schema.ts: add optional finalPlan field to WorkingMemory.
-- components/landing/LandingPage.tsx: replace hero/sample with a chat-style thread that asks for the user's current state, shows a choice card, and then reveals the "开始试运行" CTA.
-- tests/e2e/visual-prototype.spec.ts & screenshot-flow.spec.ts: update landing selectors to match the new conversation UI.
+Bug fixes:
+- Fix consent/session binding mismatch: all APIs now use resolveSession()
+  instead of requireGuestSession(), ensuring registered users' consent and
+  wave data persist to the correct session.
+- Fix ScenePlayer setState-in-render warning: move onComplete detection
+  to a useEffect with a ref-based wrap-around check.
 
-Verification: typecheck, build, lint (0 errors), test:contracts (31/31), test:e2e (48/48), and a real-user agent-browser run through landing → consent → Wave 1 → insight → routes → reload → regenerate all pass.
+Docker deployment:
+- Add multi-stage Dockerfile (deps -> build -> runtime)
+- Add docker-compose.yml with SQLite volume persistence
+- Add .dockerignore
+- Add scripts/seed-admin.cjs for initial admin + invite code creation
+
+Branding & UI:
+- Add pixel-art compass logo (logo.svg, logo-full.svg, favicon.svg)
+- Add BrandMark component in top-left of all pages
+- Add GitHub Star button in GlobalNav (top-right, always visible)
+- Add "给我们点 Star" menu item in user dropdown
+- Add StarPrompt component after portrait and routes generation
+- All star links point to https://github.com/Haaaiawd/lifetide-lite
+
+Documentation:
+- Rewrite README with product intro, quick start, env vars, tech stack,
+  project structure, and full cloud server deployment guide (Nginx + HTTPS)
+- Add docs/DEPLOYMENT.md with detailed deployment instructions
+- Add docs/ARCHITECTURE.md with system overview and data flow
+- Add LICENSE (MIT)
+- Update .env.example with all required variables
+
+Cleanup:
+- Remove .git_commit_msg.txt, old prompt design doc, unused sprite assets
+- Remove reports/ and test-results/ directories
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

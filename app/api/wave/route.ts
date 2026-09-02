@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getOrCreateGuestSession, requireGuestSession, attachGuestCookie, hasConsent } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
+import { hasConsent } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { buildWaveFromProposal, persistWaveMissionAndArtifacts } from "@/lib/db/persist-wave";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
@@ -83,9 +84,14 @@ function seedUncertaintyIfEmpty(
 }
 
 export async function GET(request: NextRequest) {
-  const { session, isNew } = await getOrCreateGuestSession(request);
+  const { session } = await resolveSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
+  }
 
-  if (isNew) {
+  // Ensure a SESSION_STARTED event exists for this session.
+  const existingSnapshot = await loadPublicSnapshot(session.id);
+  if (!existingSnapshot) {
     const started: SessionStarted = {
       guest_token_hash: session.token,
       expires_at: session.expiresAt.toISOString(),
@@ -104,12 +110,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (!hasConsent(session.consents, "ai")) {
-    const response = NextResponse.json(
+    return NextResponse.json(
       { error: "AI consent required", missing: ["ai"] },
       { status: 403 }
     );
-    if (isNew) attachGuestCookie(response, session.token);
-    return response;
   }
 
   const memory = await loadOrCreateWorkingMemory(session.id);
@@ -134,7 +138,6 @@ export async function GET(request: NextRequest) {
       provisional: stop.provisional,
       reason: "final_or_trial_phase",
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -146,7 +149,6 @@ export async function GET(request: NextRequest) {
       provisional: stop.provisional,
       reason: stop.reason,
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -157,7 +159,6 @@ export async function GET(request: NextRequest) {
       provisional: false,
       reason: "synthesizing",
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -173,7 +174,6 @@ export async function GET(request: NextRequest) {
       provisional: false,
       reason: "synthesizing",
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -249,7 +249,6 @@ export async function GET(request: NextRequest) {
       version: WAVE_1_VERSION,
       questions: makeWave1Questions(),
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -262,7 +261,6 @@ export async function GET(request: NextRequest) {
       provisional: stop.provisional,
       reason: stop.reason,
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -284,7 +282,6 @@ export async function GET(request: NextRequest) {
       focus_uncertainty_id: existing.focus_uncertainty_id,
       questions,
     });
-    if (isNew) attachGuestCookie(response, session.token);
     return response;
   }
 
@@ -439,14 +436,13 @@ export async function GET(request: NextRequest) {
     focus_reason: interviewerOutput.focus_reason,
     questions: interviewerOutput.questions,
   });
-  if (isNew) attachGuestCookie(response, session.token);
   return response;
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   if (!hasConsent(session.consents, "ai")) {

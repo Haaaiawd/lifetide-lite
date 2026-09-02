@@ -20,6 +20,7 @@ import type {
   Calibration,
   ParallelLivesPlan,
   ParallelLife as ContractParallelLife,
+  Analysis as ContractAnalysis,
   Prototype as ContractPrototype,
   MemoryOperationProposal,
   ImmediateInsight as ContractImmediateInsight,
@@ -49,6 +50,7 @@ export type {
   Calibration,
   ParallelLivesPlan,
   ParallelLife as ContractParallelLife,
+  Analysis as ContractAnalysis,
   Prototype as ContractPrototype,
   MemoryOperationProposal,
   ImmediateInsight as ContractImmediateInsight,
@@ -270,7 +272,7 @@ export function isValidId(value: unknown): value is string {
 export type Prototype = ContractPrototype;
 
 export type ParallelLife = ContractParallelLife & {
-  // Runtime convenience: embed the prototype because the UI expects it.
+  // Runtime convenience: embed the full Prototype for backwards compat.
   trial: Prototype;
 };
 
@@ -281,6 +283,12 @@ export type FinalPlan = {
   generation_provenance_id: Id;
   provisional: boolean;
   framing: string;
+  blueprint: {
+    current_coordinate: string;
+    key_tensions: string[];
+    recurring_elements: string[];
+  };
+  analysis: ContractAnalysis;
   lives: [ParallelLife, ParallelLife, ParallelLife];
   shared_values: string[];
   real_tradeoff: string;

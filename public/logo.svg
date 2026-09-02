@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Lifetide-Lite logo: a pixel-art compass rose on graph paper -->
+  <!-- Background -->
+  <rect width="64" height="64" fill="#F5F0E6"/>
+  <!-- Grid dots -->
+  <g fill="#D4CDB8" opacity="0.5">
+    <rect x="8" y="8" width="2" height="2"/>
+    <rect x="24" y="8" width="2" height="2"/>
+    <rect x="40" y="8" width="2" height="2"/>
+    <rect x="56" y="8" width="2" height="2"/>
+    <rect x="8" y="24" width="2" height="2"/>
+    <rect x="56" y="24" width="2" height="2"/>
+    <rect x="8" y="40" width="2" height="2"/>
+    <rect x="56" y="40" width="2" height="2"/>
+    <rect x="8" y="56" width="2" height="2"/>
+    <rect x="24" y="56" width="2" height="2"/>
+    <rect x="40" y="56" width="2" height="2"/>
+    <rect x="56" y="56" width="2" height="2"/>
+  </g>
+  <!-- Compass border -->
+  <rect x="16" y="16" width="32" height="32" fill="none" stroke="#171717" stroke-width="2"/>
+  <!-- North pointer (cobalt) -->
+  <polygon points="32,18 26,32 38,32" fill="#2B5F8A"/>
+  <!-- South pointer (ink) -->
+  <polygon points="32,46 26,32 38,32" fill="#171717" opacity="0.3"/>
+  <!-- Center dot -->
+  <rect x="30" y="30" width="4" height="4" fill="#171717"/>
+  <!-- N label tick -->
+  <rect x="31" y="12" width="2" height="4" fill="#171717"/>
+</svg>

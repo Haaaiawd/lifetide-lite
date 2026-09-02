@@ -20,6 +20,8 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
   const [routes, setRoutes] = useState<Route[] | null>(null);
+  const [framing, setFraming] = useState<string | null>(null);
+  const [blueprint, setBlueprint] = useState<{ current_coordinate: string; key_tensions: string[]; recurring_elements: string[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +59,8 @@ export default function AccountPage() {
           if (finalData.lives) {
             const lives = finalData.lives as ParallelLife[];
             setRoutes(lives.map((life, i) => toRouteView(life, i)));
+            setFraming(finalData.framing ?? null);
+            setBlueprint(finalData.blueprint ?? null);
           }
         }
       } finally {
@@ -138,7 +142,12 @@ export default function AccountPage() {
       <section>
         <h2 className="mb-3 font-serif text-lg font-medium">奥德赛计划</h2>
         {routes && routes.length > 0 ? (
-          <RouteCarousel routes={routes} />
+          <RouteCarousel
+            routes={routes}
+            framing={framing ?? undefined}
+            blueprint={blueprint ?? undefined}
+            onNavigate={(routeId) => router.push(`/play/life/${routeId}`)}
+          />
         ) : (
           <div className="border-2 border-dashed border-ink/30 bg-paper-raised p-8 text-center">
             <p className="text-sm text-ink-muted">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireGuestSession } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
 import { canProcess, consentCatalog, isRequired, type ConsentType } from "@/lib/privacy/consent";
 import { prisma } from "@/lib/db/prisma";
 import { commitEvent } from "@/lib/db/commit";
@@ -11,9 +11,9 @@ import type { NextRequest } from "next/server";
 const ALLOWED = new Set<ConsentType>(["ai", "upload", "research"]);
 
 export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   let body: { consents?: { type: string; given: boolean }[] };
