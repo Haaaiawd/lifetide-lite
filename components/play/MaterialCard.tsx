@@ -70,10 +70,18 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
   const dismissToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   useEffect(() => {
-    fetch("/api/session")
-      .then((r) => r.json())
+    // Use /api/progress which goes through resolveSession (auth-aware),
+    // not /api/session which uses getOrCreateGuestSession (guest-only).
+    // We need the user session's consent state, not a guest session's.
+    fetch("/api/session/consent", { method: "GET" })
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((data) => {
-        setConsentGiven(data.consents?.some((c: { type: string; given: boolean }) => c.type === "upload" && c.given));
+        if (data?.consents) {
+          setConsentGiven(data.consents.some((c: { type: string; given: boolean }) => c.type === "upload" && c.given));
+        }
       })
       .catch(() => setConsentGiven(false));
   }, []);

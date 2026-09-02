@@ -10,6 +10,27 @@ import type { NextRequest } from "next/server";
 
 const ALLOWED = new Set<ConsentType>(["ai", "upload", "research"]);
 
+// GET /api/session/consent — returns current consent state for the resolved session
+export async function GET(request: NextRequest) {
+  const { session } = await resolveSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    consents: session.consents.map((c) => ({
+      type: c.type,
+      required: c.required,
+      given: c.given,
+      givenAt: c.givenAt,
+    })),
+    catalog: consentCatalog(),
+    missingRequired: session.consents
+      .filter((c) => c.required && !c.given)
+      .map((c) => c.type),
+  });
+}
+
 export async function POST(request: NextRequest) {
   const { session } = await resolveSession(request);
   if (!session) {
