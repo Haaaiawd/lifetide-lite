@@ -620,7 +620,6 @@ export default function PlayPage() {
     const handleConsent = async () => {
       setStep("loading");
       try {
-        await fetch("/api/session", { method: "POST" });
         const res = await fetch("/api/session/consent", {
           method: "POST",
           headers: { "content-type": "application/json" },

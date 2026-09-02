@@ -48,7 +48,7 @@ type Stats = {
   }>;
 };
 
-type Tab = "overview" | "invites" | "users" | "sessions";
+type Tab = "overview" | "invites" | "users" | "sessions" | "logs";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -63,6 +63,39 @@ export default function AdminPage() {
   const [newNote, setNewNote] = useState("");
   const [generating, setGenerating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Logs
+  type LogEntry = {
+    id: string;
+    sessionId: string;
+    waveId: string | null;
+    purpose: string;
+    status: string;
+    modelConfigId: string;
+    promptVersion: string;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    latencyMs: number | null;
+    createdAt: string;
+  };
+  type LogData = {
+    summary: { total: number; errors: number; successes: number; errorRate: string };
+    logs: LogEntry[];
+  };
+  const [logData, setLogData] = useState<LogData | null>(null);
+  const [logFilter, setLogFilter] = useState<"error" | "all">("error");
+
+  const loadLogs = useCallback(async (filter: "error" | "all") => {
+    try {
+      const url = filter === "error"
+        ? "/api/admin/logs?status=error&limit=50"
+        : "/api/admin/logs?limit=50";
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLogData(data);
+    } catch {}
+  }, []);
 
   const loadStats = useCallback(async () => {
     try {
@@ -168,11 +201,15 @@ export default function AdminPage() {
               ["invites", "邀请码"],
               ["users", "用户"],
               ["sessions", "会话"],
+              ["logs", "日志"],
             ] as [Tab, string][]).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => setTab(key)}
+                onClick={() => {
+                  setTab(key);
+                  if (key === "logs" && !logData) loadLogs(logFilter);
+                }}
                 className={`px-4 py-2.5 text-sm font-medium transition-colors ${
                   tab === key
                     ? "border-b-2 border-purple bg-purple-soft/50 text-purple"
@@ -388,6 +425,88 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Logs tab */}
+      {tab === "logs" && (
+        <div className="space-y-4">
+          {/* Filter + summary */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setLogFilter("error"); loadLogs("error"); }}
+                className={`border-2 border-ink px-3 py-1.5 text-sm font-medium ${
+                  logFilter === "error" ? "bg-danger text-white" : "bg-paper-raised text-ink"
+                }`}
+              >
+                仅错误
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLogFilter("all"); loadLogs("all"); }}
+                className={`border-2 border-ink px-3 py-1.5 text-sm font-medium ${
+                  logFilter === "all" ? "bg-cobalt text-white" : "bg-paper-raised text-ink"
+                }`}
+              >
+                全部
+              </button>
+              <button
+                type="button"
+                onClick={() => loadLogs(logFilter)}
+                className="border-2 border-ink bg-paper-raised px-3 py-1.5 text-sm text-ink-muted"
+              >
+                刷新
+              </button>
+            </div>
+            {logData && (
+              <div className="text-xs text-ink-muted">
+                {logData.summary.errors} 错误 / {logData.summary.total} 总计 · 错误率 {logData.summary.errorRate}
+              </div>
+            )}
+          </div>
+
+          {/* Log table */}
+          <div className="border-2 border-ink bg-paper-raised shadow-sm">
+            <div className="divide-y divide-ink/10">
+              {!logData && (
+                <div className="px-4 py-6 text-center text-sm text-ink-muted">
+                  {logFilter === "error" ? "点击「仅错误」或「全部」加载日志" : "加载中…"}
+                </div>
+              )}
+              {logData && logData.logs.length === 0 && (
+                <div className="px-4 py-6 text-center text-sm text-ink-muted">
+                  {logFilter === "error" ? "没有错误记录 🎉" : "没有日志记录"}
+                </div>
+              )}
+              {logData && logData.logs.map((log) => (
+                <div key={log.id} className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block border px-1.5 py-0.5 text-[10px] font-medium ${
+                      log.status === "error"
+                        ? "border-danger/40 bg-danger-soft/50 text-danger"
+                        : "border-success/40 bg-success-soft/50 text-success"
+                    }`}>
+                      {log.status}
+                    </span>
+                    <span className="text-sm font-medium">{log.purpose}</span>
+                    <span className="text-xs text-ink-muted">{log.modelConfigId}</span>
+                    {log.waveId && (
+                      <span className="text-xs text-ink-muted">· {log.waveId}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-ink-muted">
+                    <span>{log.createdAt.slice(0, 19).replace("T", " ")}</span>
+                    {log.latencyMs != null && <span>{log.latencyMs}ms</span>}
+                    {log.inputTokens != null && <span>in:{log.inputTokens}</span>}
+                    {log.outputTokens != null && <span>out:{log.outputTokens}</span>}
+                    <span className="truncate">session={log.sessionId.slice(0, 8)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
