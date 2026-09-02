@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireGuestSession } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
 import { safeUploadById } from "@/lib/uploads/api-response";
 import { loadWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { prisma } from "@/lib/db/prisma";
@@ -44,9 +44,9 @@ async function invalidateUploadEvidence(memory: WorkingMemory, uploadId: string)
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   const { id } = await params;
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   const { id } = await params;

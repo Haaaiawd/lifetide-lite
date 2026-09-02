@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { PixelIcon } from "@/components/art/PixelIcon";
+import { GITHUB_URL } from "@/components/BrandMark";
+import { Star } from "@phosphor-icons/react";
 
 type AuthUser = { id: string; email: string };
 
@@ -38,6 +40,18 @@ export function GlobalNav() {
   return (
     <div className="pointer-events-none fixed right-4 top-4 z-50">
       <div className="pointer-events-auto flex items-center gap-2">
+        {/* GitHub Star button — always visible */}
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 border-2 border-ink bg-amber-soft px-2.5 py-1.5 text-xs font-medium text-ink shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] hover:bg-amber"
+          title="在 GitHub 上给我们点 Star"
+        >
+          <Star size={14} weight="fill" className="text-amber" />
+          <span className="hidden sm:block">Star</span>
+        </a>
+
         {user ? (
           <div className="relative">
             <button
@@ -72,6 +86,17 @@ export function GlobalNav() {
                     管理员后台
                   </button>
                 )}
+                <div className="border-t border-ink/20" />
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-amber-soft"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Star size={14} weight="fill" className="text-amber" />
+                  给我们点 Star
+                </a>
                 <div className="border-t border-ink/20" />
                 <button
                   type="button"

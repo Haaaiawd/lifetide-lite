@@ -632,25 +632,160 @@ export const ordinaryDaySchema = z.object({
 });
 export type OrdinaryDay = z.infer<typeof ordinaryDaySchema>;
 
+export const dayNarrativeSceneSchema = z.object({
+  text: z.string().min(1),
+});
+export type DayNarrativeScene = z.infer<typeof dayNarrativeSceneSchema>;
+
+export const dayNarrativeSchema = z.object({
+  scenes: z.array(dayNarrativeSceneSchema).min(4).max(8),
+});
+export type DayNarrative = z.infer<typeof dayNarrativeSchema>;
+
+export const prototypeEmbedSchema = z.object({
+  hypothesis: z.string().min(1),
+  today_action: z.string().min(1),
+  what_to_observe: z.string().min(1),
+  day_1: z.string().min(1),
+  day_2: z.string().min(1),
+  day_3: z.string().min(1),
+  time_ceiling_hours: z.number().min(0.5).max(6),
+  money_ceiling: z.string().min(1),
+  reversible_because: z.string().min(1),
+  feedback_source: z.string().min(1),
+  continue_signal: z.string().min(1),
+  pause_or_exit_note: z.string().min(1),
+  safety_check: z.string().min(1),
+});
+export type PrototypeEmbed = z.infer<typeof prototypeEmbedSchema>;
+
+// ── Per-life design basis (internal — links life back to analysis) ──
+
+export const designBasisSchema = z.object({
+  principle_refs: z.array(z.string().min(1)).min(1),
+  seed_ref: z.string().min(1),
+  lived_difference: z.string().min(1),
+  narrative_anchor: z.string().min(1),
+  prototype_question: z.string().min(1),
+});
+export type DesignBasis = z.infer<typeof designBasisSchema>;
+
 export const parallelLifeSchema = z.object({
   id: idSchema,
   route_intent_id: idSchema,
   generation_provenance_id: idSchema,
+  design_basis: designBasisSchema,
   title: z.string().min(1),
   core_experience: z.string().min(1),
   year_1: z.string().min(1),
   year_2: z.string().min(1),
   year_3: z.string().min(1),
   ordinary_day: z.string().min(1),
+  day_narrative: dayNarrativeSchema,
   attractions: z.array(z.string().min(1)).min(1),
   costs_and_tradeoffs: z.array(z.string().min(1)).min(1),
   evidence_for: z.array(evidenceLinkSchema).min(1),
   assumptions: z.array(z.string().min(1)),
   uncertainties: z.array(z.string().min(1)).min(1),
   risks: z.array(z.string().min(1)).min(1),
+  prototype: prototypeEmbedSchema,
   trial_id: idSchema,
 });
 export type ParallelLife = z.infer<typeof parallelLifeSchema>;
+
+export const blueprintEmbedSchema = z.object({
+  current_coordinate: z.string().min(1),
+  key_tensions: z.array(z.string().min(1)).min(1).max(3),
+  recurring_elements: z.array(z.string().min(1)).min(1).max(3),
+});
+export type BlueprintEmbed = z.infer<typeof blueprintEmbedSchema>;
+
+// ── Analysis layer (revision 5, internal — not shown directly to users) ──
+
+export const analysisFindingSchema = z.object({
+  summary: z.string().min(1),
+  kind: epistemicStatusSchema,
+  evidence_for: z.array(evidenceLinkSchema),
+  uncertainty: z.string().nullable(),
+});
+export type AnalysisFinding = z.infer<typeof analysisFindingSchema>;
+
+export const structureChangeSchema = z.object({
+  axis: z.enum(["daily_rhythm", "work_learning", "relationships", "environment", "responsibilities", "meaning"]),
+  change: z.string().min(1),
+});
+export type StructureChange = z.infer<typeof structureChangeSchema>;
+
+export const lifeDashboardSchema = z.object({
+  health: analysisFindingSchema.nullable(),
+  work_learning: analysisFindingSchema.nullable(),
+  play: analysisFindingSchema.nullable(),
+  relationships: analysisFindingSchema.nullable(),
+  cross_domain_effects: z.array(analysisFindingSchema),
+});
+export type LifeDashboard = z.infer<typeof lifeDashboardSchema>;
+
+export const compassSchema = z.object({
+  workview: analysisFindingSchema.nullable(),
+  lifeview: analysisFindingSchema.nullable(),
+  alignments: z.array(analysisFindingSchema),
+  tensions: z.array(analysisFindingSchema),
+});
+export type Compass = z.infer<typeof compassSchema>;
+
+export const energyPatternSchema = z.object({
+  activity: z.string().min(1),
+  conditions: z.array(z.string().min(1)),
+  engagement: z.string().nullable(),
+  after_effect: z.string().nullable(),
+  finding: analysisFindingSchema,
+  counter_evidence: z.array(evidenceLinkSchema),
+});
+export type EnergyPattern = z.infer<typeof energyPatternSchema>;
+
+export const problemFrameSchema = z.object({
+  presenting_question: z.string().nullable(),
+  constraints: z.array(analysisFindingSchema),
+  adjustable_factors: z.array(analysisFindingSchema),
+  assumptions_to_test: z.array(analysisFindingSchema),
+  design_question: analysisFindingSchema.nullable(),
+});
+export type ProblemFrame = z.infer<typeof problemFrameSchema>;
+
+export const possibilitySeedSchema = z.object({
+  direction: z.string().min(1),
+  finding_refs: z.array(z.string().min(1)),
+  structural_changes: z.array(structureChangeSchema).min(1),
+  prerequisites: z.array(z.string().min(1)),
+});
+export type PossibilitySeed = z.infer<typeof possibilitySeedSchema>;
+
+export const supportResourceSchema = z.object({
+  resource: z.string().min(1),
+  availability: z.enum(["available", "to_verify", "to_find"]),
+  contribution: z.string().min(1),
+  evidence_for: z.array(evidenceLinkSchema),
+});
+export type SupportResource = z.infer<typeof supportResourceSchema>;
+
+export const designPrincipleSchema = z.object({
+  principle: z.string().min(1),
+  finding_refs: z.array(z.string().min(1)),
+  tradeoff: z.string().nullable(),
+});
+export type DesignPrinciple = z.infer<typeof designPrincipleSchema>;
+
+export const analysisSchema = z.object({
+  life_dashboard: lifeDashboardSchema,
+  compass: compassSchema,
+  energy_patterns: z.array(energyPatternSchema),
+  problem_frame: problemFrameSchema,
+  possibility_seeds: z.array(possibilitySeedSchema),
+  failure_learning: z.array(analysisFindingSchema),
+  support_map: z.array(supportResourceSchema),
+  design_principles: z.array(designPrincipleSchema),
+});
+export type Analysis = z.infer<typeof analysisSchema>;
 
 export const parallelLivesPlanSchema = z.object({
   id: idSchema,
@@ -659,6 +794,8 @@ export const parallelLivesPlanSchema = z.object({
   schema_version: z.literal("parallel-lives.v3"),
   provisional: z.boolean(),
   framing: z.string().min(1),
+  blueprint: blueprintEmbedSchema,
+  analysis: analysisSchema,
   lives: z.array(parallelLifeSchema).length(3),
   shared_values: z.array(z.string().min(1)).min(2),
   real_tradeoff: z.string().min(1),

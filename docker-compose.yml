@@ -1,0 +1,27 @@
+services:
+  lifetide:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # ── Database ──
+      DATABASE_URL: "file:/app/data/lifetide.db"
+      # ── Auth ──
+      JWT_SECRET: "${JWT_SECRET:-change-me-in-production}"
+      # ── Admin ──
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@lifetide.ai}"
+      NEXT_PUBLIC_ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@lifetide.ai}"
+      # ── AI Provider ──
+      AI_PROVIDER: "${AI_PROVIDER:-aiping}"
+      AIPING_API_KEY: "${AIPING_API_KEY}"
+      AIPING_BASE_URL: "${AIPING_BASE_URL:-https://aiping.cn/api/v1}"
+      AIPING_MODEL: "${AIPING_MODEL:-Qwen3.7-Plus}"
+      MULTIMODAL_MODEL: "${MULTIMODAL_MODEL:-Qwen3.5-Flash}"
+      # ── GitHub (for star button) ──
+      NEXT_PUBLIC_GITHUB_URL: "${NEXT_PUBLIC_GITHUB_URL:-https://github.com/Haaaiawd/lifetide-lite}"
+    volumes:
+      - lifetide-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  lifetide-data:

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { LoadingProgress } from "@/components/LoadingProgress";
 import { RouteCarousel } from "@/components/routes/RouteCarousel";
 import { Conversation, type ConversationItem } from "@/components/play/Conversation";
 import { WaitingBubble } from "@/components/play/WaitingBubble";
 import { PortraitCard } from "@/components/portrait/PortraitCard";
+import { StarPrompt } from "@/components/StarPrompt";
 import type { Route } from "@/lib/fixtures";
 import { toInsightView } from "@/lib/plans/insight-view";
 import { toRouteView } from "@/lib/plans/route-view";
@@ -26,6 +28,7 @@ type ProgressInfo = {
 
 export default function PlayPage() {
   const reduce = useReducedMotion();
+  const router = useRouter();
   const [step, setStep] = useState<Step>("loading");
   const [items, setItems] = useState<ConversationItem[]>([]);
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
@@ -35,6 +38,8 @@ export default function PlayPage() {
   const [waveId, setWaveId] = useState<string>("w1");
   const [insight, setInsight] = useState<ImmediateInsight | null>(null);
   const [routes, setRoutes] = useState<Route[] | null>(null);
+  const [framing, setFraming] = useState<string | null>(null);
+  const [blueprint, setBlueprint] = useState<{ current_coordinate: string; key_tensions: string[]; recurring_elements: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
@@ -472,10 +477,15 @@ export default function PlayPage() {
     setStep("waiting");
     try {
       const res = await fetch("/api/final", { method: "POST" });
-      if (!res.ok) throw new Error(`Final generation failed: ${res.status}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `生成失败（${res.status}）`);
+      }
       const data = await res.json();
       const lives: ParallelLife[] = data.lives ?? [];
       setRoutes(lives.map((life, i) => toRouteView(life, i)));
+      setFraming(data.framing ?? null);
+      setBlueprint(data.blueprint ?? null);
       setStep("routes");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -517,6 +527,8 @@ export default function PlayPage() {
             if (data.lives) {
               const lives = data.lives as ParallelLife[];
               setRoutes(lives.map((life, i) => toRouteView(life, i)));
+              setFraming(data.framing ?? null);
+              setBlueprint(data.blueprint ?? null);
               setStep("routes");
               return;
             }
@@ -652,13 +664,28 @@ export default function PlayPage() {
       <div className="mx-auto w-full max-w-2xl px-4 py-6">
         <PortraitCard portrait={portrait} />
         <div className="mt-6 flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={handlePortraitContinue}
-            className="w-full border-2 border-ink bg-cobalt px-5 py-3.5 text-center text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
-          >
-            看完了，继续生成三条路线
-          </button>
+          {error && (
+            <div className="border-2 border-red-600 bg-red-50 p-4">
+              <p className="text-sm text-red-700">{error}</p>
+              <button
+                type="button"
+                onClick={() => { setError(null); handlePortraitContinue(); }}
+                className="mt-3 border-2 border-red-600 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
+              >
+                重新生成
+              </button>
+            </div>
+          )}
+          {!error && (
+            <button
+              type="button"
+              onClick={handlePortraitContinue}
+              className="w-full border-2 border-ink bg-cobalt px-5 py-3.5 text-center text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+            >
+              看完了，继续生成三条路线
+            </button>
+          )}
+          <StarPrompt className="mt-1" />
           <button
             type="button"
             onClick={handleReset}
@@ -666,7 +693,6 @@ export default function PlayPage() {
           >
             从头开始新一轮
           </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
       </div>
     );
@@ -674,8 +700,16 @@ export default function PlayPage() {
 
   if (step === "routes" && routes) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 md:max-w-7xl">
-        <RouteCarousel routes={routes} />
+      <div>
+        <RouteCarousel
+          routes={routes}
+          framing={framing ?? undefined}
+          blueprint={blueprint ?? undefined}
+          onNavigate={(routeId) => router.push(`/play/life/${routeId}`)}
+        />
+        <div className="mx-auto max-w-5xl px-4 pb-12">
+          <StarPrompt />
+        </div>
       </div>
     );
   }

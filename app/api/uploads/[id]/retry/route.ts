@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireGuestSession } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
 import { getParser, UPLOAD_STATUS } from "@/lib/uploads/config";
 import { parseUploadContent } from "@/lib/uploads/parse";
 import { safeUploadById } from "@/lib/uploads/api-response";
@@ -7,9 +7,9 @@ import { prisma } from "@/lib/db/prisma";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
-    return NextResponse.json({ error: "No active guest session" }, { status: 401 });
+    return NextResponse.json({ error: "No active session" }, { status: 401 });
   }
 
   const { id } = await params;

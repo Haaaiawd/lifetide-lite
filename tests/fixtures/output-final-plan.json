@@ -1,0 +1,614 @@
+{
+  "id": "c7da1069-dfaf-4827-a0e6-6cf84a1a3d9f",
+  "session_id": "test-session-virtual-user-01",
+  "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+  "schema_version": "parallel-lives.v3",
+  "provisional": false,
+  "framing": "这是根据你目前回答生成的三种可能，不是预测，也不是建议。",
+  "blueprint": {
+    "current_coordinate": "站在继续积累和开始转向之间，两边都有吸引力但节奏不同。",
+    "key_tensions": [
+      "稳定与探索之间的时间分配",
+      "现有能力是否足以支撑新方向"
+    ],
+    "recurring_elements": [
+      "保留学习的好奇心",
+      "维持与身边人的关系"
+    ]
+  },
+  "analysis": {
+    "life_dashboard": {
+      "health": {
+        "summary": "目前信息不足以形成判断。",
+        "kind": "working_inference",
+        "evidence_for": [
+          {
+            "source_id": "src-w1q1",
+            "source_revision": 1,
+            "epistemic_status": "user_stated",
+            "evidence_shape": "concrete_scene",
+            "relevance": "本波回答"
+          }
+        ],
+        "uncertainty": "需要更多采访才能确认。"
+      },
+      "work_learning": {
+        "summary": "目前信息不足以形成判断。",
+        "kind": "working_inference",
+        "evidence_for": [
+          {
+            "source_id": "src-w1q1",
+            "source_revision": 1,
+            "epistemic_status": "user_stated",
+            "evidence_shape": "concrete_scene",
+            "relevance": "本波回答"
+          }
+        ],
+        "uncertainty": "需要更多采访才能确认。"
+      },
+      "play": null,
+      "relationships": {
+        "summary": "目前信息不足以形成判断。",
+        "kind": "working_inference",
+        "evidence_for": [
+          {
+            "source_id": "src-w1q1",
+            "source_revision": 1,
+            "epistemic_status": "user_stated",
+            "evidence_shape": "concrete_scene",
+            "relevance": "本波回答"
+          }
+        ],
+        "uncertainty": "需要更多采访才能确认。"
+      },
+      "cross_domain_effects": []
+    },
+    "compass": {
+      "workview": {
+        "summary": "目前信息不足以形成判断。",
+        "kind": "working_inference",
+        "evidence_for": [
+          {
+            "source_id": "src-w1q1",
+            "source_revision": 1,
+            "epistemic_status": "user_stated",
+            "evidence_shape": "concrete_scene",
+            "relevance": "本波回答"
+          }
+        ],
+        "uncertainty": "需要更多采访才能确认。"
+      },
+      "lifeview": null,
+      "alignments": [],
+      "tensions": [
+        {
+          "summary": "目前信息不足以形成判断。",
+          "kind": "working_inference",
+          "evidence_for": [
+            {
+              "source_id": "src-w1q1",
+              "source_revision": 1,
+              "epistemic_status": "user_stated",
+              "evidence_shape": "concrete_scene",
+              "relevance": "本波回答"
+            }
+          ],
+          "uncertainty": "需要更多采访才能确认。"
+        }
+      ]
+    },
+    "energy_patterns": [],
+    "problem_frame": {
+      "presenting_question": null,
+      "constraints": [],
+      "adjustable_factors": [],
+      "assumptions_to_test": [],
+      "design_question": {
+        "summary": "目前信息不足以形成判断。",
+        "kind": "working_inference",
+        "evidence_for": [
+          {
+            "source_id": "src-w1q1",
+            "source_revision": 1,
+            "epistemic_status": "user_stated",
+            "evidence_shape": "concrete_scene",
+            "relevance": "本波回答"
+          }
+        ],
+        "uncertainty": "需要更多采访才能确认。"
+      }
+    },
+    "possibility_seeds": [
+      {
+        "direction": "延续当前道路",
+        "finding_refs": [
+          "/analysis/life_dashboard/work_learning/finding"
+        ],
+        "structural_changes": [
+          {
+            "axis": "work_learning",
+            "change": "在现有轨道上深化"
+          }
+        ],
+        "prerequisites": [
+          "现有资源可继续支撑"
+        ]
+      },
+      {
+        "direction": "转向新方向",
+        "finding_refs": [
+          "/analysis/compass/tensions/0/finding"
+        ],
+        "structural_changes": [
+          {
+            "axis": "daily_rhythm",
+            "change": "重新分配探索时间"
+          }
+        ],
+        "prerequisites": [
+          "新方向的基本条件可验证"
+        ]
+      },
+      {
+        "direction": "重新组合现有要素",
+        "finding_refs": [
+          "/analysis/problem_frame/design_question/finding"
+        ],
+        "structural_changes": [
+          {
+            "axis": "meaning",
+            "change": "从不同角度理解已有积累"
+          }
+        ],
+        "prerequisites": [
+          "愿意重新定义当前问题"
+        ]
+      }
+    ],
+    "failure_learning": [],
+    "support_map": [],
+    "design_principles": [
+      {
+        "principle": "保留学习的好奇心，同时为探索创造连续时间。",
+        "finding_refs": [
+          "/analysis/life_dashboard/work_learning/finding"
+        ],
+        "tradeoff": "探索时间可能挤占休息。"
+      },
+      {
+        "principle": "先小步验证，再决定是否加大投入。",
+        "finding_refs": [
+          "/analysis/problem_frame/design_question/finding"
+        ],
+        "tradeoff": null
+      }
+    ]
+  },
+  "lives": [
+    {
+      "id": "1d5cbe55-1a95-476b-8ad2-6791857c25b7",
+      "route_intent_id": "cb99cf42-d068-4e90-b496-b242582b8dbf",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "design_basis": {
+        "principle_refs": [
+          "/analysis/design_principles/0"
+        ],
+        "seed_ref": "/analysis/possibility_seeds/0",
+        "lived_difference": "这条路围绕「教育领域的产品经理」组织生活，与其他两条在节奏和重心上不同。",
+        "narrative_anchor": "把对「教育领域的产品经理」的探索变成一天里可以连续做完的一段。",
+        "prototype_question": "「教育领域的产品经理」这个方向是否值得继续了解。"
+      },
+      "title": "教育领域的产品经理",
+      "core_experience": "在保留产品工作的节奏，但内容转向教育的节奏里，逐步确认自己真正愿意重复的日常。",
+      "year_1": "第一年：在教育科技公司做产品，逐步验证这个方向的真实节奏。",
+      "year_2": "第二年：根据第一年反馈，决定是否扩大投入或调整比例。",
+      "year_3": "第三年：形成一段更稳定的生活模式，但仍保留退出空间。",
+      "ordinary_day": "在保留产品工作的节奏，但内容转向教育的节奏里，留出一小时给教育领域的产品经理，其余时间属于工作和和男友继续在上海，周末一起做饭。",
+      "day_narrative": {
+        "scenes": [
+          {
+            "text": "阳光从窗帘缝隙里漏进来，房间里很安静，能听见远处有鸟叫。"
+          },
+          {
+            "text": "出门前往包里塞了一本书，是上周读到一半没读完的那本。"
+          },
+          {
+            "text": "保留产品工作的节奏，但内容转向教育的节奏已经熟悉了，处理完手头的事，留出一小时给「教育领域的产品经理」相关的探索。"
+          },
+          {
+            "text": "午后和和男友继续在上海，周末一起做饭聊了几句，说了些今天遇到的琐事，对方听着，偶尔笑一下。"
+          },
+          {
+            "text": "窗外暗下来，路灯一盏接一盏亮了，走在回去的路上，风有点凉。"
+          },
+          {
+            "text": "关了灯，想着今天读到的那段话，想着想着就睡着了。"
+          }
+        ]
+      },
+      "attractions": [
+        "现有产品能力可迁移，教育领域需要新学习",
+        "获得更明确的方向信息",
+        "风险相对可控"
+      ],
+      "costs_and_tradeoffs": [
+        "可能需要降薪进入教育行业，行业成熟度不如互联网",
+        "前两年仍然需要在工作和探索之间分配时间",
+        "可能错过更确定的短期机会"
+      ],
+      "evidence_for": [
+        {
+          "source_id": "src-w2q4",
+          "source_revision": 1,
+          "excerpt": "如果不用考虑钱，我想去做青少年教育相关的事，可能是设计一些帮孩子认识自己的课程。但我不确定这只是兴趣还是真的想转行。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "想做事教相关"
+        },
+        {
+          "source_id": "src-w1q8",
+          "source_revision": 1,
+          "excerpt": "最近在考虑要不要换工作方向。做了五年产品经理，擅长协调和落地，但越来越觉得自己在重复，没有新的成长感。有时候想是不是该去做教育相关的事，但又怕只是逃避。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "产品经理能力可迁移"
+        },
+        {
+          "source_id": "src-w1q1",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q2",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q3",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        }
+      ],
+      "assumptions": [
+        "这个方向的真实节奏与想象中相差不大",
+        "现实约束可以在两年内逐步调整"
+      ],
+      "uncertainties": [
+        "对教育的兴趣是持久的方向还是对当前倦怠的暂时逃避？"
+      ],
+      "risks": [
+        "把坚持误当作成长",
+        "探索变成只说不做",
+        "现实约束比预期更硬"
+      ],
+      "prototype": {
+        "hypothesis": "用三天小步验证「教育领域的产品经理」这个方向是否真实适合自己。",
+        "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+        "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+        "day_1": "接触一个与「教育领域的产品经理」相关的真实信息源：人、作品、活动或环境。",
+        "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+        "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+        "time_ceiling_hours": 3,
+        "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+        "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+        "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+        "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+        "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+        "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+      },
+      "trial_id": "8e99d5aa-7a19-4c98-8bc4-c1166e75398c"
+    },
+    {
+      "id": "0537ce89-5d43-4321-923c-a27a3c7188ab",
+      "route_intent_id": "b5929d70-11c9-4a2b-91b8-9e6a2cbef102",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "design_basis": {
+        "principle_refs": [
+          "/analysis/design_principles/0"
+        ],
+        "seed_ref": "/analysis/possibility_seeds/0",
+        "lived_difference": "这条路围绕「独立教育课程设计者」组织生活，与其他两条在节奏和重心上不同。",
+        "narrative_anchor": "把对「独立教育课程设计者」的探索变成一天里可以连续做完的一段。",
+        "prototype_question": "「独立教育课程设计者」这个方向是否值得继续了解。"
+      },
+      "title": "独立教育课程设计者",
+      "core_experience": "在自主安排，上午创作下午协作的节奏里，逐步确认自己真正愿意重复的日常。",
+      "year_1": "第一年：独立设计帮孩子认识自己的课程，逐步验证这个方向的真实节奏。",
+      "year_2": "第二年：根据第一年反馈，决定是否扩大投入或调整比例。",
+      "year_3": "第三年：形成一段更稳定的生活模式，但仍保留退出空间。",
+      "ordinary_day": "在自主安排，上午创作下午协作的节奏里，留出一小时给独立教育课程设计者，其余时间属于工作和和男友继续合作，减少固定社交。",
+      "day_narrative": {
+        "scenes": [
+          {
+            "text": "阳光从窗帘缝隙里漏进来，房间里很安静，能听见远处有鸟叫。"
+          },
+          {
+            "text": "出门前往包里塞了一本书，是上周读到一半没读完的那本。"
+          },
+          {
+            "text": "自主安排，上午创作下午协作的节奏已经熟悉了，处理完手头的事，留出一小时给「独立教育课程设计者」相关的探索。"
+          },
+          {
+            "text": "午后和和男友继续合作，减少固定社交聊了几句，说了些今天遇到的琐事，对方听着，偶尔笑一下。"
+          },
+          {
+            "text": "窗外暗下来，路灯一盏接一盏亮了，走在回去的路上，风有点凉。"
+          },
+          {
+            "text": "关了灯，想着今天读到的那段话，想着想着就睡着了。"
+          }
+        ]
+      },
+      "attractions": [
+        "需要积累教育方法和独立收入来源",
+        "获得更明确的方向信息",
+        "风险相对可控"
+      ],
+      "costs_and_tradeoffs": [
+        "收入不稳定，需要从零建立教育领域信任",
+        "前两年仍然需要在工作和探索之间分配时间",
+        "可能错过更确定的短期机会"
+      ],
+      "evidence_for": [
+        {
+          "source_id": "src-w2q4",
+          "source_revision": 1,
+          "excerpt": "如果不用考虑钱，我想去做青少年教育相关的事，可能是设计一些帮孩子认识自己的课程。但我不确定这只是兴趣还是真的想转行。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "想做帮孩子认识自己的课程"
+        },
+        {
+          "source_id": "src-w2q6",
+          "source_revision": 1,
+          "excerpt": "我希望三年后的自己是在做一件觉得有意义的事，同时生活节奏是自己能掌控的，不是被会议和 deadline 推着走。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "希望节奏自己掌控"
+        },
+        {
+          "source_id": "src-w1q1",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q2",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q3",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        }
+      ],
+      "assumptions": [
+        "这个方向的真实节奏与想象中相差不大",
+        "现实约束可以在两年内逐步调整"
+      ],
+      "uncertainties": [
+        "对教育的兴趣是持久的方向还是对当前倦怠的暂时逃避？"
+      ],
+      "risks": [
+        "把坚持误当作成长",
+        "探索变成只说不做",
+        "现实约束比预期更硬"
+      ],
+      "prototype": {
+        "hypothesis": "用三天小步验证「独立教育课程设计者」这个方向是否真实适合自己。",
+        "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+        "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+        "day_1": "接触一个与「独立教育课程设计者」相关的真实信息源：人、作品、活动或环境。",
+        "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+        "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+        "time_ceiling_hours": 3,
+        "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+        "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+        "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+        "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+        "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+        "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+      },
+      "trial_id": "7dc4f983-22ae-45bb-9972-cacb300e4bde"
+    },
+    {
+      "id": "a8f248da-7145-42cb-9666-a2c36cfac8a0",
+      "route_intent_id": "e1f922ec-c362-4a18-b7c1-10fdc2287636",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "design_basis": {
+        "principle_refs": [
+          "/analysis/design_principles/0"
+        ],
+        "seed_ref": "/analysis/possibility_seeds/0",
+        "lived_difference": "这条路围绕「保留现状，副业探索」组织生活，与其他两条在节奏和重心上不同。",
+        "narrative_anchor": "把对「保留现状，副业探索」的探索变成一天里可以连续做完的一段。",
+        "prototype_question": "「保留现状，副业探索」这个方向是否值得继续了解。"
+      },
+      "title": "保留现状，副业探索",
+      "core_experience": "在工作日做产品，周末探索教育的节奏里，逐步确认自己真正愿意重复的日常。",
+      "year_1": "第一年：继续互联网产品经理，业余做教育内容，逐步验证这个方向的真实节奏。",
+      "year_2": "第二年：根据第一年反馈，决定是否扩大投入或调整比例。",
+      "year_3": "第三年：形成一段更稳定的生活模式，但仍保留退出空间。",
+      "ordinary_day": "在工作日做产品，周末探索教育的节奏里，留出一小时给保留现状，副业探索，其余时间属于工作和维持现有关系和社交。",
+      "day_narrative": {
+        "scenes": [
+          {
+            "text": "阳光从窗帘缝隙里漏进来，房间里很安静，能听见远处有鸟叫。"
+          },
+          {
+            "text": "出门前往包里塞了一本书，是上周读到一半没读完的那本。"
+          },
+          {
+            "text": "工作日做产品，周末探索教育的节奏已经熟悉了，处理完手头的事，留出一小时给「保留现状，副业探索」相关的探索。"
+          },
+          {
+            "text": "午后和维持现有关系和社交聊了几句，说了些今天遇到的琐事，对方听着，偶尔笑一下。"
+          },
+          {
+            "text": "窗外暗下来，路灯一盏接一盏亮了，走在回去的路上，风有点凉。"
+          },
+          {
+            "text": "关了灯，想着今天读到的那段话，想着想着就睡着了。"
+          }
+        ]
+      },
+      "attractions": [
+        "稳定收入支撑探索",
+        "获得更明确的方向信息",
+        "风险相对可控"
+      ],
+      "costs_and_tradeoffs": [
+        "探索速度慢，精力被工作挤压，可能长期停留在想法阶段",
+        "前两年仍然需要在工作和探索之间分配时间",
+        "可能错过更确定的短期机会"
+      ],
+      "evidence_for": [
+        {
+          "source_id": "src-w2q5",
+          "source_revision": 1,
+          "excerpt": "我怕换了方向之后发现自己其实只是厌倦了现在的公司，而不是厌倦了产品经理这个角色。也怕三十岁还在重新开始，落后于同龄人。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "担心只是厌倦公司而非角色"
+        },
+        {
+          "source_id": "src-w2q2",
+          "source_revision": 1,
+          "excerpt": "周末喜欢去咖啡馆读书，最近在读教育和心理学相关的书。和男友一起做饭的时候觉得很放松。但最近半年周末经常加班，这些事都被挤掉了。",
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "周末已被加班挤掉"
+        },
+        {
+          "source_id": "src-w1q1",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q2",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        },
+        {
+          "source_id": "src-w1q3",
+          "source_revision": 1,
+          "epistemic_status": "user_stated",
+          "evidence_shape": "concrete_scene",
+          "relevance": "本波回答"
+        }
+      ],
+      "assumptions": [
+        "这个方向的真实节奏与想象中相差不大",
+        "现实约束可以在两年内逐步调整"
+      ],
+      "uncertainties": [
+        "两人都不稳定时，经济压力会如何影响关系和探索空间？"
+      ],
+      "risks": [
+        "把坚持误当作成长",
+        "探索变成只说不做",
+        "现实约束比预期更硬"
+      ],
+      "prototype": {
+        "hypothesis": "用三天小步验证「保留现状，副业探索」这个方向是否真实适合自己。",
+        "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+        "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+        "day_1": "接触一个与「保留现状，副业探索」相关的真实信息源：人、作品、活动或环境。",
+        "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+        "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+        "time_ceiling_hours": 3,
+        "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+        "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+        "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+        "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+        "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+        "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+      },
+      "trial_id": "d8d594eb-632f-47b7-a8b8-fd15bed09ecf"
+    }
+  ],
+  "shared_values": [
+    "真实信息优先于过早决定",
+    "允许自己先小步试玩"
+  ],
+  "real_tradeoff": "没有一条路能同时保留安全感、信息量和速度；重点是你愿意用三年时间验证哪个方向。",
+  "open_questions": [
+    "对教育的兴趣是持久的方向还是对当前倦怠的暂时逃避？",
+    "两人都不稳定时，经济压力会如何影响关系和探索空间？"
+  ],
+  "prototypes": [
+    {
+      "id": "5f66a8ad-13d7-4a2d-8e50-ef2271ff119e",
+      "session_id": "test-session-virtual-user-01",
+      "trial_id": "8e99d5aa-7a19-4c98-8bc4-c1166e75398c",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "hypothesis": "用三天小步验证「教育领域的产品经理」这个方向是否真实适合自己。",
+      "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+      "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+      "day_1": "接触一个与「教育领域的产品经理」相关的真实信息源：人、作品、活动或环境。",
+      "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+      "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+      "time_ceiling_hours": 3,
+      "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+      "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+      "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+      "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+      "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+      "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+    },
+    {
+      "id": "38fbde2d-e486-4d4c-b4fc-b6845454da62",
+      "session_id": "test-session-virtual-user-01",
+      "trial_id": "7dc4f983-22ae-45bb-9972-cacb300e4bde",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "hypothesis": "用三天小步验证「独立教育课程设计者」这个方向是否真实适合自己。",
+      "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+      "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+      "day_1": "接触一个与「独立教育课程设计者」相关的真实信息源：人、作品、活动或环境。",
+      "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+      "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+      "time_ceiling_hours": 3,
+      "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+      "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+      "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+      "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+      "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+      "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+    },
+    {
+      "id": "f8748b39-e310-43ca-ab55-11074fca660b",
+      "session_id": "test-session-virtual-user-01",
+      "trial_id": "d8d594eb-632f-47b7-a8b8-fd15bed09ecf",
+      "generation_provenance_id": "dfac585b-818b-4a1a-be52-3a30170e840d",
+      "hypothesis": "用三天小步验证「保留现状，副业探索」这个方向是否真实适合自己。",
+      "today_action": "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
+      "what_to_observe": "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
+      "day_1": "接触一个与「保留现状，副业探索」相关的真实信息源：人、作品、活动或环境。",
+      "day_2": "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
+      "day_3": "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+      "time_ceiling_hours": 3,
+      "money_ceiling": "0 元或单次公共交通/一杯咖啡",
+      "reversible_because": "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
+      "feedback_source": "自己的能量变化、具体事件和可接触的人。",
+      "continue_signal": "想再试一次，或能说出至少一个真实吸引点。",
+      "pause_or_exit_note": "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+      "safety_check": "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。"
+    }
+  ]
+}

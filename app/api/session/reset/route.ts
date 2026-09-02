@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { requireGuestSession } from "@/lib/auth/session";
+import { resolveSession } from "@/lib/auth/resolve";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const session = await requireGuestSession(request);
+  const { session } = await resolveSession(request);
   if (!session) {
     return NextResponse.json({ ok: true });
   }

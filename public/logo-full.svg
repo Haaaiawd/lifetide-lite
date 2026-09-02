@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 64" width="200" height="64" shape-rendering="crispEdges">
+  <!-- Lifetide-Lite full logo with wordmark -->
+  <!-- Logo mark (left) -->
+  <rect x="4" y="8" width="40" height="40" fill="#F5F0E6"/>
+  <g fill="#D4CDB8" opacity="0.5">
+    <rect x="8" y="12" width="2" height="2"/>
+    <rect x="20" y="12" width="2" height="2"/>
+    <rect x="32" y="12" width="2" height="2"/>
+    <rect x="8" y="24" width="2" height="2"/>
+    <rect x="32" y="24" width="2" height="2"/>
+    <rect x="8" y="36" width="2" height="2"/>
+    <rect x="32" y="36" width="2" height="2"/>
+    <rect x="8" y="44" width="2" height="2"/>
+    <rect x="20" y="44" width="2" height="2"/>
+    <rect x="32" y="44" width="2" height="2"/>
+  </g>
+  <rect x="12" y="12" width="24" height="24" fill="none" stroke="#171717" stroke-width="2"/>
+  <polygon points="24,14 20,24 28,24" fill="#2B5F8A"/>
+  <polygon points="24,34 20,24 28,24" fill="#171717" opacity="0.3"/>
+  <rect x="23" y="23" width="2" height="2" fill="#171717"/>
+  <rect x="23" y="9" width="2" height="3" fill="#171717"/>
+  <!-- Wordmark (right) -->
+  <text x="52" y="28" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#171717">人生试运行</text>
+  <text x="52" y="44" font-family="monospace" font-size="9" fill="#6B6B6B" letter-spacing="1">LIFETIDE · LITE</text>
+</svg>
