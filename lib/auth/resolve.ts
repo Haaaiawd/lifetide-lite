@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { requireGuestSession, getSessionByToken, hasConsent, GUEST_TOKEN_COOKIE } from "./session";
 import { getAuthUser } from "./user";
+import { defaultConsentRecords } from "@/lib/privacy/consent";
 
 // Unified session resolution: auth user first, guest fallback.
 // Returns the session row with consents included, or null if neither exists.
@@ -19,7 +20,7 @@ export async function resolveSession(request: NextRequest) {
     if (session) {
       return { session, isAuthed: true, user: authUser };
     }
-    // User exists but no session bound yet — create a fresh one and bind it
+    // User exists but no session bound yet — create a fresh one with default consents
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const newSession = await prisma.session.create({
@@ -27,6 +28,9 @@ export async function resolveSession(request: NextRequest) {
         token,
         userId: authUser.id,
         expiresAt,
+        consents: {
+          create: defaultConsentRecords(),
+        },
       },
       include: { consents: true, answers: true, uploads: true, derived: true, workingMemory: true },
     });
