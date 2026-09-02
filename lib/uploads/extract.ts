@@ -1,6 +1,6 @@
 import { pdfToPng, VerbosityLevel, type PngPageOutput } from "pdf-to-png-converter";
 import mammoth from "mammoth";
-import { extractTextFromImageBase64, MAX_PAGES } from "@/lib/ai/vision";
+import { extractTextFromImageBase64 } from "@/lib/ai/vision";
 
 export type ExtractionResult = {
   previewText: string;
@@ -56,7 +56,6 @@ export async function extractFromBuffer(
 
 async function convertPdfToPng(buffer: Buffer): Promise<Buffer[]> {
   const pages: PngPageOutput[] = await pdfToPng(buffer, {
-    pagesToProcess: Array.from({ length: MAX_PAGES }, (_, i) => i + 1),
     returnPageContent: true,
     returnMetadataOnly: false,
     verbosityLevel: VerbosityLevel.ERRORS,
@@ -65,6 +64,5 @@ async function convertPdfToPng(buffer: Buffer): Promise<Buffer[]> {
 
   return pages
     .filter((p) => p.kind === "content" && p.content)
-    .slice(0, MAX_PAGES)
     .map((p) => p.content as Buffer);
 }
