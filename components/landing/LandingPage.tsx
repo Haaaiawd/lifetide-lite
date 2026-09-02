@@ -9,17 +9,17 @@ const choices = [
   {
     id: "choose",
     label: "我正面临一个具体选择，想先看清它",
-    response: "好，那我们可以先把你面临的选择拆成几个小问题，看看你真正在意的是什么。",
+    response: "好，那咱们先把这个选择拆开看看——你真正在意的到底是什么。",
   },
   {
     id: "drift",
     label: "我对现在的方向感到不确定，想重新理解",
-    response: "明白。我们会先帮你把现在的状态和卡住的感觉整理出来，再生成一些可以试玩的方向。",
+    response: "嗯，这种感觉我懂。咱们先把你现在的状态和卡住的地方理一理，再看有哪些方向值得试试。",
   },
   {
     id: "browse",
     label: "我只是先随便看看",
-    response: "没问题。你可以先看看流程，随时退出，数据只保存在当前这个临时会话里。",
+    response: "完全没问题，先逛逛。随时可以开始，也随时可以退出。",
   },
 ] as const;
 
@@ -78,17 +78,15 @@ export function LandingPage() {
 
       <section className="flex flex-1 flex-col gap-4 pt-4">
         <ChatMessage delay={0.1}>
-          嗨，谢谢你愿意来试一试。
+          嗨，来了呀。
         </ChatMessage>
 
         <ChatMessage delay={0.25}>
-          我不会替你决定人生，只会帮你把眼前这个选择讲得更清楚一点。
+          我不替你做决定，就是陪你把眼前这摊事儿捋清楚一点。
         </ChatMessage>
 
         <ChatMessage delay={0.4}>
-          在开始之前，我想先问一句：
-          <br />
-          你现在更接近下面哪种状态？
+          先问一句——你现在大概是哪种情况？
         </ChatMessage>
 
         <motion.div
@@ -129,7 +127,7 @@ export function LandingPage() {
               </ChatMessage>
 
               <ChatMessage from="host" delay={0.15}>
-                接下来会用 3-5 个短问题，先收集一些和你最相关的信息。
+                那咱们先聊几个小问题，3-5 个就够，不用紧张。
               </ChatMessage>
 
               <motion.div
@@ -152,7 +150,7 @@ export function LandingPage() {
       <footer className="pt-2">
         <p className="flex max-w-md items-start gap-2 text-sm text-ink-muted">
           <PixelIcon name="user" size={18} className="mt-0.5 shrink-0 text-ink-muted" />
-          <span>无需注册。回答 3-5 题后会得到一条可纠正的理解；足够后再生成三条平行的三年人生。</span>
+          <span>需要邀请码注册。回答 3-5 题后会得到一条可纠正的理解；足够后再生成三条平行的三年人生。</span>
         </p>
       </footer>
     </div>
