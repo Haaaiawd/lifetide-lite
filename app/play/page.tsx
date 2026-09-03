@@ -349,6 +349,35 @@ export default function PlayPage() {
     advance(nextAnswers);
   };
 
+  const handleQuestionBack = () => {
+    if (questionIndex === 0) return;
+    // Remove the current active question item (it hasn't been answered yet)
+    // and re-activate the previous question, keeping its old answer so the
+    // user can edit it rather than re-answer from scratch.
+    setItems((prev) => {
+      const lastQuestionIdx = [...prev].reverse().findIndex((it) => it.type === "question");
+      if (lastQuestionIdx === -1) return prev;
+      const actualIdx = prev.length - 1 - lastQuestionIdx;
+      let prevQuestionIdx = -1;
+      for (let i = actualIdx - 1; i >= 0; i--) {
+        if (prev[i].type === "question") {
+          prevQuestionIdx = i;
+          break;
+        }
+      }
+      if (prevQuestionIdx === -1) return prev;
+      return prev.map((it, i) => {
+        if (i === actualIdx) return null; // remove current unanswered question
+        if (i === prevQuestionIdx && it.type === "question") {
+          // Re-activate but keep the old answer so QuestionFrame can pre-fill it
+          return { ...it, isActive: true };
+        }
+        return it;
+      }).filter(Boolean) as typeof prev;
+    });
+    setQuestionIndex((i) => i - 1);
+  };
+
   const handleInsightContinue = async (
     id: string,
     feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }
@@ -747,6 +776,7 @@ export default function PlayPage() {
           items={items}
           onQuestionSubmit={handleQuestionSubmit}
           onQuestionSkip={handleQuestionSkip}
+          onQuestionBack={handleQuestionBack}
           onInsightContinue={handleInsightContinue}
           onMaterialSubmit={handleMaterialSubmit}
           onMaterialSkip={handleMaterialSkip}
@@ -764,6 +794,7 @@ export default function PlayPage() {
         items={items}
         onQuestionSubmit={handleQuestionSubmit}
         onQuestionSkip={handleQuestionSkip}
+        onQuestionBack={handleQuestionBack}
         onInsightContinue={handleInsightContinue}
         onMaterialSubmit={handleMaterialSubmit}
         onMaterialSkip={handleMaterialSkip}
