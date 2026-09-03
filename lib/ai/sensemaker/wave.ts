@@ -3,7 +3,7 @@
 // See .loom/design/adaptive-interview-system.md §3
 
 import { z } from "zod";
-import { waveSensemakerProposalSchema } from "@/lib/state/contracts";
+import { waveSensemakerProposalSchema, immediateInsightProposalSchema } from "@/lib/state/contracts";
 import { generateStructured, streamStructured } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
@@ -203,7 +203,7 @@ export async function runSensemakerWave(input: SensemakerWaveInput): Promise<Sen
       wave_id: input.wave_id,
       prompt: makePrompt(input),
       schema: waveSensemakerProposalSchema as z.ZodType<WaveSensemakerProposal, z.ZodTypeDef, unknown>,
-      max_tokens: 2500,
+      max_tokens: 16000,
       timeout_ms: 120000,
       prompt_version: "sensemaker.wave.v3",
       fixture: () => Promise.resolve(
@@ -241,7 +241,7 @@ export async function runSensemakerWaveStream(
       wave_id: input.wave_id,
       prompt: makePrompt(input),
       schema: waveSensemakerProposalSchema as z.ZodType<WaveSensemakerProposal, z.ZodTypeDef, unknown>,
-      max_tokens: 2500,
+      max_tokens: 16000,
       timeout_ms: 120000,
       prompt_version: "sensemaker.wave.v3",
       fixture: () => Promise.resolve(
@@ -266,7 +266,34 @@ export async function runSensemakerWaveStream(
       expected_revision: input.memory.revision + 1,
     };
   } catch (err) {
-    console.error("Sensemaker wave stream failed, using fallback:", err instanceof Error ? err.message : "unknown");
+    const errMsg = err instanceof Error ? err.message : "unknown";
+    console.error("Sensemaker wave stream failed:", errMsg);
+
+    // Attempt partial recovery: if the AI generated a valid insight but
+    // operations were malformed (common with complex nested schemas),
+    // salvage the insight and use empty operations. This preserves the
+    // AI's actual understanding instead of replacing it with a generic
+    // fallback that says "系统未能生成深入理解".
+    const rawObject = (err as Error & { rawObject?: unknown }).rawObject;
+    if (rawObject && typeof rawObject === "object") {
+      const rawInsight = (rawObject as Record<string, unknown>)?.insight;
+      if (rawInsight && typeof rawInsight === "object") {
+        const insightResult = immediateInsightProposalSchema.safeParse(rawInsight);
+        if (insightResult.success) {
+          console.log("[Sensemaker] Recovered insight from failed parse, using empty operations");
+          return {
+            base_revision: input.memory.revision,
+            operations: [],
+            insight: insightResult.data,
+            expected_revision: input.memory.revision + 1,
+          };
+        } else {
+          console.error("[Sensemaker] Insight recovery also failed:", insightResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; "));
+        }
+      }
+    }
+
+    console.log("[Sensemaker] Using full fallback");
     return {
       ...fallbackWaveProposal(input),
       expected_revision: input.memory.revision + 1,

@@ -328,7 +328,11 @@ export async function streamStructured<T>(
     const validated = options.schema.safeParse(finalObject);
     if (!validated.success) {
       console.error(`[AI STREAM] Schema validation failed for purpose=${options.purpose}:`, validated.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; "));
-      throw new Error(`AI output schema validation failed: ${validated.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+      const err = new Error(`AI output schema validation failed: ${validated.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+      // Attach the raw object so callers can attempt partial recovery
+      // (e.g. extracting a valid insight even if operations are malformed).
+      (err as Error & { rawObject?: unknown }).rawObject = finalObject;
+      throw err;
     }
 
     const parsed = validated.data as T;
