@@ -124,25 +124,30 @@ export type PartialPortrait = Partial<PersonaPortraitProposal>;
 // ── Fixture helper for tests ──
 
 /**
- * Build a fixture portrait. When memory is provided, uses real active
- * source_ids for evidence_ref. When memory is null (e.g. standalone tests),
- * falls back to placeholder source_ids.
+ * Build a fixture portrait for the fixture provider path.
+ *
+ * Fixture portraits use a single `fixture-portrait-evidence` source_id for
+ * all evidence_ref fields. This is intentional: the fixture does not know
+ * which specific user answer maps to which behavioral pattern, so it must
+ * not pretend otherwise. The real AI provider is responsible for linking
+ * evidence to specific source_versions.
+ *
+ * When memory is provided, the trait_summary notes how many active sources
+ * the fixture was built from, so the user sees an honest placeholder.
  */
 export function makeFixturePortrait(memory?: { source_versions: { source_id: string; revision: number; kind: string; untrusted: boolean }[]; source_heads: { source_id: string; status: string; active_revision?: number }[] } | null): PersonaPortraitProposal {
-  // Collect active, trusted source_ids from memory.
-  const activeSources = memory
+  const activeCount = memory
     ? memory.source_versions.filter((sv) => {
         const head = memory.source_heads.find((h) => h.source_id === sv.source_id);
         return head?.status === "active" && head.active_revision === sv.revision && !sv.untrusted;
-      })
-    : [];
+      }).length
+    : 0;
 
-  const sourceByIndex = (idx: number) => {
-    const sv = activeSources[idx];
-    return sv
-      ? { source_id: sv.source_id, source_revision: sv.revision }
-      : { source_id: `fixture-source-${idx}`, source_revision: 1 };
-  };
+  const fixtureRef = { source_id: "fixture-portrait-evidence", source_revision: 1 };
+
+  const summaryPrefix = activeCount > 0
+    ? `（基于你目前 ${activeCount} 条回答的初步画像，完整版需要 AI 生成）`
+    : "（这是占位画像，完整版需要 AI 生成）";
 
   return {
     trait_scales: [
@@ -153,23 +158,23 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
       { dimension: "emotional_range", level: 2, label: "内敛但非压抑" },
     ],
     trait_summary:
-      "你在独处时恢复能量，社交不算排斥但会消耗。偏好有基本框架的安排，不喜欢被精确到小时。面对新事物时倾向先了解再行动，不会冲动跳入。决策时反复权衡，但一旦定了就不太回头。情感表达偏内敛，不等于不感受，只是习惯自己消化。",
+      `${summaryPrefix}你在独处时恢复能量，社交不算排斥但会消耗。偏好有基本框架的安排，不喜欢被精确到小时。面对新事物时倾向先了解再行动，不会冲动跳入。决策时反复权衡，但一旦定了就不太回头。情感表达偏内敛，不等于不感受，只是习惯自己消化。`,
     behavioral_patterns: [
       {
         pattern: "晚上效率明显高于白天，但不会主动调整白天安排来配合这个节奏",
-        evidence_ref: sourceByIndex(0),
-        confidence: "medium",
+        evidence_ref: fixtureRef,
+        confidence: "low",
       },
       {
-        pattern: "课表固定时随大流，备考时能自己定作息——外部结构在时放松自我管理",
-        evidence_ref: sourceByIndex(1),
-        confidence: "high",
+        pattern: "外部结构明确时随大流，自主空间大时能自我管理——两者之间有张力",
+        evidence_ref: fixtureRef,
+        confidence: "low",
       },
     ],
     psychological_features: [
       {
-        feature: "压力下倾向回避而不是求助，习惯自己扛到实在撑不住",
-        evidence_ref: sourceByIndex(2),
+        feature: "压力下倾向先自己消化，不太主动求助",
+        evidence_ref: fixtureRef,
       },
     ],
     relationship_mode:
