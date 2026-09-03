@@ -25,11 +25,35 @@ import { deriveShortQuestion } from "@/lib/interview/derive-question";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyMemoryOperations } from "@/lib/working-memory/operations";
 import { recomputeUncertaintyPriority } from "@/lib/working-memory/types";
-import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty, WorkingMemory } from "@/lib/working-memory/types";
+import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty, UploadChunk, WorkingMemory } from "@/lib/working-memory/types";
 import type { NextRequest } from "next/server";
 
 const MAX_WAVES = 5;
 const MAX_QUESTIONS = 50;
+
+// Load ready upload chunks for a session. Shared by GET (Interviewer) and
+// POST (Sensemaker) so both model roles see the same uploaded materials.
+async function loadUploadChunks(sessionId: string): Promise<UploadChunk[] | undefined> {
+  const uploadsWithChunks = await prisma.upload.findMany({
+    where: { sessionId, status: "ready" },
+    include: { chunks: true },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  const chunks = uploadsWithChunks.flatMap((u) =>
+    u.chunks.map((c) => ({
+      document_id: u.id,
+      chunk_id: c.id,
+      ordinal: c.index,
+      text: c.text,
+      content_hash: hashObject(c.text),
+      trust: "untrusted_user_data" as const,
+      injection_pattern_detected: false,
+    }))
+  );
+  return chunks.length > 0 ? chunks : undefined;
+}
 
 function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolean {
   if (sv.untrusted) return false;
@@ -335,24 +359,7 @@ export async function GET(request: NextRequest) {
 
   const burden = await computeBurden(session.id, memory);
 
-  const uploadsWithChunks = await prisma.upload.findMany({
-    where: { sessionId: session.id, status: "ready" },
-    include: { chunks: true },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
-
-  const uploadChunks = uploadsWithChunks.flatMap((u) =>
-    u.chunks.map((c) => ({
-      document_id: u.id,
-      chunk_id: c.id,
-      ordinal: c.index,
-      text: c.text,
-      content_hash: hashObject(c.text),
-      trust: "untrusted_user_data" as const,
-      injection_pattern_detected: false,
-    }))
-  );
+  const uploadChunks = await loadUploadChunks(session.id);
 
   const interviewerInput: InterviewerInput = {
     schema_version: "interviewer.input.v3",
@@ -366,7 +373,7 @@ export async function GET(request: NextRequest) {
     relevant_constraints: relevantConstraints,
     latest_feedback: latestFeedback,
     recent_question_texts: recentQuestionTexts.slice(-8),
-    upload_chunks: uploadChunks.length > 0 ? uploadChunks : undefined,
+    upload_chunks: uploadChunks && uploadChunks.length > 0 ? uploadChunks : undefined,
     burden,
     prompt_version: "v0-draft",
   };
@@ -619,6 +626,7 @@ export async function POST(request: NextRequest) {
             questions,
             answers: createdAnswers,
             memory,
+            upload_chunks: await loadUploadChunks(session.id),
             expected_revision: memory.revision,
             prompt_version: "v0-draft",
           },
