@@ -21,6 +21,7 @@ import { runSensemakerWave, runSensemakerWaveStream } from "@/lib/ai/sensemaker/
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
 import { runInterviewer } from "@/lib/ai/interviewer";
 import { selectedUncertainty, rankActiveUncertainties } from "@/lib/interview/uncertainty";
+import { deriveShortQuestion } from "@/lib/interview/derive-question";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyMemoryOperations } from "@/lib/working-memory/operations";
 import { recomputeUncertaintyPriority } from "@/lib/working-memory/types";
@@ -90,25 +91,6 @@ function seedUncertaintyIfEmpty(
   };
 
   memory.uncertainties.push(uncertainty);
-}
-
-// Derive a short, human-readable question from a statement-shaped important_unknown.
-// The important_unknown is always a statement ("我暂不知晓的是……"), never a question.
-// We extract the core concern and wrap it in a generic, concrete-scene question.
-function deriveShortQuestion(importantUnknown: string): string {
-  // Strip common statement prefixes to get the core concern.
-  const core = importantUnknown
-    .replace(/^我暂不知[晓悉的是]+[，,]?\s*/u, "")
-    .replace(/^仍不清楚的是[，,]?\s*/u, "")
-    .replace(/^目前还不?清楚[，,]?\s*/u, "")
-    .trim();
-  // If the core is short enough, use it as the question subject.
-  // Otherwise, fall back to a generic question that references the topic as background.
-  if (core.length <= 30) {
-    return `关于「${core}」，最近有没有一个具体的时刻让你感受最深？`;
-  }
-  // Long statement: don't embed it. Use a generic question.
-  return "最近有没有一个具体的时刻，让你对当前的方向感受最深？";
 }
 
 export async function GET(request: NextRequest) {

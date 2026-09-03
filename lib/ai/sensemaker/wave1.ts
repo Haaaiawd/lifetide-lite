@@ -95,7 +95,12 @@ export function runWave1Sensemaker(
   const intent = labelForChoice(questions, "w1q5", q5Answer);
   const people = labelForChoice(questions, "w1q6", q6Answer);
   const stage = labelForChoice(questions, "w1q7", q7Answer);
-  const hook = textValue(q8Answer);
+  const rawHook = textValue(q8Answer);
+  // Sanitize hook: collapse whitespace, strip brackets, truncate to avoid
+  // malformed or overly long important_unknown statements downstream.
+  const hook = rawHook
+    ? rawHook.replace(/\s+/g, " ").replace(/[「」]/g, "").trim().slice(0, 80)
+    : undefined;
 
   const links: EvidenceLink[] = [];
 
