@@ -147,6 +147,10 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     expect(stop.can_generate).toBe(true);
     expect(stop.provisional).toBe(false);
 
+    // Generate portrait before final plan (required by API).
+    const portraitRes = await request.post(`${baseURL}/api/portrait`);
+    expect(portraitRes.status()).toBe(200);
+
     const finalRes = await request.post(`${baseURL}/api/final`);
     expect(finalRes.status()).toBe(200);
     const finalPlan = await finalRes.json();
@@ -158,14 +162,15 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     });
 
     const businessCalls = calls.filter((c) =>
-      ["sensemaker_wave", "interviewer", "sensemaker_final"].includes(c.purpose)
+      ["sensemaker_wave", "interviewer", "portrait", "sensemaker_final"].includes(c.purpose)
     );
 
-    expect(businessCalls.length).toBe(4);
+    expect(businessCalls.length).toBe(5);
     expect(businessCalls.map((c) => c.purpose)).toEqual([
       "sensemaker_wave",
       "interviewer",
       "sensemaker_wave",
+      "portrait",
       "sensemaker_final",
     ]);
 

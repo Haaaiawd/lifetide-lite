@@ -563,6 +563,7 @@ export async function runSensemakerFinal(input: SensemakerFinalInput): Promise<S
     session_id: raw.session_id ?? sessionId,
     generation_provenance_id: raw.generation_provenance_id ?? provenanceId,
     schema_version: "parallel-lives.v3",
+    provisional: false,
     blueprint: raw.blueprint,
     lives: raw.lives.map((life) => ({
       ...life,

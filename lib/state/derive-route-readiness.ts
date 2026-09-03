@@ -177,7 +177,7 @@ export function deriveRouteReadiness(
   // calibration: met iff >=2 distinct committed insights have calibration; not_applicable iff all closed-wave insights submitted/skipped and at least one skip
   // For this initial implementation we use a simplified gate based on WorkingUnderstanding calibrations:
   // Real implementation will track closed-wave insights and calibration events explicitly.
-  const submittedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration");
+  const submittedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration" && !v.untrusted);
   const skippedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration" && v.untrusted);
   if (submittedCalibrations.length >= 2) {
     result.calibration = "met";
