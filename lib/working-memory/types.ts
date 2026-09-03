@@ -149,6 +149,10 @@ export type WorkingMemory = WorkingUnderstanding & {
   finalPlan?: ParallelLivesPlan;
   // Persona portrait generated before blueprint, if any.
   persona_portrait?: PersonaPortrait;
+  // Last insight shown to the user, for resume after page refresh.
+  // Cleared when the user calibrates (accurate/partly/inaccurate) or
+  // moves to the next wave.
+  last_insight?: ImmediateInsight;
 };
 
 // Immediate insight presented to the user. Uses the v3 contract (host-assigned

@@ -25,7 +25,6 @@ export type SafeUpload = {
   chunks?: { index: number; source: string; text: string }[];
   preview?: {
     text: string;
-    pageImages: string[];
   };
 };
 
@@ -48,12 +47,9 @@ export async function safeUploadById(id: string, includeChunks = true): Promise<
   if (derived) {
     try {
       const payload = JSON.parse(derived.payload);
-      if (payload.text !== undefined || payload.pageImages !== undefined) {
+      if (payload.text !== undefined) {
         result.preview = {
           text: String(payload.text ?? ""),
-          pageImages: Array.isArray(payload.pageImages)
-            ? payload.pageImages.filter((p: unknown) => p !== null && p !== undefined).map(String)
-            : [],
         };
       }
     } catch {

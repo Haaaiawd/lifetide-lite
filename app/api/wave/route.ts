@@ -664,8 +664,6 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await saveWorkingMemory(session.id, nextMemory);
-
         const config = getProviderConfig();
         const promptFileHash = wave_id === "w1" ? hashObject("lib/ai/sensemaker/wave1") : hashObject("prompts/sensemaker-wave-v2.md");
         const endProvenance = {
@@ -746,6 +744,13 @@ export async function POST(request: NextRequest) {
           generated_at: now.toISOString(),
           status: "generated" as const,
         };
+
+        // Store insight in WorkingMemory for resume after page refresh.
+        // The user can refresh while on the insight page; without this,
+        // progress API can't tell the user was mid-calibration and they
+        // get sent to the stop page instead.
+        nextMemory.last_insight = fullInsight;
+        await saveWorkingMemory(session.id, nextMemory);
 
         sendSSE("done", {
           wave_id,

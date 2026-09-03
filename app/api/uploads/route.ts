@@ -97,9 +97,12 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const rawBase64 = buffer.toString("base64");
 
-  // Create record in scanning state
+  // Create record in scanning state.
+  // Note: rawBase64 is not stored — it was causing slow writes for 1MB+
+  // files (base64 encoding inflates size ~33%, and SQLite blob writes
+  // are not optimized for large payloads). Retry re-upload from the
+  // client side instead of storing the raw file server-side.
   const upload = await prisma.upload.create({
     data: {
       sessionId: session.id,
@@ -107,7 +110,6 @@ export async function POST(request: NextRequest) {
       mimeType,
       size: file.size,
       status: UPLOAD_STATUS.SCANNING,
-      rawBase64,
     },
   });
 
@@ -126,10 +128,34 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { previewText, pageImages } = await extractFromBuffer(buffer, mimeType, parser);
+    const { previewText, status: extractStatus } = await extractFromBuffer(buffer, mimeType, parser);
 
-    // Text-like files are immediately ready; images and PDFs need user confirmation.
-    const needsConfirmation = parser === "image" || parser === "pdf";
+    // PDF with no text layer (scanned/image) — return a special status so the
+    // frontend can prompt the user to paste text from an external OCR tool.
+    if (extractStatus === "pdf_no_text") {
+      await prisma.derivedContent.create({
+        data: {
+          sessionId: session.id,
+          uploadId: upload.id,
+          kind: "extract_preview",
+          payload: JSON.stringify({ text: "" }),
+          supportStatus: "supported",
+        },
+      });
+      await prisma.upload.update({
+        where: { id: upload.id },
+        data: { status: UPLOAD_STATUS.PREVIEW_READY },
+      });
+      const safeUpload = await safeUploadById(upload.id, true);
+      return NextResponse.json({
+        upload: safeUpload,
+        needsManualText: true,
+        message: "该 PDF 是扫描件或图片型 PDF，无法直接提取文字。请用豆包、微信等工具识别后，将文字粘贴到下方文本框。",
+      }, { status: 201 });
+    }
+
+    // Text-like files are immediately ready; images need user confirmation.
+    const needsConfirmation = parser === "image";
 
     if (!needsConfirmation) {
       const chunks = textToChunks(previewText);
@@ -150,12 +176,17 @@ export async function POST(request: NextRequest) {
         ),
       ]);
     } else {
+      // Store only the extracted text in DB — pageImages (PNG data URLs) are
+      // returned to the client for preview but NOT persisted, since they can
+      // be several MB and SQLite blob writes are slow. The client keeps them
+      // in memory for the preview session; if the user refreshes, they can
+      // re-upload. The text is what actually gets used for interview context.
       await prisma.derivedContent.create({
         data: {
           sessionId: session.id,
           uploadId: upload.id,
           kind: "extract_preview",
-          payload: JSON.stringify({ text: previewText, pageImages }),
+          payload: JSON.stringify({ text: previewText }),
           supportStatus: "supported",
         },
       });
