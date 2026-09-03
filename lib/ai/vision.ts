@@ -3,6 +3,8 @@ import { createVisionModel } from "@/lib/ai/client";
 import { loadPrompt } from "@/lib/ai/prompts/loader";
 
 // No artificial page limit — send all pages, batched for parallel OCR.
+// Batch size 5 balances parallelism vs per-request token load:
+// too small = more requests but each still slow; too large = one giant request.
 const OCR_BATCH_SIZE = 5;
 
 export type ExtractedTextResult = {
