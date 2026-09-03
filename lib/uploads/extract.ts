@@ -39,9 +39,15 @@ export async function extractFromBuffer(
       const parsed = JSON.parse(buffer.toString("utf-8"));
       let text: string;
       if (typeof parsed === "string") text = parsed;
-      else if (Array.isArray(parsed)) text = parsed.map(String).join("\n");
+      else if (Array.isArray(parsed)) text = parsed
+        .filter((v) => v !== null && v !== undefined)
+        .map((v) => typeof v === "string" ? v : String(v))
+        .join("\n");
       else if (typeof parsed === "object" && parsed !== null) {
-        text = Object.entries(parsed).map(([k, v]) => `${k}: ${String(v)}`).join("\n");
+        text = Object.entries(parsed)
+          .filter(([, v]) => v !== null && v !== undefined)
+          .map(([k, v]) => `${k}: ${typeof v === "string" ? v : String(v)}`)
+          .join("\n");
       } else {
         text = String(parsed);
       }

@@ -51,7 +51,9 @@ export async function safeUploadById(id: string, includeChunks = true): Promise<
       if (payload.text !== undefined || payload.pageImages !== undefined) {
         result.preview = {
           text: String(payload.text ?? ""),
-          pageImages: Array.isArray(payload.pageImages) ? payload.pageImages.map(String) : [],
+          pageImages: Array.isArray(payload.pageImages)
+            ? payload.pageImages.filter((p: unknown) => p !== null && p !== undefined).map(String)
+            : [],
         };
       }
     } catch {

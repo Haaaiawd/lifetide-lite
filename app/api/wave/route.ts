@@ -501,7 +501,11 @@ export async function POST(request: NextRequest) {
         data: {
           sessionId: session.id,
           questionId: question.id,
-          value: value === undefined ? null : Array.isArray(value) ? value.join("；") : String(value),
+          value: value === undefined || value === null
+            ? null
+            : Array.isArray(value)
+              ? value.filter((v) => v !== null && v !== undefined && v !== "").join("；")
+              : String(value),
           skipped,
         },
       });
