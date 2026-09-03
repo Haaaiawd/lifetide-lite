@@ -123,7 +123,13 @@ export type UncertaintyFactors = {
 
 export type Uncertainty = {
   id: Id;
+  // Short, human-readable question text used by fallback/interviewer prompts.
+  // Must NOT contain a long statement sourced from important_unknown.
   question: string;
+  // Statement-shaped topic describing the decision-relevant unknown.
+  // Sourced from Sensemaker's important_unknown (a statement, not a question).
+  // Used as background context, never embedded directly into question text.
+  topic: string;
   plan_consequence: string;
   related_evidence: EvidenceLink[];
   related_route_intent_ids: Id[];

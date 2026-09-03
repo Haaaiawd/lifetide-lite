@@ -247,6 +247,7 @@ export function buildMemoryFromVirtualUser(filename: string): WorkingMemory {
       {
         id: randomUUID(),
         question: "对教育的兴趣是持久的方向还是对当前倦怠的暂时逃避？",
+        topic: "我暂不知晓的是，对教育的兴趣是持久的方向还是对当前倦怠的暂时逃避。",
         plan_consequence: "决定是否值得投入转型成本",
         related_evidence: [ev(w2q4, "想做事教"), ev(w2q5, "怕只是逃避")],
         related_route_intent_ids: route_intents.slice(0, 2).map((r) => r.id),
@@ -258,6 +259,7 @@ export function buildMemoryFromVirtualUser(filename: string): WorkingMemory {
       {
         id: randomUUID(),
         question: "两人都不稳定时，经济压力会如何影响关系和探索空间？",
+        topic: "我暂不知晓的是，两人都不稳定时经济压力会如何影响关系和探索空间。",
         plan_consequence: "决定副业探索还是全职转型的节奏",
         related_evidence: [ev(w2q3, "男友创业经济压力")],
         related_route_intent_ids: [route_intents[2].id],
