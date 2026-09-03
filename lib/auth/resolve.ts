@@ -11,6 +11,15 @@ export async function resolveSession(request: NextRequest) {
   // 1. Check auth token (logged-in user)
   const authUser = await getAuthUser(request);
   if (authUser) {
+    // Check if user is banned — reject even if they have a valid token
+    const userRow = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { banned: true },
+    });
+    if (userRow?.banned) {
+      return { session: null, isAuthed: false, user: null, banned: true };
+    }
+
     // Find the most recent session bound to this user
     const session = await prisma.session.findFirst({
       where: { userId: authUser.id },
