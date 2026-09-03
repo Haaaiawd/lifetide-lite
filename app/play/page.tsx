@@ -773,6 +773,12 @@ export default function PlayPage() {
                 继续下一波
               </button>
             </div>
+            <a
+              href="/play/upload"
+              className="text-center text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+            >
+              上传文件或粘贴文字（可选，帮助我更了解你）
+            </a>
             <button
               type="button"
               onClick={handleReset}

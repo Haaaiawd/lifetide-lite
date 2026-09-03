@@ -36,6 +36,11 @@ function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolea
   return head?.status === "active" && head.active_revision === sv.revision;
 }
 
+function isActiveSourceRef(memory: WorkingMemory, sourceId: string, revision: number): boolean {
+  const head = memory.source_heads.find((h) => h.source_id === sourceId);
+  return head?.status === "active" && head.active_revision === revision;
+}
+
 function activeSourceVersions(memory: WorkingMemory): SourceVersion[] {
   return memory.source_versions.filter((sv) => isActiveSourceVersion(memory, sv));
 }
@@ -613,17 +618,39 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        const nextMemory = applyMemoryOperations(memory, output.operations, {
-          wave_id,
-          generation_provenance_id: endProvenanceId,
-        });
+        // Apply memory operations. If operations contain invalid evidence
+        // references (AI hallucinated source_ids), fall back to empty operations
+        // rather than failing the entire wave — the insight is still valid,
+        // just without new claims/constraints/route-intents.
+        // Track which operations were actually applied so the ledger only
+        // records what was committed to WorkingMemory.
+        let nextMemory: WorkingMemory;
+        let appliedOperations: typeof output.operations;
+        try {
+          nextMemory = applyMemoryOperations(memory, output.operations, {
+            wave_id,
+            generation_provenance_id: endProvenanceId,
+          });
+          appliedOperations = output.operations;
+        } catch (opErr) {
+          console.error("Memory operations failed, using empty operations:", opErr instanceof Error ? opErr.message : "unknown");
+          appliedOperations = [];
+          nextMemory = applyMemoryOperations(memory, [], {
+            wave_id,
+            generation_provenance_id: endProvenanceId,
+          });
+        }
 
         if (nextMemory.uncertainties.length === 0) {
+          // Only seed uncertainty with evidence that points to active sources.
+          const validInsightEvidence = output.insight.evidence.filter((e) =>
+            isActiveSourceRef(nextMemory, e.source_id, e.source_revision)
+          );
           seedUncertaintyIfEmpty(
             nextMemory,
             waveIndex,
             output.insight.important_unknown,
-            output.insight.evidence
+            validInsightEvidence.length > 0 ? validInsightEvidence : output.insight.evidence
           );
         }
 
@@ -670,7 +697,7 @@ export async function POST(request: NextRequest) {
 
           const insightProposal = {
             base_revision: output.base_revision,
-            operations: output.operations,
+            operations: appliedOperations,
             insight: output.insight,
           };
           const insightPayload: InsightCommitted = {
