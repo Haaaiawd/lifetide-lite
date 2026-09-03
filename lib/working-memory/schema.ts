@@ -69,6 +69,7 @@ const uncertaintyFactorsSchema = z.object({
 export const uncertaintySchema = z.object({
   id: id,
   question: z.string().min(1),
+  topic: z.string().min(1),
   plan_consequence: z.string().min(1),
   related_evidence: z.array(evidenceLinkSchema),
   related_route_intent_ids: z.array(id),
