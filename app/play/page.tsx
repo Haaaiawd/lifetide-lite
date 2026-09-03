@@ -23,7 +23,9 @@ type ProgressInfo = {
   waveIndex: number;
   hasPortrait: boolean;
   hasFinalPlan: boolean;
-  lastStep: "fresh" | "question" | "stop" | "portrait" | "routes";
+  hasPendingInsight: boolean;
+  lastStep: "fresh" | "question" | "stop" | "portrait" | "routes" | "insight";
+  lastInsight: ImmediateInsight | null;
 };
 
 export default function PlayPage() {
@@ -518,6 +520,7 @@ export default function PlayPage() {
   if (step === "resume" && progressInfo) {
     const stepLabel: Record<string, string> = {
       question: "正在回答问题",
+      insight: "正在查看即时理解",
       stop: "可以生成画像了",
       portrait: "已生成人格画像",
       routes: "已生成三条路线",
@@ -526,7 +529,8 @@ export default function PlayPage() {
 
     const handleContinue = async () => {
       setStep("loading");
-      // Restore state based on progress
+      // Restore state based on progress — order matters:
+      // routes > portrait > insight > stop > fresh
       if (progressInfo.hasFinalPlan) {
         // Load final plan and show routes
         try {
@@ -557,6 +561,20 @@ export default function PlayPage() {
             }
           }
         } catch {}
+      }
+      // Restore insight page — user was viewing the immediate insight
+      // when they refreshed. Restore the insight content and let them
+      // calibrate (accurate/partly/inaccurate) or continue.
+      if (progressInfo.hasPendingInsight && progressInfo.lastInsight) {
+        const insightView = toInsightView(progressInfo.lastInsight, progressInfo.waveIndex);
+        setInsight(progressInfo.lastInsight);
+        setWaveIndex(progressInfo.waveIndex);
+        setItems([
+          { id: newId(), type: "bot", text: "好，我已经整理好一条理解，你看看哪里需要调：" },
+          { id: newId(), type: "insight", insight: insightView, isActive: true },
+        ]);
+        setStep("insight");
+        return;
       }
       // Otherwise go to stop (can generate portrait)
       if (progressInfo.waveIndex > 0) {
