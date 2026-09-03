@@ -40,19 +40,40 @@ export type QuestionFrameProps = {
   question: InterviewQuestion;
   index: number;
   total: number;
+  initialValue?: string | string[] | number;
   onSubmit: (value: string | string[] | number) => void;
   onSkip: () => void;
+  onBack?: () => void;
   variant?: "page" | "card";
 };
 
 const CUSTOM_ID = "custom";
 const CUSTOM_LABEL = "其他（可输入）";
 
-export function QuestionFrame({ question, index, total, onSubmit, onSkip, variant = "page" }: QuestionFrameProps) {
+export function QuestionFrame({ question, index, total, initialValue, onSubmit, onSkip, onBack, variant = "page" }: QuestionFrameProps) {
   const isCard = variant === "card";
-  const [selected, setSelected] = useState<string[]>([]);
-  const [customText, setCustomText] = useState("");
-  const [text, setText] = useState("");
+
+  // Pre-fill from initialValue (used when going back to edit a previous answer)
+  const initialSelected = (() => {
+    if (initialValue === undefined || initialValue === null) return [];
+    if (Array.isArray(initialValue)) return initialValue as string[];
+    return [String(initialValue)];
+  })();
+  const initialCustomText = (() => {
+    if (Array.isArray(initialValue)) {
+      const custom = initialValue.find((v) => v !== CUSTOM_ID && !question.options?.some((o) => o.id === v));
+      return typeof custom === "string" ? custom : "";
+    }
+    if (typeof initialValue === "string" && !question.options?.some((o) => o.id === initialValue) && initialValue !== "") {
+      return initialValue;
+    }
+    return "";
+  })();
+  const initialText = typeof initialValue === "string" && question.response_kind === "short_text" ? initialValue : "";
+
+  const [selected, setSelected] = useState<string[]>(initialSelected);
+  const [customText, setCustomText] = useState(initialCustomText);
+  const [text, setText] = useState(initialText);
 
   const isCustomSelected = selected.includes(CUSTOM_ID);
 
@@ -200,6 +221,15 @@ export function QuestionFrame({ question, index, total, onSubmit, onSkip, varian
 
       <footer className={`z-10 border-t-2 border-ink bg-paper py-4 pb-6 ${isCard ? "relative mt-6" : "sticky bottom-0"}`}>
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="border-2 border-ink bg-paper-raised px-4 py-3.5 text-base shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+            >
+              上一题
+            </button>
+          )}
           <button
             type="submit"
             disabled={!canSubmit()}
