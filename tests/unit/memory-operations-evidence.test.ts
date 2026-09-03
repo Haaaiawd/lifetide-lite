@@ -252,16 +252,15 @@ describe("applyMemoryOperations evidence validation", () => {
 });
 
 describe("makeFixturePortrait source_id resolution", () => {
-  it("uses placeholder source_ids when no memory provided", () => {
+  it("uses fixture-portrait-evidence source_id for all evidence_ref", () => {
     const portrait = makeFixturePortrait();
-    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-source-0");
-    expect(portrait.behavioral_patterns[1].evidence_ref.source_id).toBe("fixture-source-1");
-    expect(portrait.psychological_features[0].evidence_ref.source_id).toBe("fixture-source-2");
+    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-portrait-evidence");
+    expect(portrait.behavioral_patterns[1].evidence_ref.source_id).toBe("fixture-portrait-evidence");
+    expect(portrait.psychological_features[0].evidence_ref.source_id).toBe("fixture-portrait-evidence");
   });
 
-  it("uses real active source_ids when memory provided", () => {
+  it("does not bind evidence to specific user answers even when memory has sources", () => {
     const memory = makeMemoryWithActiveSource();
-    // Add more sources for all evidence refs
     memory.source_heads.push(
       { session_id: "test-session", source_id: "src-active-2", active_revision: 1, status: "active" },
       { session_id: "test-session", source_id: "src-active-3", active_revision: 1, status: "active" },
@@ -272,30 +271,33 @@ describe("makeFixturePortrait source_id resolution", () => {
     );
 
     const portrait = makeFixturePortrait(memory);
-    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("src-active-1");
-    expect(portrait.behavioral_patterns[1].evidence_ref.source_id).toBe("src-active-2");
-    expect(portrait.psychological_features[0].evidence_ref.source_id).toBe("src-active-3");
+    // Fixture must not pretend it knows which answer maps to which pattern.
+    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-portrait-evidence");
+    expect(portrait.behavioral_patterns[1].evidence_ref.source_id).toBe("fixture-portrait-evidence");
+    expect(portrait.psychological_features[0].evidence_ref.source_id).toBe("fixture-portrait-evidence");
   });
 
-  it("falls back to placeholder when memory has no active sources", () => {
+  it("notes active source count in trait_summary when memory provided", () => {
+    const memory = makeMemoryWithActiveSource();
+    const portrait = makeFixturePortrait(memory);
+    expect(portrait.trait_summary).toContain("基于你目前 1 条回答");
+  });
+
+  it("notes placeholder status in trait_summary when no memory", () => {
+    const portrait = makeFixturePortrait();
+    expect(portrait.trait_summary).toContain("占位画像");
+  });
+
+  it("notes placeholder status when memory has no active sources", () => {
     const memory = makeEmptyWorkingMemory("test-session");
     const portrait = makeFixturePortrait(memory);
-    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-source-0");
+    expect(portrait.trait_summary).toContain("占位画像");
   });
 
-  it("ignores untrusted sources", () => {
-    const memory = makeMemoryWithActiveSource();
-    memory.source_versions[0].untrusted = true;
-    const portrait = makeFixturePortrait(memory);
-    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-source-0");
-  });
-
-  it("ignores inactive sources", () => {
+  it("counts only active trusted sources", () => {
     const memory = makeMemoryWithInactiveSource();
-    // Only the inactive source exists, no active ones
-    memory.source_heads = memory.source_heads.filter((h) => h.source_id === "src-inactive-1");
-    memory.source_versions = memory.source_versions.filter((v) => v.source_id === "src-inactive-1");
+    // 1 active + 1 inactive
     const portrait = makeFixturePortrait(memory);
-    expect(portrait.behavioral_patterns[0].evidence_ref.source_id).toBe("fixture-source-0");
+    expect(portrait.trait_summary).toContain("基于你目前 1 条回答");
   });
 });
