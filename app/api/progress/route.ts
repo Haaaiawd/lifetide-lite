@@ -14,15 +14,20 @@ export async function GET(request: NextRequest) {
   const hasPortrait = !!memory.persona_portrait;
   const hasFinalPlan = !!memory.finalPlan;
   const waveIndex = memory.last_wave_index;
+  const hasPendingInsight = !!memory.last_insight;
 
   // Determine the step the user was at
-  let lastStep: "question" | "stop" | "portrait" | "routes" | "fresh" = "fresh";
+  let lastStep: "question" | "stop" | "portrait" | "routes" | "insight" | "fresh" = "fresh";
   if (waveIndex === 0) {
     lastStep = "fresh";
   } else if (hasFinalPlan) {
     lastStep = "routes";
   } else if (hasPortrait) {
     lastStep = "portrait";
+  } else if (hasPendingInsight) {
+    // User was on the insight/calibration page when they refreshed.
+    // Restore them there instead of jumping to the stop page.
+    lastStep = "insight";
   } else if (waveIndex > 0) {
     lastStep = "stop";
   }
@@ -34,7 +39,9 @@ export async function GET(request: NextRequest) {
       waveIndex,
       hasPortrait,
       hasFinalPlan,
+      hasPendingInsight,
       lastStep,
+      lastInsight: memory.last_insight ?? null,
     },
   });
 }

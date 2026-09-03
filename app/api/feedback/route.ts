@@ -75,7 +75,9 @@ export async function POST(request: NextRequest) {
   };
 
   const { memory: nextMemory, invalidated } = applyInsightFeedback(memory, feedback, waveProvenanceIds);
-  await saveWorkingMemory(session.id, nextMemory);
+  // Clear last_insight — user has calibrated, no longer needs resume recovery.
+  const { last_insight: _drop, ...memoryWithoutInsight } = nextMemory;
+  await saveWorkingMemory(session.id, memoryWithoutInsight as typeof nextMemory);
 
   // Commit calibration to the XState ledger and decide next phase.
   const snapshot = await loadPublicSnapshot(session.id);
