@@ -128,10 +128,34 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { previewText } = await extractFromBuffer(buffer, mimeType, parser);
+    const { previewText, status: extractStatus } = await extractFromBuffer(buffer, mimeType, parser);
 
-    // Text-like files are immediately ready; images and PDFs need user confirmation.
-    const needsConfirmation = parser === "image" || parser === "pdf";
+    // PDF with no text layer (scanned/image) — return a special status so the
+    // frontend can prompt the user to paste text from an external OCR tool.
+    if (extractStatus === "pdf_no_text") {
+      await prisma.derivedContent.create({
+        data: {
+          sessionId: session.id,
+          uploadId: upload.id,
+          kind: "extract_preview",
+          payload: JSON.stringify({ text: "" }),
+          supportStatus: "supported",
+        },
+      });
+      await prisma.upload.update({
+        where: { id: upload.id },
+        data: { status: UPLOAD_STATUS.PREVIEW_READY },
+      });
+      const safeUpload = await safeUploadById(upload.id, true);
+      return NextResponse.json({
+        upload: safeUpload,
+        needsManualText: true,
+        message: "该 PDF 是扫描件或图片型 PDF，无法直接提取文字。请用豆包、微信等工具识别后，将文字粘贴到下方文本框。",
+      }, { status: 201 });
+    }
+
+    // Text-like files are immediately ready; images need user confirmation.
+    const needsConfirmation = parser === "image";
 
     if (!needsConfirmation) {
       const chunks = textToChunks(previewText);
