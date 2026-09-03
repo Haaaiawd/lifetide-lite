@@ -37,7 +37,7 @@
 | Prompt source | runtime prompts are inline in TypeScript; `prompts/*.md` are not loaded | P0 drift risk | one behavior can have two truths; migrate atomically |
 | Wave 1 | `lib/interview/templates.ts` fixed four questions and zero Interviewer call | incompatible | keep two mandatory functions, not fixed wording |
 | Adaptive interview | `lib/ai/interviewer.ts` receives host-selected uncertainty and generates all 3–5 questions at once | incompatible | AI mission + 1–3-question adaptive microbatches |
-| Stop/limits | `app/api/wave/route.ts` uses `MAX_WAVES=4`, `MAX_QUESTIONS=19` and sufficiency heuristics | incompatible | default 3, max 5, max 2 deep dives; interview-exit and parallel-life readiness are separate host gates |
+| Stop/limits | `app/api/wave/route.ts` uses `MAX_WAVES=5`, `MAX_QUESTIONS=50` and sufficiency heuristics | aligned | default 3, max 5, max 2 deep dives; interview-exit and parallel-life readiness are separate host gates |
 | Working memory | old `WorkingMemory` with evidence/claims/constraints/uncertainties/route seeds | useful donor, incomplete | migrate to exact source revisions + six radar + route intents |
 | Wave evidence | `sensemaker/wave.ts` asks model for placeholder ids, clears them, and host builds generic patch | P0 semantic loss | model proposes exact-source patch; host validates atomically |
 | Corrections | existing accurate/partial/inaccurate concepts and invalidation foundations | healthy donor | extend to exact revision stale propagation |
