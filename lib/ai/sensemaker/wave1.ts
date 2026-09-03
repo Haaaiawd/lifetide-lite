@@ -237,16 +237,26 @@ export function runWave1Sensemaker(
   if (hook) toldParts.push(`最近想聊「${hook}」。`);
   const userToldMe = toldParts.join("");
 
-  // Build current_reading: one provisional pattern or tension, not a diagnosis.
+  // Build current_reading: a provisional interpretation or tension, not a
+  // restatement of facts. Surface a pattern that might be true but needs
+  // verification in later waves — not a diagnosis.
   const readingParts: string[] = [];
-  if (intent && stage) {
-    readingParts.push(`你说想${intent}，现在${stage}——这两者之间可能有关联，也可能没有，下一波可以看看。`);
+  if (hook && intent && stage) {
+    readingParts.push(`一种可能的解读是：你想${intent}，现在${stage}，同时提到「${hook}」——这三者之间可能有一个尚未被说出来的张力。也许「${hook}」不只是兴趣，而是对当前${stage}状态的一种回应；也可能它只是一个模糊方向，还没有和具体行动连接。后续需要验证的是，这是信息不足还是行动受阻。`);
+  } else if (hook && intent) {
+    readingParts.push(`你来这里想${intent}，同时提到「${hook}」。一种解读是「${hook}」背后有一个具体的场景或经历推动了你来，但目前还没有证据区分这是主动探索还是被动逃避。后续可以看看这个方向背后有没有已经发生过的具体行为。`);
+  } else if (hook && stage) {
+    readingParts.push(`你现在${stage}，提到最近在想「${hook}」。可能的张力在于：「${hook}」是对当前阶段的自然延伸，还是对它的某种不满？目前信息不足以区分这两种可能。`);
+  } else if (hook) {
+    readingParts.push(`你提到最近在想「${hook}」。这可能是当前最重要的一条线索，但目前还不知道它背后是已经有了具体行动、还只是一个想法。后续需要了解有没有已经发生的具体场景。`);
+  } else if (intent && stage) {
+    readingParts.push(`你说想${intent}，现在${stage}。一种可能的解读是：当前${stage}的状态在某种程度上维持着「还没行动」的舒适——想${intent}是真实的，但可能缺少一个触发点或允许自己试错的条件。这只是假设，后续可以验证。`);
   } else if (intent) {
-    readingParts.push(`你来这里想${intent}，具体是什么让你有这个感觉，下一波可以慢慢聊。`);
+    readingParts.push(`你来这里想${intent}。目前还不知道这个想法是最近才出现的还是持续了一段时间——如果是持续的，可能值得看看是什么在阻止下一步。`);
   } else if (stage) {
-    readingParts.push(`你现在${stage}，这个阶段里有没有让你想调整的地方，后面可以展开。`);
+    readingParts.push(`你现在${stage}。这个阶段本身可能包含一些未被说出来的压力或期待，但目前信息还比较轻，需要后续展开。`);
   } else {
-    readingParts.push("你给的信息还比较轻，我先记下来，下一波再聊你真正想解决的事。");
+    readingParts.push("目前信息还比较轻，一种解读是你可能在用填写这个工具来试探自己的方向，但还没有准备好展开具体内容。后续可以慢慢来。");
   }
   const currentReading = readingParts.join("");
 
@@ -254,7 +264,9 @@ export function runWave1Sensemaker(
     wave_id: WAVE_ID,
     user_told_me: truncate(userToldMe, 280),
     current_reading: truncate(currentReading, 320),
-    important_unknown: "你最近最关心的选择、卡点或变化是什么？",
+    important_unknown: hook
+      ? `我暂不知晓的是「${hook}」背后的具体场景和阻碍——是缺乏信息、缺乏兴趣还是缺乏信心，目前还没有证据区分。`
+      : "我暂不知晓的是用户最近最关心的选择、卡点或变化的具体内容，需要后续波次补充。",
     radar_deltas: radarDeltas,
     route_impact: "Wave 1 不决定路线，只打开三个非排序框架供后续验证。",
     evidence: links.slice(0, 6),
