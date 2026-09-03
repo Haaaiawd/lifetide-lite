@@ -238,7 +238,7 @@ export async function runInterviewer(input: InterviewerInput, memory: WorkingMem
       wave_id: input.next_wave_id,
       prompt,
       schema: interviewerProposalSchema as z.ZodType<InterviewerProposal, z.ZodTypeDef, unknown>,
-      max_tokens: 1600,
+      max_tokens: 8000,
       timeout_ms: 60000,
       prompt_version: PROMPT_VERSION,
       fixture: () => Promise.resolve(fixtureInterviewerRaw(input)),
@@ -268,7 +268,7 @@ export async function runInterviewer(input: InterviewerInput, memory: WorkingMem
 function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
   const questions = defaultFallbackQuestions(input.next_wave_id, input.next_wave_index, input.selected_uncertainty);
 
-  const openingQuestions: OpeningQuestionProposal[] = questions.slice(0, 3).map((q, idx) => ({
+  const openingQuestions: OpeningQuestionProposal[] = questions.slice(0, 6).map((q, idx) => ({
     text: q.text,
     why_this_matters: q.why_this_matters ?? "帮助你把模糊感受变成可观察的具体片段。",
     response_kind: toV3ResponseKind(q.response_kind),
