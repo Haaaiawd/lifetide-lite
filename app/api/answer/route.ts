@@ -29,10 +29,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "questionId required" }, { status: 400 });
   }
 
-  const storedValue = value === undefined
+  const storedValue = value === undefined || value === null
     ? null
     : Array.isArray(value)
-      ? value.join("；")
+      ? value.filter((v) => v !== null && v !== undefined && v !== "").join("；")
       : String(value);
 
   const answer = await prisma.answer.create({

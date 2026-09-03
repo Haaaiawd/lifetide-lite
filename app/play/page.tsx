@@ -217,17 +217,22 @@ export default function PlayPage() {
 
   const currentQuestion = questions[questionIndex];
 
-  const submitWave = async () => {
+  const submitWave = async (answerState?: Record<string, { value?: string | string[] | number; skipped: boolean }>) => {
     if (!currentQuestion) return;
     setWaitingVariant("insight");
     setStreamingInsight(null);
     setStep("waiting");
+    // Use the passed answerState if available — advance() calls submitWave
+    // immediately after setAnswers, and the closure `answers` may not have
+    // updated yet (React state updates are async). Without this, the last
+    // question's answer can be silently dropped.
+    const currentAnswers = answerState ?? answers;
     const payload = {
       wave_id: currentQuestion.wave_id,
       answers: questions.map((q) => ({
         question_id: q.id,
-        value: answers[q.id]?.value,
-        skipped: answers[q.id]?.skipped ?? false,
+        value: currentAnswers[q.id]?.value,
+        skipped: currentAnswers[q.id]?.skipped ?? false,
       })),
     };
 
@@ -322,7 +327,7 @@ export default function PlayPage() {
       });
       setQuestionIndex((i) => i + 1);
     } else {
-      submitWave();
+      submitWave(nextAnswers);
     }
   };
 

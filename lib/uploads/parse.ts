@@ -46,9 +46,13 @@ function extractTextFromJson(json: string): string[] {
   try {
     const parsed = JSON.parse(json);
     if (typeof parsed === "string") return [parsed];
-    if (Array.isArray(parsed)) return parsed.map((item) => String(item));
+    if (Array.isArray(parsed)) return parsed
+      .filter((item) => item !== null && item !== undefined)
+      .map((item) => typeof item === "string" ? item : String(item));
     if (typeof parsed === "object" && parsed !== null) {
-      return Object.entries(parsed).map(([k, v]) => `${k}: ${String(v)}`);
+      return Object.entries(parsed)
+        .filter(([, v]) => v !== null && v !== undefined)
+        .map(([k, v]) => `${k}: ${typeof v === "string" ? v : String(v)}`);
     }
     return [String(parsed)];
   } catch {
