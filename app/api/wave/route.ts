@@ -302,7 +302,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       stop: true,
       can_generate: true,
-      provisional: true,
+      provisional: false,
       reason: "no_active_uncertainty",
     });
   }
@@ -312,7 +312,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       stop: true,
       can_generate: true,
-      provisional: true,
+      provisional: false,
       reason: "no_active_uncertainty",
     });
   }

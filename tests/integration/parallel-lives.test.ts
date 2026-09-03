@@ -82,6 +82,10 @@ test.describe("Parallel lives and prototype contract", () => {
     await giveConsent(request);
     await runTwoWaves(request, session.id);
 
+    // Generate portrait before final plan (required by API).
+    const portraitRes = await request.post(`${baseURL}/api/portrait`);
+    expect(portraitRes.status()).toBe(200);
+
     const finalRes = await request.post(`${baseURL}/api/final`);
     expect(finalRes.status()).toBe(200);
     const plan: FinalPlan = await finalRes.json();
@@ -168,7 +172,7 @@ test.describe("Parallel lives and prototype contract", () => {
     await ctx.close();
   });
 
-  test("Provisional final plan can be generated immediately after Wave 1", async ({ browser }) => {
+  test("Final plan can be generated after Wave 1 with portrait", async ({ browser }) => {
     const ctx = await browser.newContext();
     const request = ctx.request;
 
@@ -192,15 +196,19 @@ test.describe("Parallel lives and prototype contract", () => {
       ],
     });
 
+    // Generate portrait before final plan (required by API).
+    const portraitRes = await request.post(`${baseURL}/api/portrait`);
+    expect(portraitRes.status()).toBe(200);
+
     const finalRes = await request.post(`${baseURL}/api/final`);
     expect(finalRes.status()).toBe(200);
     const plan: FinalPlan = await finalRes.json();
 
-    expect(plan.provisional).toBe(true);
+    expect(plan.provisional).toBe(false);
     expect(plan.lives.length).toBe(3);
     expect(plan.lives[0].evidence_for.length).toBeGreaterThanOrEqual(1);
 
-    // Provisional plans should still be distinct.
+    // Plans should still be distinct.
     const [x, y, z] = plan.lives;
     expect(`${x.title} ${x.year_1}`).not.toBe(`${y.title} ${y.year_1}`);
     expect(`${y.title} ${y.year_1}`).not.toBe(`${z.title} ${z.year_1}`);
