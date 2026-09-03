@@ -21,12 +21,14 @@ function evidenceFromAnswer(
 ): EvidenceLink {
   const rawValues = Array.isArray(answer.value) ? answer.value : [answer.value];
   const q = questions?.find((qq) => qq.id === answer.question_id);
-  const resolved = rawValues.map((v) => {
-    if (typeof v !== "string") return String(v);
-    const opt = q?.options?.find((o) => o.id === v);
-    return opt?.label ?? v;
-  });
-  const value = resolved.join("；");
+  const resolved = rawValues
+    .filter((v) => v !== null && v !== undefined && v !== "")
+    .map((v) => {
+      if (typeof v !== "string") return String(v);
+      const opt = q?.options?.find((o) => o.id === v);
+      return opt?.label ?? v;
+    });
+  const value = resolved.join("；") || "（空回答）";
   return {
     source_id: answer.id,
     source_revision: 1,
@@ -43,13 +45,16 @@ function buildWaveEnvelope(input: SensemakerWaveInput): string {
     .map((a) => {
       const q = input.questions.find((qq) => qq.id === a.question_id);
       const rawValue = Array.isArray(a.value) ? a.value : [a.value];
-      // Resolve option IDs to human-readable labels for single/multi choice questions
-      const resolvedValues = rawValue.map((v) => {
-        if (typeof v !== "string") return String(v);
-        const opt = q?.options?.find((o) => o.id === v);
-        return opt?.label ?? v;
-      });
-      const value = resolvedValues.join("；");
+      // Resolve option IDs to human-readable labels for single/multi choice questions.
+      // Skip null/undefined values instead of stringifying them to "undefined".
+      const resolvedValues = rawValue
+        .filter((v) => v !== null && v !== undefined && v !== "")
+        .map((v) => {
+          if (typeof v !== "string") return String(v);
+          const opt = q?.options?.find((o) => o.id === v);
+          return opt?.label ?? v;
+        });
+      const value = resolvedValues.join("；") || "（空回答）";
       const source = `{source_id: ${a.id}, source_revision: 1}`;
       return [
         `问题：${q ? q.text : a.question_id}`,
@@ -157,11 +162,13 @@ function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposa
     .map((a) => {
       const q = input.questions.find((qq) => qq.id === a.question_id);
       const rawValue = Array.isArray(a.value) ? a.value : [a.value];
-      const resolved = rawValue.map((v) => {
-        if (typeof v !== "string") return String(v);
-        const opt = q?.options?.find((o) => o.id === v);
-        return opt?.label ?? v;
-      });
+      const resolved = rawValue
+        .filter((v) => v !== null && v !== undefined && v !== "")
+        .map((v) => {
+          if (typeof v !== "string") return String(v);
+          const opt = q?.options?.find((o) => o.id === v);
+          return opt?.label ?? v;
+        });
       return resolved.join("；");
     })
     .filter((v) => v && v !== "undefined")
