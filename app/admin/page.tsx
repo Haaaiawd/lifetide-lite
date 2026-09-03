@@ -36,6 +36,8 @@ type Stats = {
     id: string;
     email: string;
     createdAt: string;
+    banned: boolean;
+    bannedAt: string | null;
     lastSessionAt: string | null;
   }>;
   recentSessions: Array<{
@@ -46,6 +48,15 @@ type Stats = {
     createdAt: string;
     progress: string;
   }>;
+};
+
+type AdminUser = {
+  id: string;
+  email: string;
+  createdAt: string;
+  banned: boolean;
+  bannedAt: string | null;
+  lastSessionAt: string | null;
 };
 
 type Tab = "overview" | "invites" | "users" | "sessions" | "logs";
@@ -85,6 +96,11 @@ export default function AdminPage() {
   const [logData, setLogData] = useState<LogData | null>(null);
   const [logFilter, setLogFilter] = useState<"error" | "all">("error");
 
+  // Users (full list for user management)
+  const [userList, setUserList] = useState<AdminUser[] | null>(null);
+  const [userLoading, setUserLoading] = useState(false);
+  const [banActionId, setBanActionId] = useState<string | null>(null);
+
   const loadLogs = useCallback(async (filter: "error" | "all") => {
     try {
       const url = filter === "error"
@@ -111,6 +127,43 @@ export default function AdminPage() {
       setLoading(false);
     }
   }, []);
+
+  const loadUsers = useCallback(async () => {
+    setUserLoading(true);
+    try {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUserList(data.users);
+      }
+    } finally {
+      setUserLoading(false);
+    }
+  }, []);
+
+  async function handleBan(userId: string) {
+    setBanActionId(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/ban`, { method: "POST" });
+      if (res.ok) {
+        await loadUsers();
+      }
+    } finally {
+      setBanActionId(null);
+    }
+  }
+
+  async function handleUnban(userId: string) {
+    setBanActionId(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/ban`, { method: "DELETE" });
+      if (res.ok) {
+        await loadUsers();
+      }
+    } finally {
+      setBanActionId(null);
+    }
+  }
 
   useEffect(() => {
     loadStats();
@@ -174,7 +227,7 @@ export default function AdminPage() {
     );
   }
 
-  const { counts, invites, waveDistribution, recentUsers, recentSessions } = stats;
+  const { counts, invites, waveDistribution, recentSessions } = stats;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-6">
@@ -209,6 +262,7 @@ export default function AdminPage() {
                 onClick={() => {
                   setTab(key);
                   if (key === "logs" && !logData) loadLogs(logFilter);
+                  if (key === "users" && !userList) loadUsers();
                 }}
                 className={`px-4 py-2.5 text-sm font-medium transition-colors ${
                   tab === key
@@ -372,22 +426,62 @@ export default function AdminPage() {
       {/* Users tab */}
       {tab === "users" && (
         <div className="border-2 border-ink bg-paper-raised shadow-sm">
-          <div className="border-b border-ink/20 px-4 py-2">
-            <h3 className="font-serif text-sm font-medium">用户（{counts.users}）</h3>
+          <div className="flex items-center justify-between border-b border-ink/20 px-4 py-2">
+            <h3 className="font-serif text-sm font-medium">用户（{userList?.length ?? counts.users}）</h3>
+            <button
+              type="button"
+              onClick={() => loadUsers()}
+              disabled={userLoading}
+              className="text-xs text-cobalt hover:underline disabled:opacity-50"
+            >
+              {userLoading ? "加载中..." : "刷新"}
+            </button>
           </div>
           <div className="divide-y divide-ink/10">
-            {recentUsers.length === 0 && (
+            {!userList && (
+              <div className="px-4 py-6 text-center text-sm text-ink-muted">
+                {userLoading ? "加载中..." : "点击「刷新」加载用户列表"}
+              </div>
+            )}
+            {userList && userList.length === 0 && (
               <div className="px-4 py-6 text-center text-sm text-ink-muted">还没有用户</div>
             )}
-            {recentUsers.map((u) => (
+            {userList && userList.map((u) => (
               <div key={u.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <div className="text-sm font-medium">{u.email}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{u.email}</span>
+                    {u.banned && (
+                      <span className="shrink-0 border border-danger/40 bg-danger-soft/50 px-1.5 py-0.5 text-[10px] text-danger">
+                        已封禁
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-ink-muted">
                     注册于 {u.createdAt.slice(0, 10)}
                     {u.lastSessionAt && ` · 最近活跃 ${u.lastSessionAt.slice(0, 10)}`}
+                    {u.banned && u.bannedAt && ` · 封禁于 ${u.bannedAt.slice(0, 10)}`}
                   </div>
                 </div>
+                {u.banned ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUnban(u.id)}
+                    disabled={banActionId === u.id}
+                    className="shrink-0 border-2 border-ink bg-success px-3 py-1 text-xs font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-50"
+                  >
+                    {banActionId === u.id ? "..." : "解封"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleBan(u.id)}
+                    disabled={banActionId === u.id}
+                    className="shrink-0 border-2 border-ink bg-danger px-3 py-1 text-xs font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-50"
+                  >
+                    {banActionId === u.id ? "..." : "封禁"}
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -81,6 +81,10 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     throw new Error("邮箱或密码错误");
   }
 
+  if (user.banned) {
+    throw new Error("该账号已被封禁，请联系管理员");
+  }
+
   const token = await signAuthToken(user.id, user.email);
   return { user: { id: user.id, email: user.email }, token };
 }

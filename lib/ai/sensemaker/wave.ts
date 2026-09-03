@@ -3,7 +3,7 @@
 // See .loom/design/adaptive-interview-system.md §3
 
 import { z } from "zod";
-import { waveSensemakerProposalSchema } from "@/lib/state/contracts";
+import { waveSensemakerProposalSchema, immediateInsightProposalSchema, memoryOperationProposalSchema } from "@/lib/state/contracts";
 import { generateStructured, streamStructured } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
@@ -12,6 +12,7 @@ import type {
   SensemakerWaveOutput,
   WaveSensemakerProposal,
   ImmediateInsightProposal,
+  MemoryOperationProposal,
   EvidenceLink,
 } from "@/lib/working-memory/types";
 
@@ -203,7 +204,7 @@ export async function runSensemakerWave(input: SensemakerWaveInput): Promise<Sen
       wave_id: input.wave_id,
       prompt: makePrompt(input),
       schema: waveSensemakerProposalSchema as z.ZodType<WaveSensemakerProposal, z.ZodTypeDef, unknown>,
-      max_tokens: 2500,
+      max_tokens: 16000,
       timeout_ms: 120000,
       prompt_version: "sensemaker.wave.v3",
       fixture: () => Promise.resolve(
@@ -241,7 +242,7 @@ export async function runSensemakerWaveStream(
       wave_id: input.wave_id,
       prompt: makePrompt(input),
       schema: waveSensemakerProposalSchema as z.ZodType<WaveSensemakerProposal, z.ZodTypeDef, unknown>,
-      max_tokens: 2500,
+      max_tokens: 16000,
       timeout_ms: 120000,
       prompt_version: "sensemaker.wave.v3",
       fixture: () => Promise.resolve(
@@ -266,7 +267,50 @@ export async function runSensemakerWaveStream(
       expected_revision: input.memory.revision + 1,
     };
   } catch (err) {
-    console.error("Sensemaker wave stream failed, using fallback:", err instanceof Error ? err.message : "unknown");
+    const errMsg = err instanceof Error ? err.message : "unknown";
+    console.error("Sensemaker wave stream failed:", errMsg);
+
+    // Attempt partial recovery: if the AI generated a valid insight but
+    // operations were malformed (common with complex nested schemas),
+    // salvage the insight and derive host-owned operations from it.
+    //
+    // We do NOT pick through the AI's operations array — that risks
+    // internal inconsistency (e.g. keeping an update_radar but dropping
+    // its supporting add_claim). Instead, we derive a minimal consistent
+    // operation set directly from the validated insight:
+    //   - update_radar for each insight.radar_delta
+    // These are guaranteed valid because they come from the already-
+    // validated insight schema. AI's original operations are discarded
+    // entirely. This means claims/constraints/route_intents from this
+    // wave are lost, but radar state stays in sync with what the user
+    // saw, and later waves can see the dimension shifts.
+    const rawObject = (err as Error & { rawObject?: unknown }).rawObject;
+    if (rawObject && typeof rawObject === "object") {
+      const rawRecord = rawObject as Record<string, unknown>;
+      const rawInsight = rawRecord.insight;
+      if (rawInsight && typeof rawInsight === "object") {
+        const insightResult = immediateInsightProposalSchema.safeParse(rawInsight);
+        if (insightResult.success) {
+          const derivedOps: MemoryOperationProposal[] = insightResult.data.radar_deltas.map(
+            (delta) => ({ op: "update_radar" as const, value: delta })
+          );
+          console.log(
+            `[Sensemaker] Recovered insight, derived ${derivedOps.length} radar ops from it` +
+            ` (AI operations discarded to preserve consistency)`
+          );
+          return {
+            base_revision: input.memory.revision,
+            operations: derivedOps,
+            insight: insightResult.data,
+            expected_revision: input.memory.revision + 1,
+          };
+        } else {
+          console.error("[Sensemaker] Insight recovery also failed:", insightResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; "));
+        }
+      }
+    }
+
+    console.log("[Sensemaker] Using full fallback");
     return {
       ...fallbackWaveProposal(input),
       expected_revision: input.memory.revision + 1,
