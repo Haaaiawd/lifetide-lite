@@ -546,7 +546,7 @@ export async function runSensemakerFinal(input: SensemakerFinalInput): Promise<S
       session_id: sessionId,
       prompt: makePrompt(input),
       schema: parallelLivesPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
-      max_tokens: 4000,
+      max_tokens: 16000,
       timeout_ms: 180000,
       max_retries: 0,
       prompt_version: PROMPT_VERSION,

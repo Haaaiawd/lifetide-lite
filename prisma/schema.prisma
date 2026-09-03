@@ -12,6 +12,8 @@ model User {
   email        String    @unique
   passwordHash String
   createdAt    DateTime  @default(now())
+  banned       Boolean   @default(false)
+  bannedAt     DateTime?
   sessions     Session[]
 }
 

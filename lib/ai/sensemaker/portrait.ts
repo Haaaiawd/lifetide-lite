@@ -141,7 +141,7 @@ export async function generatePortrait(
     session_id: sessionId,
     prompt: makePrompt(memory),
     schema: personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>,
-    max_tokens: 4000,
+    max_tokens: 16000,
     timeout_ms: 180000,
     max_retries: 0,
     temperature: 0.7,
