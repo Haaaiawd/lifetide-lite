@@ -65,7 +65,11 @@ async function convertPdfToPng(buffer: Buffer): Promise<Buffer[]> {
     returnPageContent: true,
     returnMetadataOnly: false,
     verbosityLevel: VerbosityLevel.ERRORS,
-    viewportScale: 1.5,
+    viewportScale: 1.0,
+    // Limit pages to avoid extremely long processing times on large PDFs.
+    // Most user documents are well under this; the first 10 pages capture
+    // the key content for interview context.
+    pagesToProcess: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   });
 
   return pages
