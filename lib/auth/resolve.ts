@@ -21,9 +21,10 @@ export async function resolveSession(request: NextRequest) {
     }
 
     // Find the best session for this user.
-    // Prefer sessions that have consents or progress data (answers/uploads),
-    // to avoid picking an empty duplicate created by a race condition.
-    // Among equally "rich" sessions, pick the most recently created one.
+    // Score by real progress: consents given, answers, successful uploads,
+    // derived content, and working memory. This avoids picking an empty
+    // duplicate created by a race condition, and avoids counting failed
+    // uploads as progress.
     const sessions = await prisma.session.findMany({
       where: { userId: authUser.id },
       include: { consents: true, answers: true, uploads: true, derived: true, workingMemory: true },
@@ -31,9 +32,13 @@ export async function resolveSession(request: NextRequest) {
     });
     const session = sessions.length > 0
       ? sessions.reduce((best, cur) => {
-          const bestScore = best.consents.filter(c => c.given).length + best.answers.length + best.uploads.length;
-          const curScore = cur.consents.filter(c => c.given).length + cur.answers.length + cur.uploads.length;
-          return curScore > bestScore ? cur : best;
+          const score = (s: typeof best) =>
+            s.consents.filter(c => c.given).length +
+            s.answers.length +
+            s.uploads.filter(u => u.status === "ready" || u.status === "preview_ready").length +
+            s.derived.length +
+            (s.workingMemory ? 1 : 0);
+          return score(cur) > score(best) ? cur : best;
         })
       : null;
     if (session) {
