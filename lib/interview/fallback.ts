@@ -54,5 +54,20 @@ export function defaultFallbackQuestions(
       ],
       true
     ),
+    q(4, `在那段经历里，什么让你觉得值得继续？什么让你想放弃？`, true, "short_text"),
+    q(
+      5,
+      `如果可以重新选择，你更希望当时的情况更接近哪种？`,
+      false,
+      "single_choice",
+      [
+        { id: "w2q5-a", label: "有更多自主空间" },
+        { id: "w2q5-b", label: "有更明确的方向" },
+        { id: "w2q5-c", label: "有更稳定的环境" },
+        { id: "w2q5-d", label: "有更紧密的关系" },
+      ],
+      true
+    ),
+    q(6, `最近有没有另一件事让你产生类似的感受？如果有，是什么？`, true, "short_text"),
   ];
 }
