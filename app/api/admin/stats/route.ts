@@ -92,6 +92,8 @@ export async function GET(request: NextRequest) {
       id: u.id,
       email: u.email,
       createdAt: u.createdAt.toISOString(),
+      banned: u.banned,
+      bannedAt: u.bannedAt?.toISOString() ?? null,
       lastSessionAt: u.sessions[0]?.createdAt.toISOString() ?? null,
     })),
     recentSessions: recentSessions.map((s) => {
