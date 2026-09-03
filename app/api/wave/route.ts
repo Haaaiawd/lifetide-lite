@@ -510,7 +510,9 @@ export async function POST(request: NextRequest) {
         id: created.id,
         question_id: question.id,
         wave_id: question.wave_id,
-        value: answer.value,
+        // Use the DB-stored value, which normalizes undefined → null and
+        // joins arrays. This is what the sensemaker envelope should see.
+        value: created.value ?? undefined,
         skipped,
         submitted_at: created.createdAt.toISOString(),
       });
