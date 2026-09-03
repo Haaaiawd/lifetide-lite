@@ -320,7 +320,6 @@ export async function streamStructured<T>(
 
     const finalObject = await result.object;
     console.log(`[AI STREAM] purpose=${options.purpose} objectKeys=${Object.keys(finalObject ?? {}).join(",")}`);
-    console.log(`[AI STREAM] finalObject preview:`, JSON.stringify(finalObject).slice(0, 500));
 
     // Validate the final object against the schema.
     // streamObject can return a partial object that doesn't fully match the schema

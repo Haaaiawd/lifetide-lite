@@ -238,8 +238,20 @@ export function runWave1Sensemaker(
   const userToldMe = toldParts.join("");
 
   // Build current_reading: one provisional pattern or tension, not a diagnosis.
+  // Prioritize hook (q8 text) if present — it's the user's own framing of what
+  // they want to explore, and should appear in the reading when available.
   const readingParts: string[] = [];
-  if (intent && stage) {
+  if (hook) {
+    if (intent && stage) {
+      readingParts.push(`你说想${intent}，现在${stage}。你提到最近在想「${hook}」——这可能是连接当前状态和想去的方向的一个线索，下一波可以展开看看。`);
+    } else if (intent) {
+      readingParts.push(`你来这里想${intent}。你提到最近在想「${hook}」，具体是什么让你有这个感觉，下一波可以慢慢聊。`);
+    } else if (stage) {
+      readingParts.push(`你现在${stage}。你提到最近在想「${hook}」，这个阶段里它意味着什么，后面可以展开。`);
+    } else {
+      readingParts.push(`你提到最近在想「${hook}」，我先记下来，下一波再聊这背后更具体的想法。`);
+    }
+  } else if (intent && stage) {
     readingParts.push(`你说想${intent}，现在${stage}——这两者之间可能有关联，也可能没有，下一波可以看看。`);
   } else if (intent) {
     readingParts.push(`你来这里想${intent}，具体是什么让你有这个感觉，下一波可以慢慢聊。`);
