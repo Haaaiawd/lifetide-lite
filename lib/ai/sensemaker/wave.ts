@@ -3,7 +3,7 @@
 // See .loom/design/adaptive-interview-system.md §3
 
 import { z } from "zod";
-import { waveSensemakerProposalSchema, immediateInsightProposalSchema } from "@/lib/state/contracts";
+import { waveSensemakerProposalSchema, immediateInsightProposalSchema, memoryOperationProposalSchema } from "@/lib/state/contracts";
 import { generateStructured, streamStructured } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
@@ -12,6 +12,7 @@ import type {
   SensemakerWaveOutput,
   WaveSensemakerProposal,
   ImmediateInsightProposal,
+  MemoryOperationProposal,
   EvidenceLink,
 } from "@/lib/working-memory/types";
 
@@ -271,19 +272,35 @@ export async function runSensemakerWaveStream(
 
     // Attempt partial recovery: if the AI generated a valid insight but
     // operations were malformed (common with complex nested schemas),
-    // salvage the insight and use empty operations. This preserves the
-    // AI's actual understanding instead of replacing it with a generic
-    // fallback that says "系统未能生成深入理解".
+    // salvage the insight and derive host-owned operations from it.
+    //
+    // We do NOT pick through the AI's operations array — that risks
+    // internal inconsistency (e.g. keeping an update_radar but dropping
+    // its supporting add_claim). Instead, we derive a minimal consistent
+    // operation set directly from the validated insight:
+    //   - update_radar for each insight.radar_delta
+    // These are guaranteed valid because they come from the already-
+    // validated insight schema. AI's original operations are discarded
+    // entirely. This means claims/constraints/route_intents from this
+    // wave are lost, but radar state stays in sync with what the user
+    // saw, and later waves can see the dimension shifts.
     const rawObject = (err as Error & { rawObject?: unknown }).rawObject;
     if (rawObject && typeof rawObject === "object") {
-      const rawInsight = (rawObject as Record<string, unknown>)?.insight;
+      const rawRecord = rawObject as Record<string, unknown>;
+      const rawInsight = rawRecord.insight;
       if (rawInsight && typeof rawInsight === "object") {
         const insightResult = immediateInsightProposalSchema.safeParse(rawInsight);
         if (insightResult.success) {
-          console.log("[Sensemaker] Recovered insight from failed parse, using empty operations");
+          const derivedOps: MemoryOperationProposal[] = insightResult.data.radar_deltas.map(
+            (delta) => ({ op: "update_radar" as const, value: delta })
+          );
+          console.log(
+            `[Sensemaker] Recovered insight, derived ${derivedOps.length} radar ops from it` +
+            ` (AI operations discarded to preserve consistency)`
+          );
           return {
             base_revision: input.memory.revision,
-            operations: [],
+            operations: derivedOps,
             insight: insightResult.data,
             expected_revision: input.memory.revision + 1,
           };
