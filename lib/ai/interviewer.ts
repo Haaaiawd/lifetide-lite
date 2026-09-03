@@ -87,7 +87,7 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     `- 已进行：${input.burden.elapsed_minutes.toFixed(0)} 分钟`,
     `- 用户要求缩短：${input.burden.user_requested_shorter ? "是" : "否"}`,
     "",
-    "注意：本次调用处于 v3 prompt 的过渡阶段。如果当前证据已经充分，可以 propose_deep_dive；否则输出 open_wave/continue_wave 的问题提案。",
+    "注意：一次产出 5-8 道问题，不再使用 continue_wave 分批模式。",
   ].join("\n");
 }
 
@@ -185,8 +185,8 @@ export function validateInterviewerOutput(
   input: InterviewerInput,
   output: InterviewerOutput
 ): { valid: true } | { valid: false; reason: string } {
-  if (output.questions.length < 1 || output.questions.length > 3) {
-    return { valid: false, reason: "Microbatch question count out of range (must be 1-3)" };
+  if (output.questions.length < 5 || output.questions.length > 8) {
+    return { valid: false, reason: "Question count out of range (must be 5-8)" };
   }
 
   if (!output.questions.some((q) => q.asks_for_concrete_example)) {

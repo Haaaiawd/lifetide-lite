@@ -44,9 +44,9 @@ async function extractPdfTextLayer(buffer: Buffer): Promise<string | null> {
 
     await doc.cleanup();
     const fullText = textParts.join("\n\n").trim();
-    // If we got meaningful text (at least 100 chars), use it.
-    // Otherwise fall back to OCR.
-    return fullText.length >= 100 ? fullText : null;
+    // If we got any meaningful text (at least 20 chars), use it.
+    // Only truly empty/scanned PDFs fall back to the manual-paste path.
+    return fullText.length >= 20 ? fullText : null;
   } catch {
     // If pdfjs fails for any reason, fall back to OCR
     return null;

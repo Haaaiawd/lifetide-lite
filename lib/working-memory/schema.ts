@@ -94,6 +94,7 @@ export const workingMemorySchema = workingUnderstandingSchema
     recent_feedback: z.array(insightFeedbackSchema),
     finalPlan: parallelLivesPlanSchema.optional(),
     persona_portrait: personaPortraitStoredSchema.optional(),
+    last_insight: immediateInsightSchema.optional(),
   })
   .strict();
 

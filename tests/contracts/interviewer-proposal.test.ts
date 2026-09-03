@@ -27,30 +27,28 @@ const validOpenWave = {
   action: "continue",
   bridge: "好的，我先确认一下你刚才说的场景。",
   mission_status: "opening",
-  questions: [
-    {
-      text: "那个时刻之前发生了什么？",
-      why_this_matters: "把场景起点锚定",
-      response_kind: "scene_text",
-      sensitivity: "ordinary",
-      decision_target: "target-0",
-      asks_for_concrete_example: true,
-      allows_skip: true,
-      allows_free_text: true,
-      elicitation_unit_index: 0,
-    },
-  ],
+  questions: Array.from({ length: 5 }, (_, i) => ({
+    text: `问题 ${i + 1}：那个时刻之前发生了什么？`,
+    why_this_matters: "把场景起点锚定",
+    response_kind: "scene_text",
+    sensitivity: "ordinary",
+    decision_target: `target-${i % 5}`,
+    asks_for_concrete_example: i === 0,
+    allows_skip: true,
+    allows_free_text: true,
+    elicitation_unit_index: i % 5,
+  })),
   reason: "先获取一个可观察的起点",
   route_decision_affected: "理解用户眼下最需要处理什么",
 };
 
 describe("InterviewerProposal contract", () => {
-  it("accepts a valid open_wave with 1-3 questions and 5-10 units", () => {
+  it("accepts a valid open_wave with 5-8 questions and 5-10 units", () => {
     const parsed = interviewerProposalSchema.parse(validOpenWave);
     expect(parsed.mode).toBe("open_wave");
     if (parsed.mode !== "open_wave") throw new Error("Expected open_wave");
     expect(parsed.mission.elicitation_units.length).toBe(5);
-    expect(parsed.questions.length).toBe(1);
+    expect(parsed.questions.length).toBe(5);
   });
 
   it("rejects open_wave with 11 units", () => {
