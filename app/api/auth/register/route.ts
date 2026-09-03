@@ -27,12 +27,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "请输入邀请码" }, { status: 400 });
     }
 
-    const codeValid = await validateAndConsumeInviteCode(inviteCode);
-    if (!codeValid) {
+    const codeSource = await validateAndConsumeInviteCode(inviteCode);
+    if (!codeSource) {
       return NextResponse.json({ error: "邀请码无效或已用完" }, { status: 403 });
     }
 
-    const { user, token } = await registerUser(email, password);
+    const registeredVia = codeSource === "star" ? "star" : "admin_invite";
+    const { user, token } = await registerUser(email, password, registeredVia);
 
     // Bind existing guest session to the new user if present
     const guestSession = await requireGuestSession(request);

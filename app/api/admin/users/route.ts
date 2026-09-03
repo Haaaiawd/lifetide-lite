@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       createdAt: u.createdAt.toISOString(),
       banned: u.banned,
       bannedAt: u.bannedAt?.toISOString() ?? null,
+      registeredVia: u.registeredVia,
       lastSessionAt: u.sessions[0]?.createdAt.toISOString() ?? null,
     })),
   });

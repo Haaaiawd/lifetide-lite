@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
         usedCount: c.usedCount,
         exhausted: c.exhausted,
         note: c.note,
+        source: c.source,
         createdAt: c.createdAt.toISOString(),
       })),
     },
