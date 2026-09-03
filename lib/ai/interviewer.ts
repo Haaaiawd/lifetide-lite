@@ -294,7 +294,7 @@ function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
   return {
     mode: "open_wave",
     mission: {
-      decision_to_improve: input.selected_uncertainty.question,
+      decision_to_improve: input.selected_uncertainty.topic,
       target_dimensions: ["traits"],
       known_source_refs: input.relevant_evidence.map((e) => ({ source_id: e.source_id, source_revision: e.revision })),
       important_unknown: input.selected_uncertainty.topic,
@@ -316,7 +316,7 @@ function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput
   return {
     mode: "open_wave",
     mission: {
-      decision_to_improve: input.selected_uncertainty.question,
+      decision_to_improve: input.selected_uncertainty.topic,
       target_dimensions: ["traits"],
       known_source_refs: [],
       important_unknown: input.selected_uncertainty.topic,

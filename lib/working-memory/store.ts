@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { workingMemorySchema } from "./schema";
 import { makeEmptyWorkingMemory, type WorkingMemory } from "./types";
+import { deriveShortQuestion } from "@/lib/interview/derive-question";
 
 export type StoredWorkingMemory = {
   id: string;
@@ -23,16 +24,19 @@ export async function loadWorkingMemory(sessionId: string): Promise<WorkingMemor
     return null;
   }
 
-  // Backfill `topic` for legacy uncertainty records created before the
-  // topic/question split. Old records stored the important_unknown statement
-  // in `question`, which is exactly the `topic` semantic. New records have
-  // both fields and are unaffected.
+  // Backfill `topic` and re-derive `question` for legacy uncertainty records
+  // created before the topic/question split. Old records stored the
+  // important_unknown statement in `question`, which is exactly the `topic`
+  // semantic. We move it to `topic` and re-derive a short `question` so
+  // downstream consumers (final.ts, portrait.ts, chat/summary.ts) don't
+  // embed a long statement into question-shaped contexts.
   if (parsed && typeof parsed === "object") {
     const obj = parsed as Record<string, unknown>;
     if (Array.isArray(obj.uncertainties)) {
       for (const u of obj.uncertainties as Array<Record<string, unknown>>) {
         if (u && typeof u === "object" && !("topic" in u) && typeof u.question === "string") {
           u.topic = u.question;
+          u.question = deriveShortQuestion(u.question);
         }
       }
     }
