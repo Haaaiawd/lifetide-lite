@@ -1,9 +1,11 @@
-import { pdfToPng, VerbosityLevel, type PngPageOutput } from "pdf-to-png-converter";
 import mammoth from "mammoth";
 import { extractTextFromImageBase64 } from "@/lib/ai/vision";
 
 export type ExtractionResult = {
   previewText: string;
+  // "ok" = text extracted successfully
+  // "pdf_no_text" = PDF has no text layer (scanned/image), user should paste text manually
+  status?: "ok" | "pdf_no_text";
 };
 
 function toDataUrl(mime: string, buffer: Buffer): string {
@@ -63,17 +65,21 @@ export async function extractFromBuffer(
   }
 
   if (parser === "pdf") {
-    // Fast path: try extracting the text layer directly (near-instant for
-    // text-based PDFs like academic papers, resumes, etc.)
+    // Fast path: extract text layer directly with pdfjs (near-instant).
+    // Works for text-based PDFs (papers, resumes, reports).
+    const t0 = Date.now();
     const textLayer = await extractPdfTextLayer(buffer);
+    const t1 = Date.now();
+    console.log(`[Upload] PDF text layer: ${((t1 - t0) / 1000).toFixed(2)}s, len=${textLayer?.length ?? 0}`);
     if (textLayer) {
-      return { previewText: textLayer };
+      return { previewText: textLayer, status: "ok" };
     }
-    // Slow path: scanned/image PDF — convert to PNG and OCR
-    const pngs = await convertPdfToPng(buffer);
-    const dataUrls = pngs.map((b) => toDataUrl("image/png", b));
-    const result = await extractTextFromImageBase64(dataUrls);
-    return { previewText: result.text };
+    // No text layer — this is a scanned/image PDF.
+    // Don't do slow OCR; ask the user to paste text from an external OCR tool.
+    return {
+      previewText: "",
+      status: "pdf_no_text",
+    };
   }
 
   if (parser === "docx") {
@@ -105,21 +111,4 @@ export async function extractFromBuffer(
   }
 
   return { previewText: buffer.toString("utf-8") };
-}
-
-async function convertPdfToPng(buffer: Buffer): Promise<Buffer[]> {
-  const pages: PngPageOutput[] = await pdfToPng(buffer, {
-    returnPageContent: true,
-    returnMetadataOnly: false,
-    verbosityLevel: VerbosityLevel.ERRORS,
-    viewportScale: 1.0,
-    // Limit pages to avoid extremely long processing times on large PDFs.
-    // Most user documents are well under this; the first 10 pages capture
-    // the key content for interview context.
-    pagesToProcess: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-  });
-
-  return pages
-    .filter((p) => p.kind === "content" && p.content)
-    .map((p) => p.content as Buffer);
 }
