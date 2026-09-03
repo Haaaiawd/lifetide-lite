@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   if (!upload.rawBase64) {
-    return NextResponse.json({ error: "Original file not available for retry" }, { status: 422 });
+    return NextResponse.json({ error: "原始文件未保留，请重新上传" }, { status: 422 });
   }
 
   const parser = getParser(upload.mimeType);

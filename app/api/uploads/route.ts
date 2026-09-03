@@ -97,9 +97,12 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const rawBase64 = buffer.toString("base64");
 
-  // Create record in scanning state
+  // Create record in scanning state.
+  // Note: rawBase64 is not stored — it was causing slow writes for 1MB+
+  // files (base64 encoding inflates size ~33%, and SQLite blob writes
+  // are not optimized for large payloads). Retry re-upload from the
+  // client side instead of storing the raw file server-side.
   const upload = await prisma.upload.create({
     data: {
       sessionId: session.id,
@@ -107,7 +110,6 @@ export async function POST(request: NextRequest) {
       mimeType,
       size: file.size,
       status: UPLOAD_STATUS.SCANNING,
-      rawBase64,
     },
   });
 
