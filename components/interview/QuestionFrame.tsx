@@ -54,17 +54,29 @@ export function QuestionFrame({ question, index, total, initialValue, onSubmit, 
   const isCard = variant === "card";
 
   // Pre-fill from initialValue (used when going back to edit a previous answer)
+  const optionIds = new Set(question.options?.map((o) => o.id) ?? []);
+
+  // Map non-option values to CUSTOM_ID so the custom input shows up correctly
   const initialSelected = (() => {
     if (initialValue === undefined || initialValue === null) return [];
-    if (Array.isArray(initialValue)) return initialValue as string[];
+    if (Array.isArray(initialValue)) {
+      return initialValue.map((v) =>
+        v !== CUSTOM_ID && !optionIds.has(v) ? CUSTOM_ID : v
+      );
+    }
+    if (typeof initialValue === "string") {
+      if (initialValue === "") return [];
+      if (!optionIds.has(initialValue) && initialValue !== CUSTOM_ID) return [CUSTOM_ID];
+      return [initialValue];
+    }
     return [String(initialValue)];
   })();
   const initialCustomText = (() => {
     if (Array.isArray(initialValue)) {
-      const custom = initialValue.find((v) => v !== CUSTOM_ID && !question.options?.some((o) => o.id === v));
+      const custom = initialValue.find((v) => v !== CUSTOM_ID && !optionIds.has(v));
       return typeof custom === "string" ? custom : "";
     }
-    if (typeof initialValue === "string" && !question.options?.some((o) => o.id === initialValue) && initialValue !== "") {
+    if (typeof initialValue === "string" && !optionIds.has(initialValue) && initialValue !== CUSTOM_ID && initialValue !== "") {
       return initialValue;
     }
     return "";

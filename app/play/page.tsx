@@ -598,6 +598,7 @@ export default function PlayPage() {
         const insightView = toInsightView(progressInfo.lastInsight, progressInfo.waveIndex);
         setInsight(progressInfo.lastInsight);
         setWaveIndex(progressInfo.waveIndex);
+        setWaveId(`w${progressInfo.waveIndex}`);
         setItems([
           { id: newId(), type: "bot", text: "好，我已经整理好一条理解，你看看哪里需要调：" },
           { id: newId(), type: "insight", insight: insightView, isActive: true },

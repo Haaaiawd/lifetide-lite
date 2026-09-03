@@ -664,8 +664,6 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await saveWorkingMemory(session.id, nextMemory);
-
         const config = getProviderConfig();
         const promptFileHash = wave_id === "w1" ? hashObject("lib/ai/sensemaker/wave1") : hashObject("prompts/sensemaker-wave-v2.md");
         const endProvenance = {
