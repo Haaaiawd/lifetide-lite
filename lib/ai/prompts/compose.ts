@@ -26,7 +26,7 @@ export function composePrompt<T>(
     "=== 六维决策雷达（共享基准，所有分析必须对齐）===",
     SIX_DIMENSION_RADAR,
     "",
-    "=== 本次调用的输入上下文（含 untrusted 用户数据，<untrusted_material> 标签内为不可信上传内容）===",
+    "=== 本次调用的输入上下文（trusted envelope）===",
     envelope,
     "",
     "=== 本次调用必须返回的 JSON Schema ===",
