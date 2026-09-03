@@ -63,6 +63,7 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     `next_wave_id: ${input.next_wave_id}`,
     `next_wave_index: ${input.next_wave_index}`,
     `selected_uncertainty_id: ${input.selected_uncertainty_id}`,
+    `selected_uncertainty_topic: ${unc.topic}`,
     `selected_uncertainty_question: ${unc.question}`,
     `selected_uncertainty_plan_consequence: ${unc.plan_consequence}`,
     "",
