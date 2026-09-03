@@ -20,12 +20,22 @@ export async function resolveSession(request: NextRequest) {
       return { session: null, isAuthed: false, user: null, banned: true };
     }
 
-    // Find the most recent session bound to this user
-    const session = await prisma.session.findFirst({
+    // Find the best session for this user.
+    // Prefer sessions that have consents or progress data (answers/uploads),
+    // to avoid picking an empty duplicate created by a race condition.
+    // Among equally "rich" sessions, pick the most recently created one.
+    const sessions = await prisma.session.findMany({
       where: { userId: authUser.id },
-      orderBy: { createdAt: "desc" },
       include: { consents: true, answers: true, uploads: true, derived: true, workingMemory: true },
+      orderBy: { createdAt: "desc" },
     });
+    const session = sessions.length > 0
+      ? sessions.reduce((best, cur) => {
+          const bestScore = best.consents.filter(c => c.given).length + best.answers.length + best.uploads.length;
+          const curScore = cur.consents.filter(c => c.given).length + cur.answers.length + cur.uploads.length;
+          return curScore > bestScore ? cur : best;
+        })
+      : null;
     if (session) {
       return { session, isAuthed: true, user: authUser };
     }

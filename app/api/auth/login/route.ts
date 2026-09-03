@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loginUser, AUTH_TOKEN_COOKIE, AUTH_TOKEN_TTL } from "@/lib/auth/user";
+import { loginUser, bindGuestSessionToUser, AUTH_TOKEN_COOKIE, AUTH_TOKEN_TTL } from "@/lib/auth/user";
+import { requireGuestSession } from "@/lib/auth/session";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { user, token } = await loginUser(email, password);
+
+    // Bind existing guest session to this user (same as register).
+    // Without this, consents/data from the guest session are lost
+    // and resolveSession creates a fresh empty authed session.
+    const guestSession = await requireGuestSession(request);
+    if (guestSession) {
+      await bindGuestSessionToUser(guestSession.id, user.id);
+    }
 
     const response = NextResponse.json({ user });
     response.cookies.set(AUTH_TOKEN_COOKIE, token, {
