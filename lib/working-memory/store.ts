@@ -23,6 +23,21 @@ export async function loadWorkingMemory(sessionId: string): Promise<WorkingMemor
     return null;
   }
 
+  // Backfill `topic` for legacy uncertainty records created before the
+  // topic/question split. Old records stored the important_unknown statement
+  // in `question`, which is exactly the `topic` semantic. New records have
+  // both fields and are unaffected.
+  if (parsed && typeof parsed === "object") {
+    const obj = parsed as Record<string, unknown>;
+    if (Array.isArray(obj.uncertainties)) {
+      for (const u of obj.uncertainties as Array<Record<string, unknown>>) {
+        if (u && typeof u === "object" && !("topic" in u) && typeof u.question === "string") {
+          u.topic = u.question;
+        }
+      }
+    }
+  }
+
   const result = workingMemorySchema.safeParse(parsed);
   if (!result.success) {
     console.warn(`WorkingMemory for ${sessionId} failed runtime validation:`, result.error.flatten());
