@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { previewText, pageImages } = await extractFromBuffer(buffer, mimeType, parser);
+    const { previewText } = await extractFromBuffer(buffer, mimeType, parser);
 
     // Text-like files are immediately ready; images and PDFs need user confirmation.
     const needsConfirmation = parser === "image" || parser === "pdf";
@@ -152,12 +152,17 @@ export async function POST(request: NextRequest) {
         ),
       ]);
     } else {
+      // Store only the extracted text in DB — pageImages (PNG data URLs) are
+      // returned to the client for preview but NOT persisted, since they can
+      // be several MB and SQLite blob writes are slow. The client keeps them
+      // in memory for the preview session; if the user refreshes, they can
+      // re-upload. The text is what actually gets used for interview context.
       await prisma.derivedContent.create({
         data: {
           sessionId: session.id,
           uploadId: upload.id,
           kind: "extract_preview",
-          payload: JSON.stringify({ text: previewText, pageImages }),
+          payload: JSON.stringify({ text: previewText }),
           supportStatus: "supported",
         },
       });
