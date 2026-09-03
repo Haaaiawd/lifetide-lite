@@ -55,7 +55,11 @@ export async function verifyAuthToken(token: string): Promise<AuthUser | null> {
 
 // ── Registration / Login ──
 
-export async function registerUser(email: string, password: string): Promise<AuthResult> {
+export async function registerUser(
+  email: string,
+  password: string,
+  registeredVia: string = "admin_invite",
+): Promise<AuthResult> {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw new Error("该邮箱已注册");
@@ -63,7 +67,7 @@ export async function registerUser(email: string, password: string): Promise<Aut
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash },
+    data: { email, passwordHash, registeredVia },
   });
 
   const token = await signAuthToken(user.id, user.email);
