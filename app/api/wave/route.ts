@@ -514,9 +514,13 @@ export async function POST(request: NextRequest) {
         id: created.id,
         question_id: question.id,
         wave_id: question.wave_id,
-        // Use the DB-stored value, which normalizes undefined → null and
-        // joins arrays. This is what the sensemaker envelope should see.
-        value: created.value ?? undefined,
+        // Preserve the original structured value (array for multi-select,
+        // string for text/choice) for the ledger and sensemaker envelope.
+        // The DB stores a joined string for schema compatibility, but the
+        // in-memory representation must stay structured so that:
+        // 1. selected_option_ids in the ledger keeps the choice array
+        // 2. buildWaveEnvelope can resolve option IDs to labels
+        value: skipped ? undefined : (answer.value ?? undefined),
         skipped,
         submitted_at: created.createdAt.toISOString(),
       });
