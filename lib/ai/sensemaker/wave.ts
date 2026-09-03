@@ -120,6 +120,7 @@ function buildWaveEnvelope(input: SensemakerWaveInput): string {
     sourceVersions || "（暂无）",
     "",
     "注意：请输出符合下面 WaveSensemakerProposal schema 的完整对象。必须包含 base_revision、operations 和 insight。不要输出 schema 之外的字段。",
+    "特别要求：user_told_me 必须忠实引用用户的文本回答原文（不只是选择题 label），current_reading 应当关联用户自己提出的方向或困惑（尤其是文本回答中提到的内容），不要忽略用户主动提供的文本信息。",
   ].join("\n");
 }
 
@@ -148,10 +149,30 @@ function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposa
     ? input.memory.uncertainties.find((u) => u.id === input.focus_uncertainty_id)
     : undefined;
 
+  // Build a user_told_me that actually references the user's answers instead of
+  // a generic hardcoded string. This way even the fallback preserves what the
+  // user said, making it distinguishable from a truly empty response.
+  const answerSummary = input.answers
+    .filter((a) => !a.skipped)
+    .map((a) => {
+      const q = input.questions.find((qq) => qq.id === a.question_id);
+      const rawValue = Array.isArray(a.value) ? a.value : [a.value];
+      const resolved = rawValue.map((v) => {
+        if (typeof v !== "string") return String(v);
+        const opt = q?.options?.find((o) => o.id === v);
+        return opt?.label ?? v;
+      });
+      return resolved.join("；");
+    })
+    .filter((v) => v && v !== "undefined")
+    .join("；");
+
   const insight: ImmediateInsightProposal = {
     wave_id: input.wave_id,
-    user_told_me: "本波回答已记录，但系统未能生成深入理解。",
-    current_reading: "目前信息不足以更新理解。",
+    user_told_me: answerSummary
+      ? `本波回答已记录：${answerSummary}。系统未能生成深入理解，将在下一波继续。`
+      : "本波回答已记录，但系统未能生成深入理解。",
+    current_reading: "目前信息不足以更新理解，需要更多具体场景和行为证据。",
     important_unknown: focus ? focus.question : "下一波需要补充什么？",
     radar_deltas: [],
     route_impact: "没有新增路线影响。",
