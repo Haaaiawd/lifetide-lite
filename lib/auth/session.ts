@@ -68,6 +68,12 @@ export async function requireGuestSession(request: NextRequest) {
   const session = await getSessionByToken(token);
   if (!session || session.expiresAt <= new Date()) return null;
 
+  // Security: never return a session that's already bound to a user account.
+  // After logout, the guest cookie may still point to the previous user's
+  // bound session. Returning it would let the next login rebind that
+  // session (with all its data) to a different user (CWE-639).
+  if (session.userId !== null) return null;
+
   return session;
 }
 
