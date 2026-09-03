@@ -38,10 +38,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Upload is not awaiting confirmation" }, { status: 409 });
   }
 
+  if (!confirmedText.trim()) {
+    return NextResponse.json({ error: "请输入或粘贴文字内容后再确认" }, { status: 400 });
+  }
+
   try {
     await prisma.uploadChunk.deleteMany({ where: { uploadId: id } });
 
-    const chunks = textToChunks(confirmedText || "（未确认内容）");
+    const chunks = textToChunks(confirmedText);
     await prisma.$transaction([
       prisma.upload.update({
         where: { id },

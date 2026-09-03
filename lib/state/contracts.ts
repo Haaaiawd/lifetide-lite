@@ -358,7 +358,7 @@ export const interviewerProposalSchema = z.discriminatedUnion("mode", [
     action: z.literal("continue"),
     bridge: z.string().optional(),
     mission_status: z.literal("opening"),
-    questions: z.array(openingQuestionProposalSchema).min(1).max(3),
+    questions: z.array(openingQuestionProposalSchema).min(5).max(8),
     reason: z.string().min(1),
     route_decision_affected: z.string().min(1),
   }),

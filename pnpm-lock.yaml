@@ -35,9 +35,9 @@ importers:
       next:
         specifier: 16.3.3
         version: 16.3.3(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      pdf-to-png-converter:
-        specifier: 4.2.0
-        version: 4.2.0
+      pdfjs-dist:
+        specifier: ^6.3.289
+        version: 6.3.289
       pixelarticons:
         specifier: ^2.4.1
         version: 2.4.1(react@19.2.8)
@@ -1512,13 +1512,8 @@ packages:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
 
-  pdf-to-png-converter@4.2.0:
-    resolution: {integrity: sha512-ANpSA96ByeLfUbc4PESANAqTVKOl9ku5SWtzSE2zB/okyRSEqROkRHTqJGvksd+40XtwcPvm7lATk+9F/VwN0g==}
-    engines: {node: '>=22.13.0 || >=24'}
-    hasBin: true
-
-  pdfjs-dist@6.2.108:
-    resolution: {integrity: sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==}
+  pdfjs-dist@6.3.289:
+    resolution: {integrity: sha512-ZHjSVpDa3D6izMq8/04lvkhkATUmL9px6ChPaXc1k6nU2Mrhlg1/7F0bdUqCwUjw3NsPTfPZsMDUU6ZIcRaeQw==}
     engines: {node: '>=22.13.0 || >=24'}
 
   picocolors@1.1.1:
@@ -2178,6 +2173,7 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 1.0.8
       '@napi-rs/canvas-win32-arm64-msvc': 1.0.8
       '@napi-rs/canvas-win32-x64-msvc': 1.0.8
+    optional: true
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
@@ -3031,12 +3027,7 @@ snapshots:
 
   pathval@2.0.1: {}
 
-  pdf-to-png-converter@4.2.0:
-    dependencies:
-      '@napi-rs/canvas': 1.0.8
-      pdfjs-dist: 6.2.108
-
-  pdfjs-dist@6.2.108:
+  pdfjs-dist@6.3.289:
     optionalDependencies:
       '@napi-rs/canvas': 1.0.8
 

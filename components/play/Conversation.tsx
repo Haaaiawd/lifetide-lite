@@ -39,6 +39,7 @@ type ConversationProps = {
   items: ConversationItem[];
   onQuestionSubmit: (id: string, value: string | string[] | number) => void;
   onQuestionSkip: (id: string) => void;
+  onQuestionBack: () => void;
   onInsightContinue: (
     id: string,
     feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }
@@ -176,6 +177,7 @@ function ConversationCard({
   item,
   onQuestionSubmit,
   onQuestionSkip,
+  onQuestionBack,
   onInsightContinue,
   onMaterialSubmit,
   onMaterialSkip,
@@ -183,6 +185,7 @@ function ConversationCard({
   item: ConversationItem;
   onQuestionSubmit: ConversationProps["onQuestionSubmit"];
   onQuestionSkip: ConversationProps["onQuestionSkip"];
+  onQuestionBack: ConversationProps["onQuestionBack"];
   onInsightContinue: ConversationProps["onInsightContinue"];
   onMaterialSubmit: ConversationProps["onMaterialSubmit"];
   onMaterialSkip: ConversationProps["onMaterialSkip"];
@@ -230,8 +233,10 @@ function ConversationCard({
                 question={item.question}
                 index={item.question.order}
                 total={item.total}
+                initialValue={item.answer?.value}
                 onSubmit={(value) => onQuestionSubmit(item.id, value)}
                 onSkip={() => onQuestionSkip(item.id)}
+                onBack={item.question.order > 1 ? onQuestionBack : undefined}
                 variant="card"
               />
             </motion.div>
@@ -348,6 +353,7 @@ export function Conversation({
   items,
   onQuestionSubmit,
   onQuestionSkip,
+  onQuestionBack,
   onInsightContinue,
   onMaterialSubmit,
   onMaterialSkip,
@@ -377,6 +383,7 @@ export function Conversation({
             item={item}
             onQuestionSubmit={onQuestionSubmit}
             onQuestionSkip={onQuestionSkip}
+            onQuestionBack={onQuestionBack}
             onInsightContinue={onInsightContinue}
             onMaterialSubmit={onMaterialSubmit}
             onMaterialSkip={onMaterialSkip}
