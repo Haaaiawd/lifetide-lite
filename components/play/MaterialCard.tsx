@@ -100,7 +100,7 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
     return true;
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, _isRetry = false) => {
     if (!(await ensureConsent())) return;
 
     if (file.size > UPLOAD_MAX_SIZE) {
@@ -137,6 +137,18 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        // 403 "Upload consent required" — consent was lost (e.g. after login
+        // session changed). Reset consent state, re-request it, and retry
+        // the upload once. Don't loop infinitely.
+        if (res.status === 403 && !_isRetry) {
+          setConsentGiven(false);
+          const consentOk = await ensureConsent();
+          if (consentOk) {
+            // Remove the optimistic failed item before retrying
+            setUploads((prev) => prev.filter((u) => u.tempId !== tempId));
+            return uploadFile(file, true);
+          }
+        }
         const msg = data.error || "上传失败";
         setUploads((prev) => prev.map((u) =>
           u.tempId === tempId ? { ...u, status: "failed", error: msg, controller: undefined } : u
@@ -215,7 +227,7 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
     }
     const toUpload = Array.from(files).slice(0, remainingFiles);
     // Don't disable input — each file uploads independently
-    toUpload.forEach(uploadFile);
+    toUpload.forEach((f) => uploadFile(f));
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -227,7 +239,7 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
       pushToast("error", `最多上传 ${MAX_UPLOAD_FILES} 份材料`);
       return;
     }
-    Array.from(files).slice(0, remainingFiles).forEach(uploadFile);
+    Array.from(files).slice(0, remainingFiles).forEach((f) => uploadFile(f));
   };
 
   const removeUpload = async (tempId: string) => {
