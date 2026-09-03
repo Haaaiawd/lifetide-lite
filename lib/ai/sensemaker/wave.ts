@@ -173,7 +173,7 @@ function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposa
       ? `本波回答已记录：${answerSummary}。系统未能生成深入理解，将在下一波继续。`
       : "本波回答已记录，但系统未能生成深入理解。",
     current_reading: "目前信息不足以更新理解，需要更多具体场景和行为证据。",
-    important_unknown: focus ? focus.question : "下一波需要补充什么？",
+    important_unknown: focus ? focus.question : "我暂不知晓的是本波回答背后更具体的场景和动机，需要后续波次补充。",
     radar_deltas: [],
     route_impact: "没有新增路线影响。",
     evidence: links.slice(0, 3),
