@@ -148,7 +148,7 @@ export async function generatePortrait(
     prompt_version: PROMPT_VERSION,
     enableThinking: true,
     onPartial: options?.onPartial,
-    fixture: () => Promise.resolve(makeFixturePortrait()),
+    fixture: () => Promise.resolve(makeFixturePortrait(memory)),
   });
 
   return decoratePortrait(result, sessionId, provenanceId);

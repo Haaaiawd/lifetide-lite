@@ -613,10 +613,23 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        const nextMemory = applyMemoryOperations(memory, output.operations, {
-          wave_id,
-          generation_provenance_id: endProvenanceId,
-        });
+        // Apply memory operations. If operations contain invalid evidence
+        // references (AI hallucinated source_ids), fall back to empty operations
+        // rather than failing the entire wave — the insight is still valid,
+        // just without new claims/constraints/route-intents.
+        let nextMemory: WorkingMemory;
+        try {
+          nextMemory = applyMemoryOperations(memory, output.operations, {
+            wave_id,
+            generation_provenance_id: endProvenanceId,
+          });
+        } catch (opErr) {
+          console.error("Memory operations failed, using empty operations:", opErr instanceof Error ? opErr.message : "unknown");
+          nextMemory = applyMemoryOperations(memory, [], {
+            wave_id,
+            generation_provenance_id: endProvenanceId,
+          });
+        }
 
         if (nextMemory.uncertainties.length === 0) {
           seedUncertaintyIfEmpty(
