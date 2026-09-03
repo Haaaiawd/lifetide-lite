@@ -85,8 +85,8 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
       .catch(() => setConsentGiven(false));
   }, []);
 
-  const ensureConsent = async () => {
-    if (consentGiven) return true;
+  const ensureConsent = async (force = false) => {
+    if (consentGiven && !force) return true;
     const res = await fetch("/api/session/consent", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -138,13 +138,12 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
 
       if (!res.ok) {
         // 403 "Upload consent required" — consent was lost (e.g. after login
-        // session changed). Reset consent state, re-request it, and retry
-        // the upload once. Don't loop infinitely.
+        // session changed). Force-renew consent and retry the upload once.
+        // Use force=true because setConsentGiven(false) won't update the
+        // current closure's consentGiven value within the same tick.
         if (res.status === 403 && !_isRetry) {
-          setConsentGiven(false);
-          const consentOk = await ensureConsent();
+          const consentOk = await ensureConsent(true);
           if (consentOk) {
-            // Remove the optimistic failed item before retrying
             setUploads((prev) => prev.filter((u) => u.tempId !== tempId));
             return uploadFile(file, true);
           }
