@@ -382,10 +382,8 @@ export function buildFallbackParallelLivesPlan(
     session_id: sessionId,
     generation_provenance_id: provenanceId,
     schema_version: "parallel-lives.v3",
-    provisional,
-    framing: provisional
-      ? "这是根据你目前回答生成的三种可能，只是暂定路线，不是预测，也不是建议。"
-      : "这是根据你目前回答生成的三种可能，不是预测，也不是建议。",
+    provisional: false,
+    framing: "这是根据你目前回答生成的三种可能，不是预测，也不是建议。",
     blueprint: {
       current_coordinate: "站在继续积累和开始转向之间，两边都有吸引力但节奏不同。",
       key_tensions: ["稳定与探索之间的时间分配", "现有能力是否足以支撑新方向"],
@@ -484,7 +482,7 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
     "mode: parallel_lives",
     `session_id: ${memory.session_id}`,
     `memory_revision: ${memory.revision}`,
-    `provisional: ${input.provisional}`,
+    `provisional: false`,
     `stop_reason: ${input.stop_reason}`,
     "",
     memory.persona_portrait ? portraitToContext(memory.persona_portrait) : "=== 综合画像（persona portrait）===\n（暂未生成，请直接基于以下 claims 和 radar 生成）",

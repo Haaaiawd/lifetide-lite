@@ -24,6 +24,10 @@ type ProgressInfo = {
   hasPortrait: boolean;
   hasFinalPlan: boolean;
   hasPendingInsight: boolean;
+  hasPendingWave: boolean;
+  pendingWaveId: string | null;
+  pendingWaveIndex: number | null;
+  pendingWaveQuestions: InterviewQuestion[] | null;
   lastStep: "fresh" | "question" | "stop" | "portrait" | "routes" | "insight";
   lastInsight: ImmediateInsight | null;
 };
@@ -606,6 +610,29 @@ export default function PlayPage() {
         setStep("insight");
         return;
       }
+      // Restore mid-wave question view — a wave was generated but not
+      // yet submitted. Send the user back to answering questions instead
+      // of jumping to the stop page.
+      if (progressInfo.hasPendingWave && progressInfo.pendingWaveQuestions && progressInfo.pendingWaveId) {
+        const pwIndex = progressInfo.pendingWaveIndex ?? 0;
+        setQuestions(progressInfo.pendingWaveQuestions);
+        setWaveIndex(pwIndex);
+        setWaveId(progressInfo.pendingWaveId);
+        setQuestionIndex(0);
+        setAnswers({});
+        setInsight(null);
+        setItems([
+          { id: newId(), type: "bot", text: `第 ${pwIndex} 波，继续回答几个关键问题。` },
+        ]);
+        if (progressInfo.pendingWaveQuestions.length > 0) {
+          setItems((prev) => [
+            ...prev,
+            { id: newId(), type: "question", question: progressInfo.pendingWaveQuestions![0], total: progressInfo.pendingWaveQuestions!.length, isActive: true },
+          ]);
+        }
+        setStep("question");
+        return;
+      }
       // Otherwise go to stop (can generate portrait)
       if (progressInfo.waveIndex > 0) {
         setWaveIndex(progressInfo.waveIndex);
@@ -810,7 +837,7 @@ export default function PlayPage() {
         >
           <div className="flex flex-col gap-4 p-2">
             <p className="text-center text-ink-muted">
-              我们已经收集了足够的信息，可以生成三条平行的三年路线。
+              我们已经聊了几波，可以先生成个人画像，再继续生成三条平行的三年路线。也可以继续补充更多波次。
             </p>
             <div className="flex gap-3">
               <button

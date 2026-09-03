@@ -9,7 +9,7 @@ Generated: 2026-08-30
 | Exactly two runtime roles: Interviewer and Sensemaker. | `lib/ai/interviewer.ts` and `lib/ai/sensemaker/*` exist. No PersonaAuditor, Planner or Stop Agent found in runtime code. | healthy |
 | 72-cell persona / CoverageCell / PersonaSnapshot not a runtime gate. | Not referenced in TypeScript runtime or prompts. | healthy |
 | Progressive 5-10 elicitation units per wave, 1-3 questions per microbatch, ≤5 waves, ≤2 deep dives. | `lib/ai/interviewer.ts` still generates 3-5 questions as one batch; no elicitation-unit / microbatch concept in runtime. | drift |
-| Host owns stop/focus/caps; model proposes only. | `app/api/wave/route.ts` runs host stop logic (`MAX_WAVES = 4`, `MAX_QUESTIONS = 19`, `evaluateStop`). Model proposes `focus_uncertainty_id`. | partial drift (4 waves / 19 questions vs. canonical 5 / 10 per wave) |
+| Host owns stop/focus/caps; model proposes only. | `app/api/wave/route.ts` runs host stop logic (`MAX_WAVES = 5`, `MAX_QUESTIONS = 50`, `evaluateStop`). Model proposes `focus_uncertainty_id`. | aligned |
 | Six-dimension radar with five states, no scores. | `lib/working-memory/types.ts` still uses old `WorkingMemory` with evidence/constraints/uncertainties; no radar cells. | drift |
 | Route readiness is host-derived, not model output. | `evaluateStop` and `rankActiveUncertainties` in `lib/interview/uncertainty.ts` drive stop; not yet replaced by `deriveRouteReadiness`. | drift |
 | Bounded chat: four scopes, 20-turn limit, no ranking, no upload reading. | `lib/ai/sensemaker/chat.ts` matches v3 contract. | healthy |
@@ -35,7 +35,7 @@ Generated: 2026-08-30
 
 2. **Stop-cap contradiction**
    - Design: ≤5 waves, ≤10 actual questions per wave, ≤2 deep dives, host-governed formal/provisional readiness.
-   - Runtime: `MAX_WAVES = 4`, `MAX_QUESTIONS = 19`, `WorkingMemory.last_wave_index`.
+   - Runtime: `MAX_WAVES = 5`, `MAX_QUESTIONS = 50`, `WorkingMemory.last_wave_index`.
    - Action: move stop logic to host CAS path using `deriveRouteReadiness`; remove `evaluateStop`; update constants.
 
 3. **Radar / evidence model contradiction**

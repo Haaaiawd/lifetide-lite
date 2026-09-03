@@ -65,7 +65,7 @@ export function deriveRouteReadiness(
     formal_ready: false,
     provisional_allowed: false,
     provisional_requested: opts.provisional_requested ?? false,
-    evaluated_at_wave: 0 as unknown as RouteReadiness["evaluated_at_wave"],
+    evaluated_at_wave: 1 as RouteReadiness["evaluated_at_wave"],
     evaluated_at_revision: snapshot.stateHead.revision,
   };
 
@@ -178,7 +178,7 @@ export function deriveRouteReadiness(
   // For this initial implementation we use a simplified gate based on WorkingUnderstanding calibrations:
   // Real implementation will track closed-wave insights and calibration events explicitly.
   const submittedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration");
-  const skippedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration");
+  const skippedCalibrations = wu.source_versions.filter((v) => v.kind === "calibration" && v.untrusted);
   if (submittedCalibrations.length >= 2) {
     result.calibration = "met";
     for (const v of submittedCalibrations) {

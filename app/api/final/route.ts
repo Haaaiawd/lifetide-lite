@@ -100,15 +100,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Complete at least Wave 1 before generating plans" }, { status: 400 });
   }
 
+  if (!memory.persona_portrait) {
+    return NextResponse.json({ error: "Generate portrait before final plan", can_proceed: false }, { status: 409 });
+  }
+
   const config = getProviderConfig();
-  const provisional = memory.last_wave_index < 2;
-  const stopReason = provisional ? "sufficient" : "sufficient";
 
   const input: SensemakerFinalInput = {
     schema_version: "sensemaker.final.input.v3",
     memory,
-    stop_reason: stopReason,
-    provisional,
+    stop_reason: "sufficient",
+    provisional: false,
     prompt_version: "sensemaker.final.v3",
   };
 
@@ -124,13 +126,6 @@ export async function POST(request: NextRequest) {
       );
     }
     throw err;
-  }
-
-  if (!plan.provisional && memory.last_wave_index < 2) {
-    return NextResponse.json(
-      { error: "Formal plan requires at least Wave 2", can_proceed: false },
-      { status: 409 }
-    );
   }
 
   // Commit final-plan events to the XState ledger.
