@@ -123,7 +123,27 @@ export type PartialPortrait = Partial<PersonaPortraitProposal>;
 
 // ── Fixture helper for tests ──
 
-export function makeFixturePortrait(): PersonaPortraitProposal {
+/**
+ * Build a fixture portrait. When memory is provided, uses real active
+ * source_ids for evidence_ref. When memory is null (e.g. standalone tests),
+ * falls back to placeholder source_ids.
+ */
+export function makeFixturePortrait(memory?: { source_versions: { source_id: string; revision: number; kind: string; untrusted: boolean }[]; source_heads: { source_id: string; status: string; active_revision?: number }[] } | null): PersonaPortraitProposal {
+  // Collect active, trusted source_ids from memory.
+  const activeSources = memory
+    ? memory.source_versions.filter((sv) => {
+        const head = memory.source_heads.find((h) => h.source_id === sv.source_id);
+        return head?.status === "active" && head.active_revision === sv.revision && !sv.untrusted;
+      })
+    : [];
+
+  const sourceByIndex = (idx: number) => {
+    const sv = activeSources[idx];
+    return sv
+      ? { source_id: sv.source_id, source_revision: sv.revision }
+      : { source_id: `fixture-source-${idx}`, source_revision: 1 };
+  };
+
   return {
     trait_scales: [
       { dimension: "energy_mode", level: 2, label: "主要靠独处恢复" },
@@ -137,19 +157,19 @@ export function makeFixturePortrait(): PersonaPortraitProposal {
     behavioral_patterns: [
       {
         pattern: "晚上效率明显高于白天，但不会主动调整白天安排来配合这个节奏",
-        evidence_ref: { source_id: "w1-q5-a", source_revision: 1 },
+        evidence_ref: sourceByIndex(0),
         confidence: "medium",
       },
       {
         pattern: "课表固定时随大流，备考时能自己定作息——外部结构在时放松自我管理",
-        evidence_ref: { source_id: "w1-q4-a", source_revision: 1 },
+        evidence_ref: sourceByIndex(1),
         confidence: "high",
       },
     ],
     psychological_features: [
       {
         feature: "压力下倾向回避而不是求助，习惯自己扛到实在撑不住",
-        evidence_ref: { source_id: "w1-q6-a", source_revision: 1 },
+        evidence_ref: sourceByIndex(2),
       },
     ],
     relationship_mode:

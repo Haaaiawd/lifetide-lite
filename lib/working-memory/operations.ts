@@ -39,6 +39,23 @@ function active<T extends { status: string }>(arr: T[]): T[] {
   return arr.filter((x) => x.status === "active");
 }
 
+/**
+ * Validate that every EvidenceLink in the given array points to an active
+ * source version in WorkingMemory. Throws if any reference is missing or
+ * inactive — this prevents AI-generated claims/constraints/route-intents
+ * from silently citing non-existent sources.
+ */
+function validateEvidenceLinks(memory: WorkingMemory, evidence: EvidenceLink[], opLabel: string): void {
+  for (const link of evidence) {
+    const head = memory.source_heads.find((h) => h.source_id === link.source_id);
+    if (!head || head.status !== "active" || head.active_revision !== link.source_revision) {
+      throw new Error(
+        `${opLabel} references unknown or inactive source ${link.source_id}@${link.source_revision}`
+      );
+    }
+  }
+}
+
 function sourceRefForAnswer(answerId: string): SourceRef {
   return { source_id: answerId, source_revision: 1 };
 }
@@ -77,6 +94,7 @@ export function applyMemoryOperations(
     switch (operation.op) {
       case "add_claim": {
         const value = operation.value;
+        validateEvidenceLinks(next, value.evidence, "add_claim");
         const id = allocateId(next);
         const claim: Claim = {
           ...value,
@@ -91,6 +109,7 @@ export function applyMemoryOperations(
 
       case "supersede_claim": {
         const value = operation.value;
+        validateEvidenceLinks(next, value.evidence, "supersede_claim");
         const prior = findOrFail(next.claims, operation.prior_id);
         const id = allocateId(next);
         const claim: Claim = {
@@ -117,6 +136,7 @@ export function applyMemoryOperations(
 
       case "add_constraint": {
         const value = operation.value;
+        validateEvidenceLinks(next, value.evidence, "add_constraint");
         const id = allocateId(next);
         const constraint: Constraint = {
           ...value,
@@ -130,6 +150,7 @@ export function applyMemoryOperations(
 
       case "add_route_intent_seed": {
         const value = operation.value;
+        validateEvidenceLinks(next, value.evidence, "add_route_intent_seed");
         const id = allocateId(next);
         const intent: RouteIntent = {
           ...value,
