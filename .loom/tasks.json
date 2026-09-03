@@ -1369,15 +1369,75 @@
         "tests/integration/parallel-lives.test.ts",
         "tests/integration/harness-state.test.ts"
       ],
-      "status": "active",
+      "status": "open",
       "progress": {
-        "completed": [],
-        "current": "Planning the v3 runtime alignment",
-        "next": "Build the prompt loader and reconcile working-memory types with v3 contracts"
+        "completed": [
+          "Prompt loader (lib/ai/prompts/loader.ts) reads all prompts/*.md",
+          "composePrompt injects schema + six-dimension radar + envelope",
+          "All lib/ai/*.ts use composePrompt; no hardcoded prompt prose remains",
+          "prompt_version values are v3 across interviewer/sensemaker wave/final/chat",
+          "working-memory/types.ts re-exports v3 contract types",
+          "typecheck passes; 60 contract/unit tests pass"
+        ],
+        "current": "Awaiting formal verification of build-wave-patch.ts retirement and integration/E2E test updates",
+        "next": "Verify build-wave-patch.ts status; run full integration suite; close task"
       },
       "evidence": [],
       "created_at": "2026-09-01T02:12:49.108Z",
-      "updated_at": "2026-09-01T02:13:19.072Z"
+      "updated_at": "2026-09-03T00:00:00.000Z"
+    },
+    {
+      "id": "TASK-017",
+      "title": "Fix uncertainty/important_unknown contract mismatch and fallback hardcoded options",
+      "outcome": "The runtime separates the statement-shaped important_unknown (Sensemaker output) from the short-question-shaped Uncertainty.question, so fallback and interviewer prompts never embed a long statement as a question text. Fallback question options are no longer hardcoded literals with colliding ids across waves.",
+      "done_when": [
+        "`Uncertainty` type in `lib/working-memory/types.ts` carries an independent `topic` (statement, sourced from important_unknown) distinct from `question` (short question text used by fallback/interviewer); existing consumers are updated.",
+        "`seedUncertaintyIfEmpty` in `app/api/wave/route.ts` assigns `important_unknown` to `topic`, not `question`; `question` gets a short generic question derived from the topic or left for the Interviewer to generate.",
+        "`lib/interview/fallback.ts` no longer embeds `uncertainty.question` (or any long statement) inside question text templates; it uses `topic` as background context and a generic, human-readable question; option ids include wave_index to avoid collisions; option labels are not fixed identical literals every wave.",
+        "`lib/ai/interviewer.ts` fallback paths no longer assign `uncertainty.question` into `mission.important_unknown` or `mission.decision_to_improve`; they use `uncertainty.topic` or generate appropriate short text.",
+        "`lib/ai/sensemaker/wave.ts` fallback no longer assigns `focus.question` into `important_unknown`; uses `focus.topic` when available.",
+        "typecheck, build, lint, contract/unit tests (60) and integration suite all pass; no regression in wave-one, adaptive-waves, parallel-lives or harness-state tests."
+      ],
+      "boundaries": [
+        "Do not edit `prompts/*.md`; the prompt contract for important_unknown (statement shape) is correct.",
+        "Do not change the v3 contract schema in `lib/state/contracts.ts`; this is a runtime type + assignment fix.",
+        "Do not introduce a new model call just to generate fallback question text; keep fallback deterministic.",
+        "Preserve guest session, consent, upload and visual behavior."
+      ],
+      "depends_on": [
+        "TASK-009"
+      ],
+      "reads": [
+        ".loom/design/insight-plan-contracts.md",
+        ".loom/design/adaptive-interview-system.md",
+        "prompts/sensemaker-wave-v2.md",
+        "lib/working-memory/types.ts",
+        "lib/interview/fallback.ts",
+        "lib/interview/uncertainty.ts",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "app/api/wave/route.ts",
+        "tests/fixtures/build-memory.ts"
+      ],
+      "touches": [
+        "lib/working-memory/types.ts",
+        "lib/interview/fallback.ts",
+        "lib/ai/interviewer.ts",
+        "lib/ai/sensemaker/wave.ts",
+        "app/api/wave/route.ts",
+        "tests/fixtures/build-memory.ts",
+        "tests/integration/wave-one.test.ts",
+        "tests/integration/adaptive-waves.test.ts"
+      ],
+      "status": "active",
+      "progress": {
+        "completed": [],
+        "current": "Separating topic from question in Uncertainty type and fixing all assignment sites",
+        "next": "Run typecheck and full test suite"
+      },
+      "evidence": [],
+      "created_at": "2026-09-03T14:04:13.682Z",
+      "updated_at": "2026-09-03T14:04:13.683Z"
     }
   ]
 }
