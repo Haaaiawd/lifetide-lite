@@ -23,7 +23,6 @@ type UploadItem = {
   status: "uploading" | "parsing" | "preview_ready" | "ready" | "failed" | "cancelled";
   error?: string;
   previewText?: string;
-  pageImages?: string[];
   controller?: AbortController;
 };
 
@@ -119,11 +118,22 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
       controller,
     }]);
 
+    // For PDF/image files, the server does PDF→PNG→OCR which takes time.
+    // Switch the UI label from "上传中" to "解析中" after 3s so the user
+    // knows the server is processing, not stuck uploading.
+    const isPdfOrImage = /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name);
+    const statusTimer = isPdfOrImage ? setTimeout(() => {
+      setUploads((prev) => prev.map((u) =>
+        u.tempId === tempId && u.status === "uploading" ? { ...u, status: "parsing" } : u
+      ));
+    }, 3000) : null;
+
     const form = new FormData();
     form.append("file", file);
 
     try {
       const res = await fetch("/api/uploads", { method: "POST", body: form, signal: controller.signal });
+      if (statusTimer) clearTimeout(statusTimer);
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -139,7 +149,6 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
         const serverId = data.upload.id;
         const serverStatus = data.upload.status;
         const previewText = data.upload.preview?.text ?? "";
-        const pageImages = data.upload.preview?.pageImages ?? [];
 
         // Map server status to our UI status
         const uiStatus: UploadItem["status"] =
@@ -154,7 +163,6 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
             serverId,
             status: uiStatus,
             previewText,
-            pageImages,
             error: uiStatus === "failed" ? data.upload.error : undefined,
             controller: undefined,
           } : u
@@ -167,6 +175,7 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
         pushToast("success", `${file.name} ${uiStatus === "ready" ? "上传成功" : "解析完成，待确认"}`);
       }
     } catch (err) {
+      if (statusTimer) clearTimeout(statusTimer);
       if (err instanceof DOMException && err.name === "AbortError") {
         // Already handled by cancelUpload — just ensure it's marked cancelled
         return;
@@ -462,20 +471,6 @@ export function MaterialCard({ onSubmit, onSkip }: MaterialCardProps) {
                 {/* Error message */}
                 {upload.status === "failed" && upload.error && (
                   <p className="mt-1 text-xs text-danger">{upload.error}</p>
-                )}
-
-                {/* Preview images (for preview_ready) */}
-                {upload.status === "preview_ready" && upload.pageImages && upload.pageImages.length > 0 && (
-                  <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-                    {upload.pageImages.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt={`${upload.fileName} 第 ${i + 1} 页`}
-                        className="h-32 w-auto rounded-sm border border-ink object-contain"
-                      />
-                    ))}
-                  </div>
                 )}
 
                 {/* Editable text (for preview_ready) */}

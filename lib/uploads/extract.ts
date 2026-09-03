@@ -4,7 +4,6 @@ import { extractTextFromImageBase64 } from "@/lib/ai/vision";
 
 export type ExtractionResult = {
   previewText: string;
-  pageImages: string[];
 };
 
 function toDataUrl(mime: string, buffer: Buffer): string {
@@ -19,19 +18,19 @@ export async function extractFromBuffer(
   if (parser === "image") {
     const dataUrl = toDataUrl(mime, buffer);
     const result = await extractTextFromImageBase64([dataUrl]);
-    return { previewText: result.text, pageImages: [dataUrl] };
+    return { previewText: result.text };
   }
 
   if (parser === "pdf") {
     const pngs = await convertPdfToPng(buffer);
     const dataUrls = pngs.map((b) => toDataUrl("image/png", b));
     const result = await extractTextFromImageBase64(dataUrls);
-    return { previewText: result.text, pageImages: dataUrls };
+    return { previewText: result.text };
   }
 
   if (parser === "docx") {
     const raw = await mammoth.extractRawText({ buffer });
-    return { previewText: raw.value, pageImages: [] };
+    return { previewText: raw.value };
   }
 
   if (parser === "json") {
@@ -51,13 +50,13 @@ export async function extractFromBuffer(
       } else {
         text = String(parsed);
       }
-      return { previewText: text, pageImages: [] };
+      return { previewText: text };
     } catch {
-      return { previewText: buffer.toString("utf-8"), pageImages: [] };
+      return { previewText: buffer.toString("utf-8") };
     }
   }
 
-  return { previewText: buffer.toString("utf-8"), pageImages: [] };
+  return { previewText: buffer.toString("utf-8") };
 }
 
 async function convertPdfToPng(buffer: Buffer): Promise<Buffer[]> {
