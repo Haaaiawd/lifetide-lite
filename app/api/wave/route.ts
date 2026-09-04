@@ -330,8 +330,15 @@ export async function GET(request: NextRequest) {
     for (const q of qs) recentQuestionTexts.push(q.text);
   }
 
-  const relevantEvidence = activeSourceVersions(memory)
-    .filter((sv) => sv.kind === "question_answer")
+  const activeSources = activeSourceVersions(memory);
+  const relatedSourceIds = new Set(uncertainty.related_evidence.map((e) => e.source_id));
+  const relevantEvidence = activeSources
+    .sort((a, b) => {
+      const aRel = relatedSourceIds.has(a.source_id) ? 1 : 0;
+      const bRel = relatedSourceIds.has(b.source_id) ? 1 : 0;
+      if (aRel !== bRel) return bRel - aRel;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    })
     .slice(0, 8);
   const relevantConstraints = memory.constraints.filter((c) => c.status === "active").slice(0, 4);
   const latestFeedback = memory.recent_feedback[memory.recent_feedback.length - 1];
