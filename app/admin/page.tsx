@@ -563,17 +563,20 @@ export default function AdminPage() {
                       <span>· {c.createdAt.slice(0, 10)}</span>
                     </div>
                   </div>
-                  {/* Usage bar */}
+                  {/* Usage bar — capped at 20 segments to avoid DOM explosion on large maxUses */}
                   <div className="hidden w-24 sm:block">
                     <div className="flex gap-0.5">
-                      {Array.from({ length: c.maxUses }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-3 flex-1 border border-ink/30 ${
-                            i < c.usedCount ? "bg-purple" : "bg-paper"
-                          }`}
-                        />
-                      ))}
+                      {Array.from({ length: Math.min(c.maxUses, 20) }).map((_, i) => {
+                        const filledCount = Math.round((c.usedCount / c.maxUses) * Math.min(c.maxUses, 20));
+                        return (
+                          <div
+                            key={i}
+                            className={`h-3 flex-1 border border-ink/30 ${
+                              i < filledCount ? "bg-purple" : "bg-paper"
+                            }`}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                   <button

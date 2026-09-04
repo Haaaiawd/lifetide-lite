@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
       maxAge: AUTH_TOKEN_TTL / 1000,
     });
     return response;
-  } catch (err) {
+  } catch (err: any) {
+    // P2002 = unique constraint violation (concurrent same-email registration)
+    if (err?.code === "P2002") {
+      return NextResponse.json({ error: "该邮箱已注册" }, { status: 409 });
+    }
     const message = err instanceof Error ? err.message : "注册失败";
     const status =
       message === "该邮箱已注册" ? 409 :
