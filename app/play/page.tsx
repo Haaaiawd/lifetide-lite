@@ -825,9 +825,15 @@ export default function PlayPage() {
           className="shrink-0 border-t-2 border-ink bg-paper p-4"
         >
           <div className="flex flex-col gap-4 p-2">
-            <p className="text-center text-ink-muted">
-              我们已经聊了几波，可以先生成个人画像，再继续生成三条平行的三年路线。也可以继续补充更多波次。
-            </p>
+            {waveIndex >= 8 ? (
+              <p className="text-center text-ink-muted">
+                已经聊完 {waveIndex} 波，六维观察已经充分收集。可以生成个人画像了。
+              </p>
+            ) : (
+              <p className="text-center text-ink-muted">
+                已经聊了 {waveIndex} 波。建议聊到 8 波再生成画像，理解会更完整；但如果你觉得够了，现在也可以生成。
+              </p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -836,13 +842,15 @@ export default function PlayPage() {
               >
                 生成个人画像
               </button>
-              <button
-                type="button"
-                onClick={() => loadWave()}
-                className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
-              >
-                继续下一波
-              </button>
+              {waveIndex < 8 && (
+                <button
+                  type="button"
+                  onClick={() => loadWave()}
+                  className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+                >
+                  继续下一波（{waveIndex}/8）
+                </button>
+              )}
             </div>
             <a
               href="/play/upload"

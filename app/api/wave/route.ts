@@ -29,7 +29,7 @@ import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty,
 import { loadUploadChunks } from "@/lib/uploads/load-chunks";
 import type { NextRequest } from "next/server";
 
-const MAX_WAVES = 6;
+const MAX_WAVES = 8;
 const MAX_QUESTIONS = 50;
 
 function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolean {
@@ -837,6 +837,8 @@ export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): 
 
   // Sufficient for final after at least four waves (wave1 is fixed template,
   // so AI-driven waves 2-4 must have had a chance to cover the radar).
+  // Recommended: 8 waves for full six-dimensional coverage, but allow early
+  // stop at 4 if route intents and evidence are already sufficient.
   if (memory.last_wave_index >= 4 && hasRouteIntents && hasEvidence) {
     return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
   }
