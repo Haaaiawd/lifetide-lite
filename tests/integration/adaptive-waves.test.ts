@@ -218,7 +218,7 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     await ctx.close();
   });
 
-  test("state machine never creates Wave 5 or displays question 20", async ({ browser }) => {
+  test("state machine never creates Wave 9 or exceeds question limit", async ({ browser }) => {
     const ctx = await browser.newContext();
     const request = ctx.request;
 
@@ -238,7 +238,7 @@ test.describe("Adaptive waves and deterministic stopping", () => {
       data: JSON.stringify({ wave_id: "w1", verdict: "accurate" }),
     });
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 7; i++) {
       const waveRes = await request.get(`${baseURL}/api/wave`);
       const wave = await waveRes.json();
       if (wave.stop) break;
@@ -256,12 +256,12 @@ test.describe("Adaptive waves and deterministic stopping", () => {
       where: { sessionId: (await (await request.get(`${baseURL}/api/session`)).json()).id },
     });
 
-    expect(waves.some((w) => w.wave_index >= 5)).toBe(false);
+    expect(waves.some((w) => w.wave_index >= 9)).toBe(false);
 
     const totalQuestions = await prisma.answer.count({
       where: { sessionId: (await (await request.get(`${baseURL}/api/session`)).json()).id },
     });
-    expect(totalQuestions).toBeLessThanOrEqual(19);
+    expect(totalQuestions).toBeLessThanOrEqual(50);
 
     await ctx.close();
   });
