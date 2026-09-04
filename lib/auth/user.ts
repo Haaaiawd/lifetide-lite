@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { hash, compare } from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
-import type { Session } from "@prisma/client";
+import type { Session, Prisma } from "@prisma/client";
 
 export const AUTH_TOKEN_COOKIE = "auth-token";
 export const AUTH_TOKEN_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -55,7 +55,11 @@ export async function verifyAuthToken(token: string): Promise<AuthUser | null> {
 
 // ── Registration / Login ──
 
-export async function registerUser(email: string, password: string): Promise<AuthResult> {
+export async function registerUser(
+  email: string,
+  password: string,
+  registeredVia: string = "admin_invite",
+): Promise<AuthResult> {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw new Error("该邮箱已注册");
@@ -63,11 +67,27 @@ export async function registerUser(email: string, password: string): Promise<Aut
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash },
+    data: { email, passwordHash, registeredVia },
   });
 
   const token = await signAuthToken(user.id, user.email);
   return { user: { id: user.id, email: user.email }, token };
+}
+
+/**
+ * Create a user within an existing transaction.
+ * Caller is responsible for email uniqueness and password hashing.
+ */
+export async function createUserInTx(
+  tx: Prisma.TransactionClient,
+  email: string,
+  passwordHash: string,
+  registeredVia: string,
+): Promise<{ id: string; email: string }> {
+  const user = await tx.user.create({
+    data: { email, passwordHash, registeredVia },
+  });
+  return { id: user.id, email: user.email };
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResult> {

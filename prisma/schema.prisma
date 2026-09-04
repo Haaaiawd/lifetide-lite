@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  banned       Boolean   @default(false)
-  bannedAt     DateTime?
-  sessions     Session[]
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  createdAt      DateTime  @default(now())
+  banned         Boolean   @default(false)
+  bannedAt       DateTime?
+  registeredVia  String    @default("admin_invite")
+  sessions       Session[]
 }
 
 model InviteCode {
@@ -26,6 +27,7 @@ model InviteCode {
   createdAt  DateTime @default(now())
   createdBy  String?
   exhausted  Boolean  @default(false)
+  source     String   @default("admin")
 
   @@index([code])
 }
