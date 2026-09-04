@@ -14,7 +14,6 @@ model User {
   createdAt      DateTime  @default(now())
   banned         Boolean   @default(false)
   bannedAt       DateTime?
-  registeredVia  String    @default("admin_invite")
   sessions       Session[]
 }
 
@@ -27,7 +26,7 @@ model InviteCode {
   createdAt  DateTime @default(now())
   createdBy  String?
   exhausted  Boolean  @default(false)
-  source     String   @default("admin")
+  source     String   @default("admin") // "admin" | "social"
 
   @@index([code])
 }
