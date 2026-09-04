@@ -798,26 +798,6 @@ export default function PlayPage() {
     );
   }
 
-  if (step === "waiting") {
-    return (
-      <div className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden">
-        <Conversation
-          items={items}
-          onQuestionSubmit={handleQuestionSubmit}
-          onQuestionSkip={handleQuestionSkip}
-          onQuestionBack={handleQuestionBack}
-          onInsightContinue={handleInsightContinue}
-          onMaterialSubmit={handleMaterialSubmit}
-          onMaterialSkip={handleMaterialSkip}
-          className="flex-1 min-h-0"
-        />
-        <div className="shrink-0 border-t-2 border-ink/10 bg-paper/50 p-4">
-          <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden">
       <Conversation
@@ -830,6 +810,12 @@ export default function PlayPage() {
         onMaterialSkip={handleMaterialSkip}
         className="flex-1 min-h-0"
       />
+
+      {step === "waiting" && (
+        <div className="shrink-0 border-t-2 border-ink/10 bg-paper/50 p-4">
+          <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
+        </div>
+      )}
 
       {step === "stop" && (
         <motion.div
