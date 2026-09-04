@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import { generateStructured } from "@/lib/ai/client";
-import { composePrompt } from "@/lib/ai/prompts/compose";
+import { composePrompt, buildProgressSummary } from "@/lib/ai/prompts/compose";
 import { defaultFallbackQuestions } from "@/lib/interview/fallback";
 import type { InterviewerInput, InterviewerOutput, InterviewQuestion, WorkingMemory } from "@/lib/working-memory/types";
 import type { ElicitationUnitProposal, InterviewerProposal, OpeningQuestionProposal, QuestionContentProposal } from "@/lib/state/contracts";
@@ -83,6 +83,9 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     `selected_uncertainty_topic: ${unc.topic}`,
     `selected_uncertainty_question: ${unc.question}`,
     `selected_uncertainty_plan_consequence: ${unc.plan_consequence}`,
+    "",
+    "=== 进度概览 ===",
+    buildProgressSummary(memory, input.next_wave_index),
     "",
     "=== 六维雷达当前状态 ===",
     radar || "（暂无）",

@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { waveSensemakerProposalSchema, immediateInsightProposalSchema, memoryOperationProposalSchema } from "@/lib/state/contracts";
 import { generateStructured, streamStructured } from "@/lib/ai/client";
-import { composePrompt } from "@/lib/ai/prompts/compose";
+import { composePrompt, buildProgressSummary } from "@/lib/ai/prompts/compose";
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
 import type {
   SensemakerWaveInput,
@@ -109,6 +109,9 @@ function buildWaveEnvelope(input: SensemakerWaveInput): string {
     `focus_uncertainty_id: ${input.focus_uncertainty_id ?? "（无）"}`,
     `focus_uncertainty_topic: ${focus ? focus.topic : "（首波模板，无单一焦点）"}`,
     `expected_base_revision: ${input.memory.revision}`,
+    "",
+    "=== 进度概览 ===",
+    buildProgressSummary(input.memory, input.wave_index),
     "",
     "=== 用户回答 ===",
     answered || "（本波全部跳过）",
