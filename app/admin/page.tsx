@@ -276,6 +276,32 @@ export default function AdminPage() {
     }
   }
 
+  // Debug export
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  async function handleExport(sessionId: string, format: "txt" | "json") {
+    setExportingId(sessionId);
+    try {
+      const res = await fetch(
+        `/api/admin/debug/export?session_id=${sessionId}&format=${format}`,
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("content-disposition") ?? "";
+      const match = disposition.match(/filename="(.+?)"/);
+      a.download = match ? match[1] : `debug_${sessionId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingId(null);
+    }
+  }
+
   if (authError) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
