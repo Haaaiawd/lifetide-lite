@@ -131,3 +131,57 @@ export async function createOrUpdateStarCampaign(opts: {
   });
   return created;
 }
+
+// --- Social campaign helpers ---
+
+export async function getSocialCampaign(): Promise<{
+  id: string;
+  code: string;
+  maxUses: number;
+  usedCount: number;
+  remaining: number;
+  exhausted: boolean;
+} | null> {
+  const record = await prisma.inviteCode.findFirst({
+    where: { source: "social" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!record) return null;
+  return {
+    id: record.id,
+    code: record.code,
+    maxUses: record.maxUses,
+    usedCount: record.usedCount,
+    remaining: Math.max(0, record.maxUses - record.usedCount),
+    exhausted: record.exhausted,
+  };
+}
+
+export async function createOrUpdateSocialCampaign(opts: {
+  maxUses: number;
+  createdBy?: string;
+}): Promise<{ id: string; code: string; maxUses: number }> {
+  const existing = await prisma.inviteCode.findFirst({ where: { source: "social" } });
+  if (existing) {
+    const updated = await prisma.inviteCode.update({
+      where: { id: existing.id },
+      data: {
+        maxUses: opts.maxUses,
+        exhausted: existing.usedCount >= opts.maxUses,
+      },
+    });
+    return { id: updated.id, code: updated.code, maxUses: updated.maxUses };
+  }
+
+  const created = await createInviteCode({
+    maxUses: opts.maxUses,
+    note: "Social campaign (GitHub Star / 小红书 Follow)",
+    createdBy: opts.createdBy,
+  });
+  // Mark source as social
+  await prisma.inviteCode.update({
+    where: { id: created.id },
+    data: { source: "social" },
+  });
+  return created;
+}
