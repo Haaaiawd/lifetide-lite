@@ -185,6 +185,27 @@ export type BurdenSignals = {
   user_requested_shorter: boolean;
 };
 
+// Runtime-only: complete per-wave history transmitted to the interviewer so it
+// can build on every prior question, answer, and sensemaker insight instead of
+// only the most recent wave. Not part of the v3 WorkingUnderstanding contract.
+export type WaveHistoryEntry = {
+  wave_id: Id;
+  wave_index: number;
+  questions: InterviewQuestion[];
+  answers: {
+    question_id: Id;
+    question_text: string;
+    answer_text: string;
+    skipped: boolean;
+  }[];
+  insight?: {
+    user_told_me?: string;
+    current_reading?: string;
+    important_unknown?: string;
+    route_impact?: string;
+  };
+};
+
 export type InterviewerInput = {
   schema_version: "interviewer.input.v3";
   session_id: Id;
@@ -198,9 +219,13 @@ export type InterviewerInput = {
   latest_feedback?: InsightFeedback;
   recent_feedback?: InsightFeedback[];
   recent_question_texts: string[];
-  // Q&A text from the most recent completed wave, so the Interviewer can
-  // avoid repeating similar questions and build on actual answers.
+  // Q&A text from the most recent completed wave, kept for backwards compat.
+  // Prefer `full_history` for a complete, wave-by-wave view.
   last_wave_answers?: { question_text: string; answer_text: string }[];
+  // Complete per-wave history: every prior question, user answer, and the
+  // sensemaker insight produced for that wave. The interviewer should use this
+  // as its primary memory and avoid repeating already-answered directions.
+  full_history: WaveHistoryEntry[];
   upload_chunks?: UploadChunk[];
   burden: BurdenSignals;
   prompt_version: string;
