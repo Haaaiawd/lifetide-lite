@@ -51,9 +51,8 @@ export async function POST(request: NextRequest) {
         throw new Error("邀请码无效或已用完");
       }
 
-      const registeredVia = codeSource === "star" ? "star" : "admin_invite";
-      const user = await createUserInTx(tx, email, passwordHash, registeredVia);
-      return { user, registeredVia };
+      const user = await createUserInTx(tx, email, passwordHash);
+      return { user };
     });
 
     const token = await signAuthToken(result.user.id, result.user.email);

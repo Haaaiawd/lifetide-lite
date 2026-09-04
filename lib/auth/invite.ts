@@ -6,7 +6,7 @@ type PrismaTransaction = Prisma.TransactionClient;
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing chars (0/O, 1/I)
 
-export type InviteSource = "admin" | "star";
+export type InviteSource = "admin" | "social";
 
 export function generateCode(length: number = 8): string {
   const bytes = randomBytes(length);
@@ -77,57 +77,9 @@ export async function consumeInviteCodeInTx(
   return record.source as InviteSource;
 }
 
-// --- Star campaign helpers ---
-
-export async function getStarCampaign(): Promise<{
-  id: string;
-  code: string;
-  maxUses: number;
-  usedCount: number;
-  remaining: number;
-  exhausted: boolean;
-} | null> {
-  const record = await prisma.inviteCode.findFirst({
-    where: { source: "star" },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!record) return null;
-  return {
-    id: record.id,
-    code: record.code,
-    maxUses: record.maxUses,
-    usedCount: record.usedCount,
-    remaining: Math.max(0, record.maxUses - record.usedCount),
-    exhausted: record.exhausted,
-  };
-}
-
-export async function createOrUpdateStarCampaign(opts: {
-  maxUses: number;
-  createdBy?: string;
-}): Promise<{ id: string; code: string; maxUses: number }> {
-  const existing = await prisma.inviteCode.findFirst({ where: { source: "star" } });
-  if (existing) {
-    const updated = await prisma.inviteCode.update({
-      where: { id: existing.id },
-      data: {
-        maxUses: opts.maxUses,
-        exhausted: existing.usedCount >= opts.maxUses,
-      },
-    });
-    return { id: updated.id, code: updated.code, maxUses: updated.maxUses };
-  }
-
-  const created = await createInviteCode({
-    maxUses: opts.maxUses,
-    source: "star",
-    note: "GitHub Star campaign",
-    createdBy: opts.createdBy,
-  });
-  return created;
-}
-
 // --- Social campaign helpers ---
+// One campaign, two platform entry points (GitHub Star + 小红书 Follow).
+// Both platforms share the same code and quota.
 
 export async function getSocialCampaign(): Promise<{
   id: string;
@@ -173,13 +125,9 @@ export async function createOrUpdateSocialCampaign(opts: {
 
   const created = await createInviteCode({
     maxUses: opts.maxUses,
+    source: "social",
     note: "Social campaign (GitHub Star / 小红书 Follow)",
     createdBy: opts.createdBy,
-  });
-  // Mark source as social
-  await prisma.inviteCode.update({
-    where: { id: created.id },
-    data: { source: "social" },
   });
   return created;
 }

@@ -57,7 +57,6 @@ type AdminUser = {
   createdAt: string;
   banned: boolean;
   bannedAt: string | null;
-  registeredVia: string;
   lastSessionAt: string | null;
 };
 
@@ -103,8 +102,8 @@ export default function AdminPage() {
   const [userLoading, setUserLoading] = useState(false);
   const [banActionId, setBanActionId] = useState<string | null>(null);
 
-  // Star campaign
-  type StarCampaign = {
+  // Social campaign
+  type SocialCampaign = {
     enabled: boolean;
     campaign: {
       id: string;
@@ -115,9 +114,9 @@ export default function AdminPage() {
       exhausted: boolean;
     } | null;
   };
-  const [starCampaign, setStarCampaign] = useState<StarCampaign | null>(null);
-  const [starMaxUses, setStarMaxUses] = useState(50);
-  const [starSaving, setStarSaving] = useState(false);
+  const [socialCampaign, setSocialCampaign] = useState<SocialCampaign | null>(null);
+  const [socialMaxUses, setSocialMaxUses] = useState(50);
+  const [socialSaving, setSocialSaving] = useState(false);
 
   const loadLogs = useCallback(async (filter: "error" | "all") => {
     try {
@@ -215,14 +214,14 @@ export default function AdminPage() {
     setTimeout(() => setCopiedCode(null), 1500);
   }
 
-  const loadStarCampaign = useCallback(async () => {
+  const loadSocialCampaign = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/invite-codes/star");
+      const res = await fetch("/api/admin/invite-codes/social");
       if (res.ok) {
         const data = await res.json();
-        setStarCampaign(data);
+        setSocialCampaign(data);
         if (data.campaign) {
-          setStarMaxUses(data.campaign.maxUses);
+          setSocialMaxUses(data.campaign.maxUses);
         }
       }
     } catch {}
@@ -230,49 +229,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (tab === "invites") {
-      loadStarCampaign();
+      loadSocialCampaign();
     }
-  }, [tab, loadStarCampaign]);
+  }, [tab, loadSocialCampaign]);
 
-  async function handleSaveStarCampaign() {
-    setStarSaving(true);
+  async function handleSaveSocialCampaign() {
+    setSocialSaving(true);
     try {
-      const res = await fetch("/api/admin/invite-codes/star", {
+      const res = await fetch("/api/admin/invite-codes/social", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ maxUses: starMaxUses }),
+        body: JSON.stringify({ maxUses: socialMaxUses }),
       });
       if (res.ok) {
-        await Promise.all([loadStarCampaign(), loadStats()]);
+        await Promise.all([loadSocialCampaign(), loadStats()]);
       }
     } finally {
-      setStarSaving(false);
-    }
-  }
-
-  // Debug export
-  const [exportingId, setExportingId] = useState<string | null>(null);
-
-  async function handleExport(sessionId: string, format: "txt" | "json") {
-    setExportingId(sessionId);
-    try {
-      const res = await fetch(
-        `/api/admin/debug/export?session_id=${sessionId}&format=${format}`,
-      );
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const disposition = res.headers.get("content-disposition") ?? "";
-      const match = disposition.match(/filename="(.+?)"/);
-      a.download = match ? match[1] : `debug_${sessionId}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExportingId(null);
+      setSocialSaving(false);
     }
   }
 
@@ -430,30 +403,30 @@ export default function AdminPage() {
       {/* Invites tab */}
       {tab === "invites" && (
         <div className="space-y-4">
-          {/* Star campaign management */}
+          {/* Social campaign management */}
           <div className="border-2 border-purple/40 bg-purple-soft/30 p-4 shadow-sm">
             <h3 className="mb-3 font-serif text-sm font-medium">
-              GitHub Star 活动名额
+              社交活动名额（GitHub Star / 小红书关注）
             </h3>
-            {starCampaign?.campaign ? (
+            {socialCampaign?.campaign ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-xs">
                   <code className="font-mono text-base font-bold tracking-wider text-purple">
-                    {starCampaign.campaign.code}
+                    {socialCampaign.campaign.code}
                   </code>
                   <button
                     type="button"
-                    onClick={() => copyCode(starCampaign.campaign!.code)}
+                    onClick={() => copyCode(socialCampaign.campaign!.code)}
                     className="text-xs text-cobalt hover:underline"
                   >
-                    {copiedCode === starCampaign.campaign.code ? "已复制" : "复制"}
+                    {copiedCode === socialCampaign.campaign.code ? "已复制" : "复制"}
                   </button>
                   <span className="text-ink-muted">
-                    {starCampaign.campaign.usedCount} / {starCampaign.campaign.maxUses} 已用
+                    {socialCampaign.campaign.usedCount} / {socialCampaign.campaign.maxUses} 已用
                     {" · "}
-                    剩余 {starCampaign.campaign.remaining}
+                    剩余 {socialCampaign.campaign.remaining}
                   </span>
-                  {starCampaign.campaign.exhausted && (
+                  {socialCampaign.campaign.exhausted && (
                     <span className="border border-danger/40 bg-danger-soft/50 px-1.5 py-0.5 text-[10px] text-danger">
                       已用完
                     </span>
@@ -466,30 +439,28 @@ export default function AdminPage() {
                       type="number"
                       min={1}
                       max={10000}
-                      value={starMaxUses}
-                      onChange={(e) => setStarMaxUses(Number(e.target.value))}
+                      value={socialMaxUses}
+                      onChange={(e) => setSocialMaxUses(Number(e.target.value))}
                       className="w-28 border-2 border-ink bg-paper px-3 py-2 text-sm outline-none focus:border-cobalt"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={handleSaveStarCampaign}
-                    disabled={starSaving}
+                    onClick={handleSaveSocialCampaign}
+                    disabled={socialSaving}
                     className="border-2 border-ink bg-purple px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm disabled:opacity-50"
                   >
-                    {starSaving ? "保存中..." : "保存名额"}
+                    {socialSaving ? "保存中..." : "保存名额"}
                   </button>
                 </div>
                 <p className="text-xs text-ink-muted">
-                  用户在注册页点「我已 Star」后会获取此邀请码。调高名额 = 增加可用 slot；
-                  调到当前已用量 = 停止发放。
+                  用户在注册页点「去 GitHub」或「去小红书」后，回来点确认即可获取此邀请码。
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-ink-muted">
-                  还没有 Star 活动邀请码。设置一个名额数即可创建，用户就能在注册页通过
-                  GitHub Star 获取邀请码。
+                  还没有社交活动邀请码。设置一个名额数即可创建。
                 </p>
                 <div className="flex items-end gap-3">
                   <div>
@@ -498,18 +469,18 @@ export default function AdminPage() {
                       type="number"
                       min={1}
                       max={10000}
-                      value={starMaxUses}
-                      onChange={(e) => setStarMaxUses(Number(e.target.value))}
+                      value={socialMaxUses}
+                      onChange={(e) => setSocialMaxUses(Number(e.target.value))}
                       className="w-28 border-2 border-ink bg-paper px-3 py-2 text-sm outline-none focus:border-cobalt"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={handleSaveStarCampaign}
-                    disabled={starSaving}
+                    onClick={handleSaveSocialCampaign}
+                    disabled={socialSaving}
                     className="border-2 border-ink bg-purple px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm disabled:opacity-50"
                   >
-                    {starSaving ? "创建中..." : "创建 Star 活动"}
+                    {socialSaving ? "创建中..." : "创建社交活动"}
                   </button>
                 </div>
               </div>
@@ -583,9 +554,9 @@ export default function AdminPage() {
                           已用完
                         </span>
                       )}
-                      {c.source === "star" && (
+                      {c.source === "social" && (
                         <span className="border border-purple/40 bg-purple-soft/50 px-1.5 py-0.5 text-[10px] text-purple">
-                          Star 活动
+                          社交活动
                         </span>
                       )}
                       {c.note && <span>· {c.note}</span>}
@@ -647,11 +618,6 @@ export default function AdminPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{u.email}</span>
-                    {u.registeredVia === "star" && (
-                      <span className="shrink-0 border border-purple/40 bg-purple-soft/50 px-1.5 py-0.5 text-[10px] text-purple">
-                        Star 注册
-                      </span>
-                    )}
                     {u.banned && (
                       <span className="shrink-0 border border-danger/40 bg-danger-soft/50 px-1.5 py-0.5 text-[10px] text-danger">
                         已封禁

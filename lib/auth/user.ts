@@ -55,25 +55,6 @@ export async function verifyAuthToken(token: string): Promise<AuthUser | null> {
 
 // ── Registration / Login ──
 
-export async function registerUser(
-  email: string,
-  password: string,
-  registeredVia: string = "admin_invite",
-): Promise<AuthResult> {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    throw new Error("该邮箱已注册");
-  }
-
-  const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
-    data: { email, passwordHash, registeredVia },
-  });
-
-  const token = await signAuthToken(user.id, user.email);
-  return { user: { id: user.id, email: user.email }, token };
-}
-
 /**
  * Create a user within an existing transaction.
  * Caller is responsible for email uniqueness and password hashing.
@@ -82,10 +63,9 @@ export async function createUserInTx(
   tx: Prisma.TransactionClient,
   email: string,
   passwordHash: string,
-  registeredVia: string,
 ): Promise<{ id: string; email: string }> {
   const user = await tx.user.create({
-    data: { email, passwordHash, registeredVia },
+    data: { email, passwordHash },
   });
   return { id: user.id, email: user.email };
 }
