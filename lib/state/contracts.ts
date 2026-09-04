@@ -292,7 +292,7 @@ export type Wave = z.infer<typeof waveSchema>;
 
 export const elicitationUnitProposalSchema = z.object({
   decision_target: z.string().min(1),
-  target_dimensions: z.array(radarDimensionSchema),
+  target_dimensions: z.array(radarDimensionSchema).min(1).max(3),
   precovered_by: z.array(sourceRefSchema),
 });
 export type ElicitationUnitProposal = z.infer<typeof elicitationUnitProposalSchema>;
