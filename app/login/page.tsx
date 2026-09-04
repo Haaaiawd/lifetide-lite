@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { PixelIcon } from "@/components/art/PixelIcon";
 
 type Mode = "login" | "register";
+
+const GITHUB_REPO_URL =
+  process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/Haaaiawd/lifetide-lite";
+
+interface StarStatus {
+  enabled: boolean;
+  remaining: number;
+  total: number;
+  used: number;
+  code: string | null;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +27,54 @@ export default function LoginPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Star campaign state
+  const [starStatus, setStarStatus] = useState<StarStatus | null>(null);
+  const [starLoading, setStarLoading] = useState(false);
+  const [starMessage, setStarMessage] = useState<string | null>(null);
+
+  const fetchStarStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/invite/star");
+      if (res.ok) {
+        const data = await res.json();
+        setStarStatus(data);
+      }
+    } catch {
+      // silently ignore — star section is optional
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode === "register") {
+      fetchStarStatus();
+    }
+  }, [mode, fetchStarStatus]);
+
+  async function handleGetStarCode() {
+    setStarLoading(true);
+    setStarMessage(null);
+    try {
+      const res = await fetch("/api/invite/star", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.code) {
+        setInviteCode(data.code);
+        setStarMessage("邀请码已填入，完成注册即可");
+        setStarStatus((prev) =>
+          prev ? { ...prev, remaining: data.remaining, total: data.total, used: data.used } : prev,
+        );
+      } else {
+        setStarMessage(data.error ?? "名额已用完");
+        setStarStatus((prev) =>
+          prev ? { ...prev, enabled: false, remaining: 0 } : prev,
+        );
+      }
+    } catch {
+      setStarMessage("网络错误，请重试");
+    } finally {
+      setStarLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,18 +159,60 @@ export default function LoginPage() {
             </div>
 
             {mode === "register" && (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">邀请码</label>
-                <input
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  required
-                  autoComplete="off"
-                  className="w-full border-2 border-ink bg-paper px-3 py-2 text-sm uppercase tracking-wider outline-none focus:border-cobalt focus:shadow-sm"
-                  placeholder="8 位邀请码"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-muted">邀请码</label>
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    required
+                    autoComplete="off"
+                    className="w-full border-2 border-ink bg-paper px-3 py-2 text-sm uppercase tracking-wider outline-none focus:border-cobalt focus:shadow-sm"
+                    placeholder="8 位邀请码"
+                  />
+                </div>
+
+                {/* Star campaign section */}
+                {starStatus && (
+                  <div className="border-2 border-ink/20 bg-paper px-3 py-3 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-ink">没有邀请码？</span>
+                      {starStatus.enabled ? (
+                        <span className="text-success">
+                          剩余名额：{starStatus.remaining} / {starStatus.total}
+                        </span>
+                      ) : (
+                        <span className="text-danger">名额已用完</span>
+                      )}
+                    </div>
+                    <p className="text-ink-muted leading-relaxed">
+                      去 GitHub 给项目点个 Star（或 Follow），回来就能获取一个邀请码。
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={GITHUB_REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border-2 border-ink bg-paper-raised px-2.5 py-1.5 text-xs font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft"
+                      >
+                        去 GitHub →
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleGetStarCode}
+                        disabled={!starStatus.enabled || starLoading}
+                        className="border-2 border-ink bg-cobalt px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40"
+                      >
+                        {starLoading ? "..." : "我已 Star，获取邀请码"}
+                      </button>
+                    </div>
+                    {starMessage && (
+                      <p className="text-ink-muted">{starMessage}</p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {error && (

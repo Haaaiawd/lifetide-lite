@@ -28,6 +28,7 @@ type Stats = {
       usedCount: number;
       exhausted: boolean;
       note: string | null;
+      source: string;
       createdAt: string;
     }>;
   };
@@ -56,6 +57,7 @@ type AdminUser = {
   createdAt: string;
   banned: boolean;
   bannedAt: string | null;
+  registeredVia: string;
   lastSessionAt: string | null;
 };
 
@@ -100,6 +102,22 @@ export default function AdminPage() {
   const [userList, setUserList] = useState<AdminUser[] | null>(null);
   const [userLoading, setUserLoading] = useState(false);
   const [banActionId, setBanActionId] = useState<string | null>(null);
+
+  // Star campaign
+  type StarCampaign = {
+    enabled: boolean;
+    campaign: {
+      id: string;
+      code: string;
+      maxUses: number;
+      usedCount: number;
+      remaining: number;
+      exhausted: boolean;
+    } | null;
+  };
+  const [starCampaign, setStarCampaign] = useState<StarCampaign | null>(null);
+  const [starMaxUses, setStarMaxUses] = useState(50);
+  const [starSaving, setStarSaving] = useState(false);
 
   const loadLogs = useCallback(async (filter: "error" | "all") => {
     try {
@@ -195,6 +213,41 @@ export default function AdminPage() {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 1500);
+  }
+
+  const loadStarCampaign = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/invite-codes/star");
+      if (res.ok) {
+        const data = await res.json();
+        setStarCampaign(data);
+        if (data.campaign) {
+          setStarMaxUses(data.campaign.maxUses);
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (tab === "invites") {
+      loadStarCampaign();
+    }
+  }, [tab, loadStarCampaign]);
+
+  async function handleSaveStarCampaign() {
+    setStarSaving(true);
+    try {
+      const res = await fetch("/api/admin/invite-codes/star", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ maxUses: starMaxUses }),
+      });
+      if (res.ok) {
+        await Promise.all([loadStarCampaign(), loadStats()]);
+      }
+    } finally {
+      setStarSaving(false);
+    }
   }
 
   if (authError) {
@@ -325,6 +378,92 @@ export default function AdminPage() {
       {/* Invites tab */}
       {tab === "invites" && (
         <div className="space-y-4">
+          {/* Star campaign management */}
+          <div className="border-2 border-purple/40 bg-purple-soft/30 p-4 shadow-sm">
+            <h3 className="mb-3 font-serif text-sm font-medium">
+              GitHub Star 活动名额
+            </h3>
+            {starCampaign?.campaign ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-xs">
+                  <code className="font-mono text-base font-bold tracking-wider text-purple">
+                    {starCampaign.campaign.code}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => copyCode(starCampaign.campaign!.code)}
+                    className="text-xs text-cobalt hover:underline"
+                  >
+                    {copiedCode === starCampaign.campaign.code ? "已复制" : "复制"}
+                  </button>
+                  <span className="text-ink-muted">
+                    {starCampaign.campaign.usedCount} / {starCampaign.campaign.maxUses} 已用
+                    {" · "}
+                    剩余 {starCampaign.campaign.remaining}
+                  </span>
+                  {starCampaign.campaign.exhausted && (
+                    <span className="border border-danger/40 bg-danger-soft/50 px-1.5 py-0.5 text-[10px] text-danger">
+                      已用完
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-end gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-ink-muted">名额总数</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      value={starMaxUses}
+                      onChange={(e) => setStarMaxUses(Number(e.target.value))}
+                      className="w-28 border-2 border-ink bg-paper px-3 py-2 text-sm outline-none focus:border-cobalt"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveStarCampaign}
+                    disabled={starSaving}
+                    className="border-2 border-ink bg-purple px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm disabled:opacity-50"
+                  >
+                    {starSaving ? "保存中..." : "保存名额"}
+                  </button>
+                </div>
+                <p className="text-xs text-ink-muted">
+                  用户在注册页点「我已 Star」后会获取此邀请码。调高名额 = 增加可用 slot；
+                  调到当前已用量 = 停止发放。
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-ink-muted">
+                  还没有 Star 活动邀请码。设置一个名额数即可创建，用户就能在注册页通过
+                  GitHub Star 获取邀请码。
+                </p>
+                <div className="flex items-end gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-ink-muted">名额总数</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      value={starMaxUses}
+                      onChange={(e) => setStarMaxUses(Number(e.target.value))}
+                      className="w-28 border-2 border-ink bg-paper px-3 py-2 text-sm outline-none focus:border-cobalt"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveStarCampaign}
+                    disabled={starSaving}
+                    className="border-2 border-ink bg-purple px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm disabled:opacity-50"
+                  >
+                    {starSaving ? "创建中..." : "创建 Star 活动"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Generate form */}
           <div className="border-2 border-ink bg-paper-raised p-4 shadow-sm">
             <h3 className="mb-3 font-serif text-sm font-medium">生成邀请码</h3>
@@ -392,6 +531,11 @@ export default function AdminPage() {
                           已用完
                         </span>
                       )}
+                      {c.source === "star" && (
+                        <span className="border border-purple/40 bg-purple-soft/50 px-1.5 py-0.5 text-[10px] text-purple">
+                          Star 活动
+                        </span>
+                      )}
                       {c.note && <span>· {c.note}</span>}
                       <span>· {c.createdAt.slice(0, 10)}</span>
                     </div>
@@ -451,6 +595,11 @@ export default function AdminPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{u.email}</span>
+                    {u.registeredVia === "star" && (
+                      <span className="shrink-0 border border-purple/40 bg-purple-soft/50 px-1.5 py-0.5 text-[10px] text-purple">
+                        Star 注册
+                      </span>
+                    )}
                     {u.banned && (
                       <span className="shrink-0 border border-danger/40 bg-danger-soft/50 px-1.5 py-0.5 text-[10px] text-danger">
                         已封禁
