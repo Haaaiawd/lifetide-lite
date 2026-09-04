@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { loadPrompt, type PromptKey } from "./loader";
+import type { WorkingMemory } from "@/lib/working-memory/types";
 
 function schemaAsJson(schema: z.ZodType<unknown, z.ZodTypeDef, unknown>): string {
   const json = zodToJsonSchema(schema, { target: "openApi3" });
@@ -11,6 +12,59 @@ function schemaAsJson(schema: z.ZodType<unknown, z.ZodTypeDef, unknown>): string
 // It sits between the role prompt and the runtime envelope, so the model always
 // has the dimension definitions and state rules when deciding what to ask or analyze.
 const SIX_DIMENSION_RADAR = loadPrompt("six_dimension_radar");
+
+const MAX_WAVES = 5;
+
+/**
+ * Build a concise progress summary so the Agent knows how much runway is left
+ * and how much of the six-dimensional radar is still uncovered. This gives it
+ * a sense of pacing — e.g. "2 waves left, 3 dimensions still unseen" means
+ * it should be more aggressive about covering those dimensions now, rather
+ * than going deeper on already-grounded ones.
+ */
+export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: number): string {
+  const currentWave = nextWaveIndex ?? memory.last_wave_index + 1;
+  const remainingWaves = Math.max(0, MAX_WAVES - currentWave);
+  const totalDimensions = 6;
+
+  const states = Object.entries(memory.radar).map(([dim, cell]) => ({ dim, state: cell.state }));
+  const grounded = states.filter((s) => s.state === "grounded").length;
+  const conflicted = states.filter((s) => s.state === "conflicted").length;
+  const signaled = states.filter((s) => s.state === "signaled").length;
+  const unseen = states.filter((s) => s.state === "unseen").length;
+  const declined = states.filter((s) => s.state === "declined").length;
+
+  const covered = grounded + conflicted; // dimensions with real evidence
+  const touched = covered + signaled; // dimensions with at least a clue
+
+  const uncoveredDims = states
+    .filter((s) => s.state === "unseen" || s.state === "declined")
+    .map((s) => s.dim)
+    .join("、") || "无";
+
+  const thinDims = states
+    .filter((s) => s.state === "signaled")
+    .map((s) => s.dim)
+    .join("、") || "无";
+
+  const lines = [
+    `当前波次: ${currentWave} / ${MAX_WAVES}`,
+    `剩余波次: ${remainingWaves}`,
+    `雷达覆盖: ${covered}/${totalDimensions} 已有实质证据, ${signaled} 有线索, ${unseen} 未触及, ${declined} 用户拒绝`,
+    `未触及维度: ${uncoveredDims}`,
+    `线索薄维度: ${thinDims}`,
+  ];
+
+  if (remainingWaves <= 1) {
+    lines.push("节奏提醒: 这是最后一个波次，优先补齐最缺证据且最影响决定的维度，不再发散。");
+  } else if (remainingWaves <= 2) {
+    lines.push("节奏提醒: 剩余波次不多，优先覆盖未触及维度，已有实质证据的维度不再深入。");
+  } else {
+    lines.push("节奏提醒: 还有充足波次，可以兼顾深度和广度，但确保每波至少推进一个未触及或线索薄的维度。");
+  }
+
+  return lines.join("\n");
+}
 
 export function composePrompt<T>(
   key: PromptKey,
