@@ -14,7 +14,6 @@ model User {
   createdAt      DateTime  @default(now())
   banned         Boolean   @default(false)
   bannedAt       DateTime?
-  registeredVia  String    @default("admin_invite")
   sessions       Session[]
 }
 
