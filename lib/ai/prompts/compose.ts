@@ -60,9 +60,9 @@ export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: numb
   } else if (remainingWaves <= 2) {
     lines.push("节奏提醒: 剩余波次不多，优先覆盖未触及维度，已有实质证据的维度不再深入。");
   } else if (currentWave <= 3) {
-    lines.push("节奏提醒: 还在早期波次，优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。");
+    lines.push("节奏提醒: 还在早期波次，优先打开话题广度和维度广度（让 signaled 覆盖更多维度），再逐波深化。同一话题不要连续出现 3 题以上。");
   } else {
-    lines.push("节奏提醒: 还有充足波次，可以兼顾深度和广度，但确保每波至少推进一个未触及或线索薄的维度。");
+    lines.push("节奏提醒: 还有充足波次，可以兼顾深度和广度，但确保每波至少推进一个未触及或线索薄的维度，同时覆盖多个话题领域。");
   }
 
   return lines.join("\n");
