@@ -52,20 +52,40 @@ function chatId(item: ConversationItem): string {
   return item.id;
 }
 
-function answerText(question: InterviewQuestion, value?: string | string[] | number, skipped?: boolean): string {
-  if (skipped) return "跳过";
-  if (value === undefined || value === null) return "未答";
-  if (typeof value === "number") return String(value);
+// Resolve an answer value into an array of option labels for display.
+// Handles three forms:
+//  1. string[] — the canonical form from QuestionFrame multi_choice submit
+//  2. string with "；" separators — DB-stored joined form (after refresh/restore)
+//  3. single string/number — single_choice or short_text
+function answerLabels(question: InterviewQuestion, value?: string | string[] | number, skipped?: boolean): string[] {
+  if (skipped) return ["跳过"];
+  if (value === undefined || value === null) return ["未答"];
+  if (typeof value === "number") return [String(value)];
   if (Array.isArray(value)) {
-    return value
-      .map((v) => {
+    const labels = value.map((v) => {
+      const opt = question.options?.find((o) => o.id === v);
+      return opt ? opt.label : v;
+    });
+    return labels.length > 0 ? labels : ["未答"];
+  }
+  // String value: check if it's a DB-joined multi-choice answer (contains "；"
+  // and the parts match option IDs). If so, split and resolve each part.
+  if (typeof value === "string" && value.includes("；")) {
+    const parts = value.split("；").filter((p) => p !== "");
+    if (parts.length > 1) {
+      const labels = parts.map((v) => {
         const opt = question.options?.find((o) => o.id === v);
         return opt ? opt.label : v;
-      })
-      .join("，") || "未答";
+      });
+      return labels;
+    }
   }
   const opt = question.options?.find((o) => o.id === value);
-  return opt ? opt.label : value;
+  return [opt ? opt.label : value];
+}
+
+function answerText(question: InterviewQuestion, value?: string | string[] | number, skipped?: boolean): string {
+  return answerLabels(question, value, skipped).join("，");
 }
 
 function MaterialSummary({
@@ -135,14 +155,29 @@ function QuestionSummary({
   question: InterviewQuestion;
   answer?: { value?: string | string[] | number; skipped: boolean };
 }) {
+  const labels = answer ? answerLabels(question, answer.value, answer.skipped) : [];
+  const isMulti = question.response_kind === "multi_choice" && labels.length > 1;
   return (
     <div className="rounded-sm border-2 border-ink bg-paper-raised p-4 shadow-sm">
       <p className="text-sm text-ink-muted">第 {question.order} 题</p>
       <p className="mt-1 font-serif text-base leading-snug">{question.text}</p>
-      {answer && (
-        <p className="mt-2 inline-block border-2 border-cobalt bg-cobalt/5 px-2 py-1 text-sm text-ink">
-          {answerText(question, answer.value, answer.skipped)}
-        </p>
+      {labels.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {isMulti
+            ? labels.map((label, i) => (
+                <span
+                  key={i}
+                  className="inline-block border-2 border-cobalt bg-cobalt/5 px-2 py-1 text-sm text-ink"
+                >
+                  {label}
+                </span>
+              ))
+            : (
+              <span className="inline-block border-2 border-cobalt bg-cobalt/5 px-2 py-1 text-sm text-ink">
+                {labels[0]}
+              </span>
+            )}
+        </div>
       )}
     </div>
   );
