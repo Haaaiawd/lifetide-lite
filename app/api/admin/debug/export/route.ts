@@ -18,8 +18,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Parallel fetch all session data
-  const [
+  // Read all session data from one consistent database snapshot.
+  // A Prisma interactive transaction gives SQLite-level read consistency:
+  // no concurrent writes can interleave between these queries.
+  const {
     session,
     waves,
     answers,
@@ -28,38 +30,70 @@ export async function GET(request: NextRequest) {
     derivedContents,
     modelCallLogs,
     waveMissions,
-  ] = await Promise.all([
-    prisma.session.findUnique({
+  } = await prisma.$transaction(async (tx) => {
+    const session = await tx.session.findUnique({
       where: { id: sessionId },
       include: { user: true },
-    }),
-    prisma.wave.findMany({
-      where: { sessionId },
-      orderBy: { wave_index: "asc" },
-    }),
-    prisma.answer.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.workingMemory.findUnique({ where: { sessionId } }),
-    prisma.upload.findMany({
-      where: { sessionId },
-      include: { chunks: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.derivedContent.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.modelCallLog.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.waveMission.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+    });
+    if (!session) {
+      return {
+        session: null,
+        waves: [],
+        answers: [],
+        workingMemory: null,
+        uploads: [],
+        derivedContents: [],
+        modelCallLogs: [],
+        waveMissions: [],
+      };
+    }
+    const [
+      waves,
+      answers,
+      workingMemory,
+      uploads,
+      derivedContents,
+      modelCallLogs,
+      waveMissions,
+    ] = await Promise.all([
+      tx.wave.findMany({
+        where: { sessionId },
+        orderBy: { wave_index: "asc" },
+      }),
+      tx.answer.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "asc" },
+      }),
+      tx.workingMemory.findUnique({ where: { sessionId } }),
+      tx.upload.findMany({
+        where: { sessionId },
+        include: { chunks: { orderBy: { index: "asc" } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      tx.derivedContent.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "asc" },
+      }),
+      tx.modelCallLog.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "asc" },
+      }),
+      tx.waveMission.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+    return {
+      session,
+      waves,
+      answers,
+      workingMemory,
+      uploads,
+      derivedContents,
+      modelCallLogs,
+      waveMissions,
+    };
+  });
 
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -138,8 +172,8 @@ export async function GET(request: NextRequest) {
       id: wm.id,
       wave_id: wm.waveId,
       decision_to_improve: wm.decisionToImprove,
-      target_dimensions: wm.targetDimensions,
-      known_source_refs: wm.knownSourceRefs,
+      target_dimensions: safeParseJson(wm.targetDimensions),
+      known_source_refs: safeParseJson(wm.knownSourceRefs),
       important_unknown: wm.importantUnknown,
       why_now: wm.whyNow,
       exit_condition: wm.exitCondition,
@@ -176,6 +210,14 @@ export async function GET(request: NextRequest) {
       "content-disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+function safeParseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 function buildTxtExport(data: any): string {
