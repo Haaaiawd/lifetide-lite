@@ -250,6 +250,32 @@ export default function AdminPage() {
     }
   }
 
+  // Debug export
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  async function handleExport(sessionId: string, format: "txt" | "json") {
+    setExportingId(sessionId);
+    try {
+      const res = await fetch(
+        `/api/admin/debug/export?session_id=${sessionId}&format=${format}`,
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("content-disposition") ?? "";
+      const match = disposition.match(/filename="(.+?)"/);
+      a.download = match ? match[1] : `debug_${sessionId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingId(null);
+    }
+  }
+
   if (authError) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
@@ -651,7 +677,7 @@ export default function AdminPage() {
             )}
             {recentSessions.map((s) => (
               <div key={s.id} className="flex items-center justify-between px-4 py-3">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">
                     {s.userEmail ?? "guest"}
                   </div>
@@ -659,12 +685,30 @@ export default function AdminPage() {
                     {s.progress} · 创建 {s.createdAt.slice(0, 16).replace("T", " ")} · 过期 {s.expiresAt.slice(0, 10)}
                   </div>
                 </div>
-                <div className={`border px-2 py-0.5 text-[10px] ${
-                  new Date(s.expiresAt) > new Date()
-                    ? "border-success/40 bg-success-soft/50 text-success"
-                    : "border-ink/20 bg-paper text-ink-muted"
-                }`}>
-                  {new Date(s.expiresAt) > new Date() ? "活跃" : "过期"}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExport(s.id, "txt")}
+                    disabled={exportingId === s.id}
+                    className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
+                  >
+                    {exportingId === s.id ? "..." : "TXT"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExport(s.id, "json")}
+                    disabled={exportingId === s.id}
+                    className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
+                  >
+                    {exportingId === s.id ? "..." : "JSON"}
+                  </button>
+                  <div className={`border px-2 py-0.5 text-[10px] ${
+                    new Date(s.expiresAt) > new Date()
+                      ? "border-success/40 bg-success-soft/50 text-success"
+                      : "border-ink/20 bg-paper text-ink-muted"
+                  }`}>
+                    {new Date(s.expiresAt) > new Date() ? "活跃" : "过期"}
+                  </div>
                 </div>
               </div>
             ))}
