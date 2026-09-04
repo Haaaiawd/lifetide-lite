@@ -53,7 +53,9 @@ function seedUncertaintyIfEmpty(
   importantUnknown: string,
   evidence: { source_id: string; source_revision: number }[],
 ): void {
-  if (memory.uncertainties.length > 0) return;
+  // Only seed if there are no active uncertainties.
+  // Inactive/deleted/declined uncertainties should not block re-seeding.
+  if (memory.uncertainties.some((u) => u.status === "active")) return;
 
   const routeIntentIds = memory.route_intents
     .filter((r) => r.status === "seed" || r.status === "accepted")
@@ -333,6 +335,48 @@ export async function GET(request: NextRequest) {
     .slice(0, 8);
   const relevantConstraints = memory.constraints.filter((c) => c.status === "active").slice(0, 4);
   const latestFeedback = memory.recent_feedback[memory.recent_feedback.length - 1];
+  // Keep last 3 feedback entries so the Interviewer sees accumulated calibration,
+  // not just the most recent one (issue #20).
+  const recentFeedback = memory.recent_feedback.slice(-3);
+
+  // Extract Q&A text from the most recent completed wave so the Interviewer
+  // can build on actual answers instead of repeating similar questions (issue #18).
+  const lastWave = previousWaves[previousWaves.length - 1];
+  let lastWaveAnswers: { question_text: string; answer_text: string }[] | undefined;
+  if (lastWave) {
+    const lastWaveQuestions: InterviewQuestion[] = JSON.parse(lastWave.questions);
+    const lastWaveAnswerRows = await prisma.answer.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: "asc" },
+    });
+    // Build a map of questionId -> raw answer value for quick lookup.
+    const answerMap = new Map<string, string>();
+    for (const a of lastWaveAnswerRows) {
+      if (a.value && !answerMap.has(a.questionId)) {
+        answerMap.set(a.questionId, a.value);
+      }
+    }
+    lastWaveAnswers = lastWaveQuestions
+      .map((q) => {
+        const raw = answerMap.get(q.id);
+        if (!raw) return null;
+        // Resolve option IDs to labels for choice questions.
+        // Stored answer may be a single option id, comma-joined ids, or free text.
+        let answerText = raw;
+        if (q.options && q.options.length > 0) {
+          const optionMap = new Map(q.options.map((o) => [o.id, o.label]));
+          const ids = raw.split(",").map((s) => s.trim());
+          const resolved = ids.map((id) => optionMap.get(id) ?? id);
+          answerText = resolved.join(", ");
+        }
+        return {
+          question_text: q.text,
+          answer_text: answerText,
+        };
+      })
+      .filter((qa): qa is { question_text: string; answer_text: string } => qa !== null);
+    if (lastWaveAnswers.length === 0) lastWaveAnswers = undefined;
+  }
 
   const burden = await computeBurden(session.id, memory);
 
@@ -349,7 +393,9 @@ export async function GET(request: NextRequest) {
     relevant_evidence: relevantEvidence,
     relevant_constraints: relevantConstraints,
     latest_feedback: latestFeedback,
+    recent_feedback: recentFeedback.length > 0 ? recentFeedback : undefined,
     recent_question_texts: recentQuestionTexts.slice(-8),
+    last_wave_answers: lastWaveAnswers,
     upload_chunks: uploadChunks && uploadChunks.length > 0 ? uploadChunks : undefined,
     burden,
     prompt_version: "v0-draft",
@@ -641,7 +687,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        if (nextMemory.uncertainties.length === 0) {
+        if (!nextMemory.uncertainties.some((u) => u.status === "active")) {
           // Only seed uncertainty with evidence that points to active sources.
           const validInsightEvidence = output.insight.evidence.filter((e) =>
             isActiveSourceRef(nextMemory, e.source_id, e.source_revision)
