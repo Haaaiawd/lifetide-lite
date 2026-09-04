@@ -196,7 +196,11 @@ export type InterviewerInput = {
   relevant_evidence: SourceVersion[];
   relevant_constraints: Constraint[];
   latest_feedback?: InsightFeedback;
+  recent_feedback?: InsightFeedback[];
   recent_question_texts: string[];
+  // Q&A text from the most recent completed wave, so the Interviewer can
+  // avoid repeating similar questions and build on actual answers.
+  last_wave_answers?: { question_text: string; answer_text: string }[];
   upload_chunks?: UploadChunk[];
   burden: BurdenSignals;
   prompt_version: string;

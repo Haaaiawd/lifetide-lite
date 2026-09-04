@@ -58,6 +58,23 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
 
   const unc = input.selected_uncertainty;
 
+  // Render recent feedback (last 3) so the Interviewer sees accumulated
+  // calibration signals, not just the most recent one (issue #20).
+  const feedbackLines: string[] = [];
+  for (const fb of input.recent_feedback ?? []) {
+    const parts = [`- wave ${fb.wave_id}: ${fb.verdict}`];
+    if (fb.correction_text) parts.push(`  纠正：${fb.correction_text}`);
+    if (fb.preferred_direction) parts.push(`  偏好：${fb.preferred_direction}`);
+    feedbackLines.push(parts.join("\n"));
+  }
+  const feedbackSection = feedbackLines.join("\n");
+
+  // Render Q&A from the most recent completed wave so the Interviewer can
+  // build on actual answers instead of repeating similar questions (issue #18).
+  const lastWaveSection = (input.last_wave_answers ?? [])
+    .map((qa) => `问：${qa.question_text}\n答：${qa.answer_text.slice(0, 200)}`)
+    .join("\n\n");
+
   return [
     `mode: open_wave`,
     `next_wave_id: ${input.next_wave_id}`,
@@ -75,6 +92,12 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     "",
     "=== 相关约束 ===",
     constraints || "（无）",
+    "",
+    "=== 上一波问答摘要（在此基础上深入，不要重复相同方向）===",
+    lastWaveSection || "（无）",
+    "",
+    "=== 最近反馈（校准信号）===",
+    feedbackSection || "（无）",
     "",
     "=== 最近问过的问题（不要重复）===",
     recent || "（无）",
