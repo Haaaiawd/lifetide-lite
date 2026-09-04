@@ -147,7 +147,7 @@ export function makeWave1Questions(): InterviewQuestion[] {
       wave_id: WAVE_1_ID,
       order: 8,
       text: `最近在想什么？接下来可能想往哪个方向走？`,
-      why_this_matters: "不用想太深，哪怕只是一个模糊的方向也行。",
+      why_this_matters: "这题是后面所有对话的起点——你写得越具体，后续越能问到位。可以写最近在纠结的事、一个模糊的方向、或者让你在意的一个选择，尽量多写几句。",
       response_kind: "short_text",
       sensitivity: "normal",
       allows_skip: true,
