@@ -53,7 +53,9 @@ function seedUncertaintyIfEmpty(
   importantUnknown: string,
   evidence: { source_id: string; source_revision: number }[],
 ): void {
-  if (memory.uncertainties.length > 0) return;
+  // Only seed if there are no active uncertainties.
+  // Inactive/deleted/declined uncertainties should not block re-seeding.
+  if (memory.uncertainties.some((u) => u.status === "active")) return;
 
   const routeIntentIds = memory.route_intents
     .filter((r) => r.status === "seed" || r.status === "accepted")
@@ -333,6 +335,35 @@ export async function GET(request: NextRequest) {
     .slice(0, 8);
   const relevantConstraints = memory.constraints.filter((c) => c.status === "active").slice(0, 4);
   const latestFeedback = memory.recent_feedback[memory.recent_feedback.length - 1];
+  // Keep last 3 feedback entries so the Interviewer sees accumulated calibration,
+  // not just the most recent one (issue #20).
+  const recentFeedback = memory.recent_feedback.slice(-3);
+
+  // Extract Q&A text from the most recent completed wave so the Interviewer
+  // can build on actual answers instead of repeating similar questions (issue #18).
+  const lastWave = previousWaves[previousWaves.length - 1];
+  let lastWaveAnswers: { question_text: string; answer_text: string }[] | undefined;
+  if (lastWave) {
+    const lastWaveQuestions: InterviewQuestion[] = JSON.parse(lastWave.questions);
+    const lastWaveAnswerRows = await prisma.answer.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: "asc" },
+    });
+    // Build a map of questionId -> answer value for quick lookup.
+    const answerMap = new Map<string, string>();
+    for (const a of lastWaveAnswerRows) {
+      if (a.value && !answerMap.has(a.questionId)) {
+        answerMap.set(a.questionId, a.value);
+      }
+    }
+    lastWaveAnswers = lastWaveQuestions
+      .map((q) => ({
+        question_text: q.text,
+        answer_text: answerMap.get(q.id) ?? "(未回答)",
+      }))
+      .filter((qa) => qa.answer_text !== "(未回答)");
+    if (lastWaveAnswers.length === 0) lastWaveAnswers = undefined;
+  }
 
   const burden = await computeBurden(session.id, memory);
 
@@ -349,7 +380,9 @@ export async function GET(request: NextRequest) {
     relevant_evidence: relevantEvidence,
     relevant_constraints: relevantConstraints,
     latest_feedback: latestFeedback,
+    recent_feedback: recentFeedback.length > 0 ? recentFeedback : undefined,
     recent_question_texts: recentQuestionTexts.slice(-8),
+    last_wave_answers: lastWaveAnswers,
     upload_chunks: uploadChunks && uploadChunks.length > 0 ? uploadChunks : undefined,
     burden,
     prompt_version: "v0-draft",
