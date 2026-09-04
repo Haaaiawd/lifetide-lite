@@ -108,7 +108,6 @@ function buildWaveEnvelope(input: SensemakerWaveInput): string {
     `wave_index: ${input.wave_index}`,
     `focus_uncertainty_id: ${input.focus_uncertainty_id ?? "（无）"}`,
     `focus_uncertainty_topic: ${focus ? focus.topic : "（首波模板，无单一焦点）"}`,
-    `focus_uncertainty_question: ${focus ? focus.question : "（首波模板，无单一焦点）"}`,
     `expected_base_revision: ${input.memory.revision}`,
     "",
     "=== 用户回答 ===",
