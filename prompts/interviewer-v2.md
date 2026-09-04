@@ -16,7 +16,7 @@
 
 你收到结构化输入：
 
-- `mode`、`session_revision`、`wave_index`、`wave_kind`、`asked_count`、`covered_unit_count`、`elicitation_units`、`deep_dive_count`；
+- `mode`、`next_wave_id`、`next_wave_index`、`selected_uncertainty_id`、`selected_uncertainty`；
 - 用户当前的设计问题与希望探索的方向；
 - 有效来源、理解、用户纠正、现实约束与拒绝讨论的话题；
 - 六维雷达：`traits`、`motivation`、`capabilities`、`relationships`、`environment`、`narrative`；
