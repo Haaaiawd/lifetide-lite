@@ -312,7 +312,7 @@ function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
   for (let i = 0; i < 5; i++) {
     elicitationUnits.push({
       decision_target: i < questions.length ? questions[i].text : `补充视角 ${i + 1}`,
-      target_dimensions: ["traits"],
+      target_dimensions: ["traits", "motivation", "capabilities"],
       precovered_by: [],
     });
   }
@@ -321,7 +321,7 @@ function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
     mode: "open_wave",
     mission: {
       decision_to_improve: input.selected_uncertainty.topic,
-      target_dimensions: ["traits"],
+      target_dimensions: ["traits", "motivation", "capabilities"],
       known_source_refs: input.relevant_evidence.map((e) => ({ source_id: e.source_id, source_revision: e.revision })),
       important_unknown: input.selected_uncertainty.topic,
       why_now: "用户主动开启访谈，希望更清楚当前决策。",
@@ -343,7 +343,7 @@ function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput
     mode: "open_wave",
     mission: {
       decision_to_improve: input.selected_uncertainty.topic,
-      target_dimensions: ["traits"],
+      target_dimensions: ["traits", "motivation", "capabilities"],
       known_source_refs: [],
       important_unknown: input.selected_uncertainty.topic,
       why_now: "用户主动开启访谈，希望更清楚当前决策。",
@@ -351,7 +351,7 @@ function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput
       sensitivity_ceiling: "ordinary",
       elicitation_units: fallback.questions.map((q) => ({
         decision_target: q.text,
-        target_dimensions: ["traits"],
+        target_dimensions: ["traits", "motivation", "capabilities"],
         precovered_by: [],
       })),
     },
