@@ -808,8 +808,9 @@ export default function PlayPage() {
           onInsightContinue={handleInsightContinue}
           onMaterialSubmit={handleMaterialSubmit}
           onMaterialSkip={handleMaterialSkip}
+          className="flex-1 min-h-0"
         />
-        <div className="shrink-0 p-4">
+        <div className="shrink-0 border-t-2 border-ink/10 bg-paper/50 p-4">
           <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
         </div>
       </div>
@@ -826,6 +827,7 @@ export default function PlayPage() {
         onInsightContinue={handleInsightContinue}
         onMaterialSubmit={handleMaterialSubmit}
         onMaterialSkip={handleMaterialSkip}
+        className="h-[100dvh]"
       />
 
       {step === "stop" && (

@@ -357,7 +357,8 @@ export function Conversation({
   onInsightContinue,
   onMaterialSubmit,
   onMaterialSkip,
-}: ConversationProps) {
+  className,
+}: ConversationProps & { className?: string }) {
   const reduce = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -374,7 +375,7 @@ export function Conversation({
   return (
     <div
       ref={containerRef}
-      className="flex h-[100dvh] w-full flex-col gap-4 overflow-y-auto p-4 scroll-smooth"
+      className={`flex w-full flex-col gap-4 overflow-y-auto p-4 scroll-smooth ${className ?? ""}`}
       style={{ scrollSnapType: "y proximity", overscrollBehavior: "contain" }}
     >
       {items.map((item) => (

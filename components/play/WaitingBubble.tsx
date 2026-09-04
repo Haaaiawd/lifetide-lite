@@ -75,19 +75,19 @@ function StreamingBubble({ streamingInsight, reduce }: { streamingInsight: Strea
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="flex w-full gap-3 justify-start"
     >
-      <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink bg-paper-raised shadow-sm">
-        <PixelIcon name="sparkle" size={12} className="text-cobalt" />
+      <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink/40 bg-paper-raised/70 shadow-sm">
+        <PixelIcon name="sparkle" size={12} className="text-cobalt/60" />
       </span>
-      <div className="max-w-[85%] rounded-sm border-2 border-ink bg-paper-raised px-4 py-3 text-base leading-snug shadow-sm">
+      <div className="max-h-[60dvh] max-w-[85%] overflow-y-auto rounded-sm border-2 border-dashed border-ink/30 bg-paper-raised/60 px-4 py-3 text-base leading-snug shadow-sm backdrop-blur-sm">
         <div className="space-y-3">
           {sections.map((s, i) => (
-            <div key={i} className="border-l-4 border-cobalt pl-3">
-              <div className="mb-0.5 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <div key={i} className="border-l-4 border-cobalt/40 pl-3" style={{ animationDelay: `${i * 0.4}s` }}>
+              <div className="mb-0.5 text-xs font-medium uppercase tracking-wide text-ink-muted/70">
                 {s.label}
               </div>
               <p className="font-serif text-lg leading-snug">
-                <span className="text-ink">{s.text}</span>
-                <span className="animate-pulse">▎</span>
+                <span className="stream-wave-text" style={{ animationDelay: `${i * 0.5}s` }}>{s.text}</span>
+                <span className="animate-pulse text-cobalt/50">▎</span>
               </p>
             </div>
           ))}
@@ -111,19 +111,19 @@ function StreamingPortraitBubble({ streamingPortrait, reduce }: { streamingPortr
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="flex w-full gap-3 justify-start"
     >
-      <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink bg-paper-raised shadow-sm">
-        <PixelIcon name="sparkle" size={12} className="text-cobalt" />
+      <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink/40 bg-paper-raised/70 shadow-sm">
+        <PixelIcon name="sparkle" size={12} className="text-cobalt/60" />
       </span>
-      <div className="max-w-[85%] rounded-sm border-2 border-ink bg-paper-raised px-4 py-3 text-base leading-snug shadow-sm">
+      <div className="max-h-[60dvh] max-w-[85%] overflow-y-auto rounded-sm border-2 border-dashed border-ink/30 bg-paper-raised/60 px-4 py-3 text-base leading-snug shadow-sm backdrop-blur-sm">
         <div className="space-y-3">
           {sections.map((s, i) => (
-            <div key={i} className="border-l-4 border-cobalt pl-3">
-              <div className="mb-0.5 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <div key={i} className="border-l-4 border-cobalt/40 pl-3" style={{ animationDelay: `${i * 0.4}s` }}>
+              <div className="mb-0.5 text-xs font-medium uppercase tracking-wide text-ink-muted/70">
                 {s.label}
               </div>
               <p className="font-serif text-lg leading-snug">
-                <span className="text-ink">{s.text}</span>
-                <span className="animate-pulse">▎</span>
+                <span className="stream-wave-text" style={{ animationDelay: `${i * 0.5}s` }}>{s.text}</span>
+                <span className="animate-pulse text-cobalt/50">▎</span>
               </p>
             </div>
           ))}
