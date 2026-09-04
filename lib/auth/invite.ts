@@ -6,7 +6,7 @@ type PrismaTransaction = Prisma.TransactionClient;
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing chars (0/O, 1/I)
 
-export type InviteSource = "admin" | "star";
+export type InviteSource = "admin" | "social";
 
 export function generateCode(length: number = 8): string {
   const bytes = randomBytes(length);
@@ -45,22 +45,12 @@ export async function createInviteCode(opts: {
 }
 
 /**
- * Validate and atomically consume one slot of an invite code.
- * Returns the code's source ("admin" | "star") on success, or null on failure.
- */
-export async function validateAndConsumeInviteCode(
-  code: string,
-): Promise<InviteSource | null> {
-  const normalized = code.toUpperCase().trim();
-  const result = await prisma.$transaction(async (tx) => {
-    return consumeInviteCodeInTx(tx, normalized);
-  });
-  return result;
-}
-
-/**
  * Consume an invite code slot within an existing transaction.
  * Used by the register route to make invite consumption + user creation atomic.
+ *
+ * Uses updateMany with a WHERE guard (usedCount < maxUses) so that concurrent
+ * requests cannot over-consume the last slot — only the first one that matches
+ * will actually increment.
  */
 export async function consumeInviteCodeInTx(
   tx: PrismaTransaction,
@@ -71,20 +61,27 @@ export async function consumeInviteCodeInTx(
   if (record.exhausted) return null;
   if (record.usedCount >= record.maxUses) return null;
 
-  await tx.inviteCode.update({
-    where: { id: record.id },
+  // Atomic conditional update: only succeeds if usedCount is still below maxUses.
+  // This prevents two concurrent requests from both passing the check above
+  // and then both incrementing past the limit.
+  const willBeExhausted = record.usedCount + 1 >= record.maxUses;
+  const result = await tx.inviteCode.updateMany({
+    where: { id: record.id, usedCount: { lt: record.maxUses } },
     data: {
       usedCount: { increment: 1 },
-      exhausted: record.usedCount + 1 >= record.maxUses,
+      exhausted: willBeExhausted,
     },
   });
 
+  if (result.count === 0) return null; // someone else grabbed the last slot
   return record.source as InviteSource;
 }
 
-// --- Star campaign helpers ---
+// --- Social campaign helpers ---
+// One campaign, two platform entry points (GitHub Star + 小红书 Follow).
+// Both platforms share the same code and quota.
 
-export async function getStarCampaign(): Promise<{
+export async function getSocialCampaign(): Promise<{
   id: string;
   code: string;
   maxUses: number;
@@ -93,7 +90,7 @@ export async function getStarCampaign(): Promise<{
   exhausted: boolean;
 } | null> {
   const record = await prisma.inviteCode.findFirst({
-    where: { source: "star" },
+    where: { source: "social" },
     orderBy: { createdAt: "desc" },
   });
   if (!record) return null;
@@ -107,11 +104,14 @@ export async function getStarCampaign(): Promise<{
   };
 }
 
-export async function createOrUpdateStarCampaign(opts: {
+export async function createOrUpdateSocialCampaign(opts: {
   maxUses: number;
   createdBy?: string;
 }): Promise<{ id: string; code: string; maxUses: number }> {
-  const existing = await prisma.inviteCode.findFirst({ where: { source: "star" } });
+  const existing = await prisma.inviteCode.findFirst({
+    where: { source: "social" },
+    orderBy: { createdAt: "desc" },
+  });
   if (existing) {
     const updated = await prisma.inviteCode.update({
       where: { id: existing.id },
@@ -125,8 +125,8 @@ export async function createOrUpdateStarCampaign(opts: {
 
   const created = await createInviteCode({
     maxUses: opts.maxUses,
-    source: "star",
-    note: "GitHub Star campaign",
+    source: "social",
+    note: "Social campaign (GitHub Star / 小红书 Follow)",
     createdBy: opts.createdBy,
   });
   return created;

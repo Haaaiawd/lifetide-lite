@@ -2,20 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, AnimatePresence } from "motion/react";
 import { PixelIcon } from "@/components/art/PixelIcon";
+import { GitHubIcon, XiaohongshuIcon } from "@/components/art/SocialIcons";
 
 type Mode = "login" | "register";
 
-const GITHUB_REPO_URL =
+const GITHUB_URL =
   process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/Haaaiawd/lifetide-lite";
+const XIAOHONGSHU_URL = "https://xhslink.com/m/8BTBv4WZsmn";
 
-interface StarStatus {
+interface SocialStatus {
   enabled: boolean;
   remaining: number;
   total: number;
   used: number;
-  code: string | null;
 }
 
 export default function LoginPage() {
@@ -28,51 +29,61 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Star campaign state
-  const [starStatus, setStarStatus] = useState<StarStatus | null>(null);
-  const [starLoading, setStarLoading] = useState(false);
-  const [starMessage, setStarMessage] = useState<string | null>(null);
+  // Social campaign state
+  const [socialStatus, setSocialStatus] = useState<SocialStatus | null>(null);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialMessage, setSocialMessage] = useState<string | null>(null);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [claimedCode, setClaimedCode] = useState<string | null>(null);
+  const [clickedPlatform, setClickedPlatform] = useState<"github" | "xhs" | null>(null);
 
-  const fetchStarStatus = useCallback(async () => {
+  const fetchSocialStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/invite/star");
+      const res = await fetch("/api/invite/social");
       if (res.ok) {
         const data = await res.json();
-        setStarStatus(data);
+        setSocialStatus(data);
       }
     } catch {
-      // silently ignore — star section is optional
+      // silently ignore — social section is optional
     }
   }, []);
 
   useEffect(() => {
     if (mode === "register") {
-      fetchStarStatus();
+      fetchSocialStatus();
     }
-  }, [mode, fetchStarStatus]);
+  }, [mode, fetchSocialStatus]);
 
-  async function handleGetStarCode() {
-    setStarLoading(true);
-    setStarMessage(null);
+  function handlePlatformClick(platform: "github" | "xhs") {
+    setClickedPlatform(platform);
+    const url = platform === "github" ? GITHUB_URL : XIAOHONGSHU_URL;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleClaimCode() {
+    setSocialLoading(true);
+    setSocialMessage(null);
     try {
-      const res = await fetch("/api/invite/star", { method: "POST" });
+      const res = await fetch("/api/invite/social", { method: "POST" });
       const data = await res.json();
       if (res.ok && data.code) {
+        setClaimedCode(data.code);
         setInviteCode(data.code);
-        setStarMessage("邀请码已填入，完成注册即可");
-        setStarStatus((prev) =>
+        setShowCodeModal(true);
+        setSocialStatus((prev) =>
           prev ? { ...prev, remaining: data.remaining, total: data.total, used: data.used } : prev,
         );
       } else {
-        setStarMessage(data.error ?? "名额已用完");
-        setStarStatus((prev) =>
+        setSocialMessage(data.error ?? "名额已用完");
+        setSocialStatus((prev) =>
           prev ? { ...prev, enabled: false, remaining: 0 } : prev,
         );
       }
     } catch {
-      setStarMessage("网络错误，请重试");
+      setSocialMessage("网络错误，请重试");
     } finally {
-      setStarLoading(false);
+      setSocialLoading(false);
     }
   }
 
@@ -173,42 +184,56 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Star campaign section */}
-                {starStatus && (
-                  <div className="border-2 border-ink/20 bg-paper px-3 py-3 text-xs space-y-2">
+                {/* Social campaign section */}
+                {socialStatus && (
+                  <div className="border-2 border-ink/20 bg-paper px-3 py-3 text-xs space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-ink">没有邀请码？</span>
-                      {starStatus.enabled ? (
+                      {socialStatus.enabled ? (
                         <span className="text-success">
-                          剩余名额：{starStatus.remaining} / {starStatus.total}
+                          剩余名额：{socialStatus.remaining} / {socialStatus.total}
                         </span>
                       ) : (
                         <span className="text-danger">名额已用完</span>
                       )}
                     </div>
                     <p className="text-ink-muted leading-relaxed">
-                      去 GitHub 给项目点个 Star（或 Follow），回来就能获取一个邀请码。
+                      去 GitHub 给项目点个 Star，或者去小红书点个关注，回来就能获取一个邀请码。
                     </p>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={GITHUB_REPO_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="border-2 border-ink bg-paper-raised px-2.5 py-1.5 text-xs font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft"
-                      >
-                        去 GitHub →
-                      </a>
+                    {/* Platform buttons */}
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={handleGetStarCode}
-                        disabled={!starStatus.enabled || starLoading}
-                        className="border-2 border-ink bg-cobalt px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40"
+                        onClick={() => handlePlatformClick("github")}
+                        className="flex items-center justify-center gap-1.5 border-2 border-ink bg-paper-raised px-2.5 py-2 text-xs font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft"
                       >
-                        {starLoading ? "..." : "我已 Star，获取邀请码"}
+                        <GitHubIcon size={14} className="text-ink" />
+                        去 GitHub
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePlatformClick("xhs")}
+                        className="flex items-center justify-center gap-1.5 border-2 border-ink bg-paper-raised px-2.5 py-2 text-xs font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-danger-soft"
+                      >
+                        <XiaohongshuIcon size={14} className="text-danger" />
+                        去小红书
                       </button>
                     </div>
-                    {starMessage && (
-                      <p className="text-ink-muted">{starMessage}</p>
+                    {/* Claim button — enabled after user clicked a platform link */}
+                    <button
+                      type="button"
+                      onClick={handleClaimCode}
+                      disabled={!socialStatus.enabled || socialLoading || !clickedPlatform}
+                      className="w-full border-2 border-ink bg-cobalt px-2.5 py-2 text-xs font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40"
+                    >
+                      {socialLoading
+                        ? "..."
+                        : clickedPlatform
+                          ? `我已${clickedPlatform === "github" ? " Star" : "关注"}，获取邀请码`
+                          : "先点击上方链接，再回来获取"}
+                    </button>
+                    {socialMessage && (
+                      <p className="text-ink-muted">{socialMessage}</p>
                     )}
                   </div>
                 )}
@@ -258,6 +283,54 @@ export default function LoginPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Code reveal modal */}
+      <AnimatePresence>
+        {showCodeModal && claimedCode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
+            onClick={() => setShowCodeModal(false)}
+          >
+            <motion.div
+              initial={reduce ? false : { scale: 0.9, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={reduce ? undefined : { scale: 0.9, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-xs border-2 border-ink bg-paper-raised shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="border-b-2 border-ink bg-success-soft/50 px-4 py-2">
+                <span className="font-serif text-sm font-medium">邀请码已获取</span>
+              </div>
+              <div className="space-y-3 p-5 text-center">
+                <p className="text-xs text-ink-muted">已自动填入注册表单，完成注册即可</p>
+                <code className="block select-all font-mono text-2xl font-bold tracking-[0.2em] text-cobalt">
+                  {claimedCode}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(claimedCode);
+                  }}
+                  className="border-2 border-ink bg-paper-raised px-3 py-1.5 text-xs font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft"
+                >
+                  复制邀请码
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCodeModal(false)}
+                  className="block w-full text-xs text-ink-muted hover:text-ink"
+                >
+                  关闭
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

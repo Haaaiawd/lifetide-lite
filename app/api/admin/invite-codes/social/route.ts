@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/admin";
-import { getStarCampaign, createOrUpdateStarCampaign } from "@/lib/auth/invite";
+import { getSocialCampaign, createOrUpdateSocialCampaign } from "@/lib/auth/invite";
 
-// GET — admin: return star campaign details
+// GET — admin campaign status
 export async function GET(request: NextRequest) {
   const { response } = await requireAdmin(request);
   if (response) return response;
 
-  const campaign = await getStarCampaign();
-  if (!campaign) {
-    return NextResponse.json({ enabled: false, campaign: null });
-  }
-
-  const remaining = Math.max(0, campaign.maxUses - campaign.usedCount);
+  const campaign = await getSocialCampaign();
   return NextResponse.json({
-    enabled: !campaign.exhausted && remaining > 0,
-    campaign: {
-      ...campaign,
-      remaining,
-    },
+    enabled: true,
+    campaign: campaign
+      ? {
+          id: campaign.id,
+          code: campaign.code,
+          maxUses: campaign.maxUses,
+          usedCount: campaign.usedCount,
+          remaining: campaign.remaining,
+          exhausted: campaign.exhausted,
+        }
+      : null,
   });
 }
 
-// PATCH — admin: create or update star campaign maxUses
+// PATCH — update campaign quota
 export async function PATCH(request: NextRequest) {
   const { user, response } = await requireAdmin(request);
   if (response) return response;
@@ -37,17 +39,18 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const result = await createOrUpdateStarCampaign({
+  const result = await createOrUpdateSocialCampaign({
     maxUses,
     createdBy: user!.email,
   });
 
-  const campaign = await getStarCampaign();
+  const campaign = await getSocialCampaign();
   return NextResponse.json({
     id: result.id,
     code: result.code,
     maxUses: result.maxUses,
     usedCount: campaign?.usedCount ?? 0,
-    remaining: campaign ? Math.max(0, campaign.maxUses - campaign.usedCount) : 0,
+    remaining: campaign?.remaining ?? 0,
+    exhausted: campaign?.exhausted ?? false,
   });
 }
