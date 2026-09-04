@@ -79,7 +79,7 @@ Prompts do not expose hidden chain-of-thought. “Decision procedure” tells th
 - current state allows the call；
 - role/mode and schema match；
 - session, wave, source and revision ownership；
-- 5–10 elicitation units per wave, at most 10 actual questions, microbatch 1–3, waves ≤5, deep dives ≤2；
+- 5–10 elicitation units per wave, at most 10 actual questions, microbatch 1–3, waves ≤8, deep dives ≤2；
 - user pause/stop/preview and declined topics；
 - source references, atomic patch and stale propagation；
 - pure route-readiness derivation and pairwise six-axis life-shape checks；
