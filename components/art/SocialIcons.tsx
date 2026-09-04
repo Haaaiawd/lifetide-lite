@@ -19,15 +19,26 @@ export function GitHubIcon({ size = 20, className }: { size?: number; className?
 
 export function XiaohongshuIcon({ size = 20, className }: { size?: number; className?: string }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
+    <span
       className={className}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        borderRadius: size * 0.2,
+        background: "#FF2442",
+        color: "#FFFFFF",
+        fontSize: size * 0.42,
+        fontWeight: 700,
+        lineHeight: 1,
+        fontFamily: "system-ui, sans-serif",
+        letterSpacing: "-0.02em",
+      }}
       aria-hidden="true"
     >
-      <path d="M3 3h18v18H3V3zm5.5 4.5h-3v9h1.8v-3.2h1.2c1.3 0 2.2-.8 2.2-2.2v-1.4c0-1.4-.9-2.2-2.2-2.2zm-.3 1.6c.5 0 .8.3.8.8v1c0 .5-.3.8-.8.8h-.9V9.1h.9zM14 7.5h-3.2v9H14c1.2 0 2-.7 2-1.9V9.4c0-1.2-.8-1.9-2-1.9zm-.2 1.6c.4 0 .6.2.6.6v4.6c0 .4-.2.6-.6.6h-1.2V9.1h1.2zM18.5 7.5h-1.8v9h1.8v-4l1.5 4h1.9l-1.7-4.5 1.6-4.5h-1.8l-1.5 4v-4z" />
-    </svg>
+      小红书
+    </span>
   );
 }
