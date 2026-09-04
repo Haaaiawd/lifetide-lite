@@ -475,7 +475,7 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
   const uncertainties = memory.uncertainties
     .filter((u) => u.status === "active")
     .slice(0, 6)
-    .map((u) => `- [${u.id}] ${u.question}`)
+    .map((u) => `- [${u.id}] ${u.topic}`)
     .join("\n");
 
   return [

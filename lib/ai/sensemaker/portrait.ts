@@ -62,7 +62,7 @@ function buildPortraitEnvelope(memory: WorkingMemory): string {
   const uncertainties = memory.uncertainties
     .filter((u) => u.status === "active")
     .slice(0, 8)
-    .map((u) => `- [${u.id}] ${u.question} (priority: ${u.priority})`)
+    .map((u) => `- [${u.id}] ${u.topic} (priority: ${u.priority})`)
     .join("\n");
 
   const feedback = memory.recent_feedback
