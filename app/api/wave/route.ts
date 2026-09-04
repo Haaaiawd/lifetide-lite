@@ -349,7 +349,7 @@ export async function GET(request: NextRequest) {
       where: { sessionId: session.id },
       orderBy: { createdAt: "asc" },
     });
-    // Build a map of questionId -> answer value for quick lookup.
+    // Build a map of questionId -> raw answer value for quick lookup.
     const answerMap = new Map<string, string>();
     for (const a of lastWaveAnswerRows) {
       if (a.value && !answerMap.has(a.questionId)) {
@@ -357,11 +357,24 @@ export async function GET(request: NextRequest) {
       }
     }
     lastWaveAnswers = lastWaveQuestions
-      .map((q) => ({
-        question_text: q.text,
-        answer_text: answerMap.get(q.id) ?? "(未回答)",
-      }))
-      .filter((qa) => qa.answer_text !== "(未回答)");
+      .map((q) => {
+        const raw = answerMap.get(q.id);
+        if (!raw) return null;
+        // Resolve option IDs to labels for choice questions.
+        // Stored answer may be a single option id, comma-joined ids, or free text.
+        let answerText = raw;
+        if (q.options && q.options.length > 0) {
+          const optionMap = new Map(q.options.map((o) => [o.id, o.label]));
+          const ids = raw.split(",").map((s) => s.trim());
+          const resolved = ids.map((id) => optionMap.get(id) ?? id);
+          answerText = resolved.join(", ");
+        }
+        return {
+          question_text: q.text,
+          answer_text: answerText,
+        };
+      })
+      .filter((qa): qa is { question_text: string; answer_text: string } => qa !== null);
     if (lastWaveAnswers.length === 0) lastWaveAnswers = undefined;
   }
 
@@ -674,7 +687,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        if (nextMemory.uncertainties.length === 0) {
+        if (!nextMemory.uncertainties.some((u) => u.status === "active")) {
           // Only seed uncertainty with evidence that points to active sources.
           const validInsightEvidence = output.insight.evidence.filter((e) =>
             isActiveSourceRef(nextMemory, e.source_id, e.source_revision)
