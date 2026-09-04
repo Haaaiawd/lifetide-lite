@@ -268,7 +268,7 @@ function ConversationCard({
         }`}
         style={{ scrollSnapAlign: item.isActive ? "end" : "start" }}
       >
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence initial={false}>
           {item.isActive ? (
             <motion.div
               key="active"
@@ -364,12 +364,22 @@ export function Conversation({
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const active = containerRef.current.querySelector('[data-active="true"]') as HTMLElement | null;
-    if (active) {
-      active.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" });
-    } else {
-      containerRef.current.scrollTo({ top: containerRef.current.scrollHeight, behavior: reduce ? "auto" : "smooth" });
-    }
+    const container = containerRef.current;
+    // Defer scroll to next frame so new cards (especially insight cards
+    // with entrance animations) have a chance to render before we scroll
+    // to them. Without this, scrollIntoView fires while the card is still
+    // at opacity:0, making it appear to "vanish."
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const active = container.querySelector('[data-active="true"]') as HTMLElement | null;
+        if (active) {
+          active.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" });
+        } else {
+          container.scrollTo({ top: container.scrollHeight, behavior: reduce ? "auto" : "smooth" });
+        }
+      });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [items, reduce]);
 
   return (
