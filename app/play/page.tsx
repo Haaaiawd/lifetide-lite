@@ -315,6 +315,7 @@ export default function PlayPage() {
       startPrefetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+      setStreamingInsight(null);
       setStep("question");
     }
   };
@@ -827,7 +828,7 @@ export default function PlayPage() {
         onInsightContinue={handleInsightContinue}
         onMaterialSubmit={handleMaterialSubmit}
         onMaterialSkip={handleMaterialSkip}
-        className="h-[100dvh]"
+        className="flex-1 min-h-0"
       />
 
       {step === "stop" && (
