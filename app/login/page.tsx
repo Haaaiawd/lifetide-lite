@@ -8,7 +8,7 @@ import { PixelIcon } from "@/components/art/PixelIcon";
 type Mode = "login" | "register";
 
 const GITHUB_REPO_URL =
-  process.env.NEXT_PUBLIC_GITHUB_REPO_URL ?? "https://github.com/Haaaiawd/lifetide-lite";
+  process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/Haaaiawd/lifetide-lite";
 
 interface StarStatus {
   enabled: boolean;

@@ -243,7 +243,7 @@ export default function AdminPage() {
         body: JSON.stringify({ maxUses: starMaxUses }),
       });
       if (res.ok) {
-        await loadStarCampaign();
+        await Promise.all([loadStarCampaign(), loadStats()]);
       }
     } finally {
       setStarSaving(false);

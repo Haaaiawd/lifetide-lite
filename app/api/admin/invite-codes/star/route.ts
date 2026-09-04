@@ -28,10 +28,13 @@ export async function PATCH(request: NextRequest) {
   if (response) return response;
 
   const body = await request.json().catch(() => ({}));
-  const maxUses = Math.max(1, Math.min(10000, Number(body.maxUses) || 0));
+  const maxUses = Number(body.maxUses);
 
-  if (maxUses < 1) {
-    return NextResponse.json({ error: "maxUses 至少为 1" }, { status: 400 });
+  if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 10000) {
+    return NextResponse.json(
+      { error: "maxUses 必须是 1 到 10000 之间的整数" },
+      { status: 400 },
+    );
   }
 
   const result = await createOrUpdateStarCampaign({

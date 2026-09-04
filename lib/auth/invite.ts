@@ -1,5 +1,8 @@
 import { randomBytes } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+
+type PrismaTransaction = Prisma.TransactionClient;
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing chars (0/O, 1/I)
 
@@ -50,23 +53,33 @@ export async function validateAndConsumeInviteCode(
 ): Promise<InviteSource | null> {
   const normalized = code.toUpperCase().trim();
   const result = await prisma.$transaction(async (tx) => {
-    const record = await tx.inviteCode.findUnique({ where: { code: normalized } });
-    if (!record) return null;
-    if (record.exhausted) return null;
-    if (record.usedCount >= record.maxUses) return null;
+    return consumeInviteCodeInTx(tx, normalized);
+  });
+  return result;
+}
 
-    await tx.inviteCode.update({
-      where: { id: record.id },
-      data: {
-        usedCount: { increment: 1 },
-        exhausted: record.usedCount + 1 >= record.maxUses,
-      },
-    });
+/**
+ * Consume an invite code slot within an existing transaction.
+ * Used by the register route to make invite consumption + user creation atomic.
+ */
+export async function consumeInviteCodeInTx(
+  tx: PrismaTransaction,
+  normalizedCode: string,
+): Promise<InviteSource | null> {
+  const record = await tx.inviteCode.findUnique({ where: { code: normalizedCode } });
+  if (!record) return null;
+  if (record.exhausted) return null;
+  if (record.usedCount >= record.maxUses) return null;
 
-    return record.source as InviteSource;
+  await tx.inviteCode.update({
+    where: { id: record.id },
+    data: {
+      usedCount: { increment: 1 },
+      exhausted: record.usedCount + 1 >= record.maxUses,
+    },
   });
 
-  return result;
+  return record.source as InviteSource;
 }
 
 // --- Star campaign helpers ---
