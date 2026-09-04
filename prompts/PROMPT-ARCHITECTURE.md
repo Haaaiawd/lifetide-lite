@@ -152,7 +152,7 @@ All prompt files must agree on the following constants:
 - six dimensions and five radar states；
 - 5–10 elicitation units per wave and at most 10 actual questions; user-provided material may precover a unit with exact source mapping；
 - 1–3 questions per generated microbatch；
-- default 4, maximum 6 waves (wave 1 is a fixed template, AI-driven waves are 2–6)；
+- recommended 8, maximum 8 waves (wave 1 is a fixed template, AI-driven waves are 2–8; early stop allowed at wave 4 if sufficient)；
 - maximum 2 deep-dive waves within the total；
 - one formal insight per wave；
 - interview exit is governed by mission/user/cap, while parallel-life generation is governed later by formal/provisional readiness；
