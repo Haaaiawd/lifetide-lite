@@ -13,7 +13,7 @@ function schemaAsJson(schema: z.ZodType<unknown, z.ZodTypeDef, unknown>): string
 // has the dimension definitions and state rules when deciding what to ask or analyze.
 const SIX_DIMENSION_RADAR = loadPrompt("six_dimension_radar");
 
-const MAX_WAVES = 5;
+const MAX_WAVES = 6;
 
 /**
  * Build a concise progress summary so the Agent knows how much runway is left
@@ -59,6 +59,8 @@ export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: numb
     lines.push("节奏提醒: 这是最后一个波次，优先补齐最缺证据且最影响决定的维度，不再发散。");
   } else if (remainingWaves <= 2) {
     lines.push("节奏提醒: 剩余波次不多，优先覆盖未触及维度，已有实质证据的维度不再深入。");
+  } else if (currentWave <= 2) {
+    lines.push("节奏提醒: 还在早期波次，优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。");
   } else {
     lines.push("节奏提醒: 还有充足波次，可以兼顾深度和广度，但确保每波至少推进一个未触及或线索薄的维度。");
   }

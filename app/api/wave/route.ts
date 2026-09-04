@@ -29,7 +29,7 @@ import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty,
 import { loadUploadChunks } from "@/lib/uploads/load-chunks";
 import type { NextRequest } from "next/server";
 
-const MAX_WAVES = 5;
+const MAX_WAVES = 6;
 const MAX_QUESTIONS = 50;
 
 function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolean {
@@ -835,8 +835,9 @@ export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): 
     return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "question_limit" };
   }
 
-  // Sufficient for final after at least the default three waves.
-  if (memory.last_wave_index >= 3 && hasRouteIntents && hasEvidence) {
+  // Sufficient for final after at least four waves (wave1 is fixed template,
+  // so AI-driven waves 2-4 must have had a chance to cover the radar).
+  if (memory.last_wave_index >= 4 && hasRouteIntents && hasEvidence) {
     return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
   }
 
