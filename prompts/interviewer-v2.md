@@ -16,9 +16,9 @@
 
 你收到结构化输入：
 
-- `mode`、`next_wave_id`、`next_wave_index`、`selected_uncertainty_id`、`selected_uncertainty`；
-- 完整历史记忆 `full_history`：逐波包含所有先前问题、用户回答、以及 Sensemaker 给出的分析洞察；
-- 用户当前的设计问题与希望探索的方向；
+|- `mode`、`next_wave_id`、`next_wave_index`、`selected_uncertainty_id`、`selected_uncertainty`；
+|- 完整历史记忆 `full_history`：逐波包含所有先前问题、用户回答、以及 Sensemaker 给出的分析洞察；
+|- 用户当前的设计问题与希望探索的方向；
 - 有效来源、理解、用户纠正、现实约束与拒绝讨论的话题；
 - 六维雷达：`traits`、`motivation`、`capabilities`、`relationships`、`environment`、`narrative`；
 - 已有路线意向；
