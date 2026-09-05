@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { LoadingProgress } from "@/components/LoadingProgress";
@@ -567,6 +567,17 @@ export default function PlayPage() {
   // Uses a full-screen overlay with walking animation + streaming text.
   const portraitAbortRef = useRef<AbortController | null>(null);
   const isGeneratingRef = useRef(false);
+  const [portraitComplete, setPortraitComplete] = useState(false);
+  const portraitDoneDataRef = useRef<{ portrait: PersonaPortrait } | null>(null);
+  const handlePortraitDone = useCallback(() => {
+    const doneData = portraitDoneDataRef.current;
+    if (!doneData) return;
+    portraitDoneDataRef.current = null;
+    setPortrait(doneData.portrait);
+    setStreamingPortrait(null);
+    setPortraitComplete(false);
+    setStep("portrait");
+  }, []);
   const handleGenerateFinal = async () => {
     if (isGeneratingRef.current) return;
     isGeneratingRef.current = true;
@@ -578,6 +589,8 @@ export default function PlayPage() {
     setBadgeExpanded(false);
     setStreamingPortrait(null);
     setPortraitError(null);
+    setPortraitComplete(false);
+    portraitDoneDataRef.current = null;
     setStep("portrait_overlay");
     try {
       const res = await fetch("/api/portrait", { method: "POST", signal: ac.signal });
@@ -591,9 +604,9 @@ export default function PlayPage() {
         (d) => { if (!ac.signal.aborted) setStreamingPortrait(d as { essence?: string; trait_summary?: string }); }
       );
       if (ac.signal.aborted) return;
-      setPortrait(doneData.portrait);
-      setStreamingPortrait(null);
-      setStep("portrait");
+
+      portraitDoneDataRef.current = doneData;
+      setPortraitComplete(true);
     } catch (err) {
       if (ac.signal.aborted) return;
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -608,7 +621,21 @@ export default function PlayPage() {
   // Uses full-screen overlay with walking animation, then shows results.
   const [finalOverlayError, setFinalOverlayError] = useState<string | null>(null);
   const [streamingFinal, setStreamingFinal] = useState<Array<{ label: string; text: string }> | null>(null);
+  const [finalComplete, setFinalComplete] = useState(false);
+  const finalDoneDataRef = useRef<FinalPlan | null>(null);
   const finalAbortRef = useRef<AbortController | null>(null);
+  const handleFinalComplete = useCallback(() => {
+    const doneData = finalDoneDataRef.current;
+    if (!doneData) return;
+    finalDoneDataRef.current = null;
+    const lives: ParallelLife[] = doneData.lives ?? [];
+    setRoutes(lives.map((life, i) => toRouteView(life, i)));
+    setFraming(doneData.framing ?? null);
+    setBlueprint(doneData.blueprint ?? null);
+    setStreamingFinal(null);
+    setFinalComplete(false);
+    setStep("routes");
+  }, []);
   const handlePortraitContinue = async () => {
     if (isGeneratingRef.current) return;
     isGeneratingRef.current = true;
@@ -618,6 +645,8 @@ export default function PlayPage() {
 
     setFinalOverlayError(null);
     setStreamingFinal(null);
+    setFinalComplete(false);
+    finalDoneDataRef.current = null;
     setStep("final_overlay");
     try {
       const res = await fetch("/api/final", { method: "POST", signal: ac.signal });
@@ -636,12 +665,8 @@ export default function PlayPage() {
       );
       if (ac.signal.aborted) return;
 
-      const lives: ParallelLife[] = doneData.lives ?? [];
-      setRoutes(lives.map((life, i) => toRouteView(life, i)));
-      setFraming(doneData.framing ?? null);
-      setBlueprint(doneData.blueprint ?? null);
-      setStreamingFinal(null);
-      setStep("routes");
+      finalDoneDataRef.current = doneData;
+      setFinalComplete(true);
     } catch (err) {
       if (ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -996,6 +1021,8 @@ export default function PlayPage() {
                 ]
               : null
           }
+          isComplete={portraitComplete}
+          onComplete={handlePortraitDone}
           error={portraitError?.message ?? null}
           onRetry={portraitError?.retry}
           onCancel={() => { portraitAbortRef.current?.abort(); setPortraitError(null); setStep("stop"); }}
@@ -1009,6 +1036,8 @@ export default function PlayPage() {
           title="设计三条平行人生"
           subtitle="每条都得是一个真的能过的日子……"
           streamingSections={streamingFinal}
+          isComplete={finalComplete}
+          onComplete={handleFinalComplete}
           error={finalOverlayError}
           onRetry={() => { setFinalOverlayError(null); handlePortraitContinue(); }}
           onCancel={() => { finalAbortRef.current?.abort(); setFinalOverlayError(null); setStep("portrait"); }}

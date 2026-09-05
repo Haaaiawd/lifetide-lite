@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { WalkProgress } from "@/components/play/WalkProgress";
 
-type Phase = "walking" | "streaming" | "error";
+type Phase = "walking" | "streaming" | "complete" | "error";
 
 type StreamingSection = {
   label: string;
@@ -18,8 +18,12 @@ export type GenerationOverlayProps = {
   title: string;
   /** Subtitle shown during walking phase. */
   subtitle: string;
-  /** Streaming data — when sections appear, we switch from walking to streaming. */
+  /** Streaming data — drives both early transition from walking and content display. */
   streamingSections?: StreamingSection[] | null;
+  /** When true, all content has arrived; overlay waits briefly then calls onComplete. */
+  isComplete?: boolean;
+  /** Called after the streaming content has been shown for a moment. */
+  onComplete?: () => void;
   /** Error message — if set, overlay shows error + retry. */
   error?: string | null;
   /** Retry callback. */
@@ -28,23 +32,30 @@ export type GenerationOverlayProps = {
   onCancel?: () => void;
 };
 
+const MAX_WALK_DURATION = 8000; // ms — fallback cap so it cannot hang forever
+const STREAMING_SETTLE_MS = 2500; // ms — how long to show streamed content before transition
+
 /**
  * Full-screen overlay for portrait and final-plan generation.
  *
- * Two-phase experience:
- * 1. Walking phase: pixel-art traveler walks through a day cycle (~3s).
- *    This is the "ceremony" — a ritual transition before results appear.
- * 2. Streaming phase: once streaming data arrives (or walking completes
- *    for non-streaming final plan), text content fades in section by section.
+ * Stream-driven experience:
+ * 1. Walking phase: pixel-art traveler walks along a progress line. The walking
+ *    phase ends as soon as real streaming content arrives — it does NOT wait
+ *    for a fixed duration.
+ * 2. Streaming phase: text content fades in section by section as it arrives.
+ * 3. Complete phase: when isComplete becomes true, the overlay waits a short
+ *    moment so the user can see the final content, then calls onComplete.
  *
- * For portrait: SSE provides real streaming text.
- * For final plan: no SSE, so we use a typewriter effect on the result.
+ * A max walking duration exists only as a safety cap (e.g., if the provider
+ * streams no partials at all).
  */
 export function GenerationOverlay({
   variant,
   title,
   subtitle,
   streamingSections,
+  isComplete,
+  onComplete,
   error,
   onRetry,
   onCancel,
@@ -55,7 +66,10 @@ export function GenerationOverlay({
   const walkStartRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Walking phase: 3 seconds, time-driven. Skipped for reduced motion.
+  const hasStreamContent = streamingSections && streamingSections.some((s) => s.text);
+
+  // Walking phase: advances until either (a) stream content arrives, or
+  // (b) the safety cap is reached. Not fixed to a set duration.
   useEffect(() => {
     if (error) {
       setPhase("error");
@@ -63,21 +77,28 @@ export function GenerationOverlay({
     }
     if (reduce) {
       setWalkProgress(1);
-      setPhase("streaming");
+      setPhase(hasStreamContent ? "streaming" : "walking");
       return;
     }
     setPhase("walking");
     setWalkProgress(0);
     walkStartRef.current = null;
 
-    const walkDuration = 3000; // 3 seconds
-
     const tick = (now: number) => {
       if (walkStartRef.current === null) walkStartRef.current = now;
       const elapsed = now - walkStartRef.current;
-      const p = Math.min(elapsed / walkDuration, 1);
+      const p = Math.min(elapsed / MAX_WALK_DURATION, 1);
       setWalkProgress(p);
 
+      // Stream content arrived — end walking and hand over to streaming.
+      if (hasStreamContent) {
+        setWalkProgress(1);
+        setPhase("streaming");
+        rafRef.current = null;
+        return;
+      }
+
+      // Safety cap: if nothing arrives for a long time, show "正在生成……".
       if (p >= 1) {
         setPhase("streaming");
         rafRef.current = null;
@@ -90,16 +111,19 @@ export function GenerationOverlay({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [error, reduce]);
+  }, [error, reduce, hasStreamContent]);
 
-  // If streaming data arrives during walking, transition early.
-  const hasStreamContent = streamingSections && streamingSections.some((s) => s.text);
+  // Once streaming, show streaming content. When complete, wait a beat
+  // before calling onComplete so the user actually sees the final text.
   useEffect(() => {
-    if (phase === "walking" && hasStreamContent) {
-      setWalkProgress(1);
-      setPhase("streaming");
-    }
-  }, [hasStreamContent, phase]);
+    if (phase !== "streaming" || !isComplete || !onComplete) return;
+    setPhase("complete");
+    const timer = setTimeout(() => {
+      if (!isComplete) return;
+      onComplete();
+    }, STREAMING_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [phase, isComplete, onComplete]);
 
   return (
     <motion.div
@@ -108,94 +132,94 @@ export function GenerationOverlay({
       transition={{ duration: 0.3 }}
       className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center"
     >
-        {/* Walking phase */}
-        {phase === "walking" && (
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="flex w-full max-w-2xl flex-col items-center px-6"
-          >
-            <h2 className="mb-2 font-serif text-2xl font-medium text-ink">
-              {title}
-            </h2>
-            <p className="mb-6 text-sm text-ink-muted">
-              {subtitle}
-            </p>
-            <div className="w-full">
-              <WalkProgress
-                progress={walkProgress}
-                accentColor={variant === "portrait" ? "var(--cobalt)" : "var(--purple)"}
-              />
-            </div>
-            <p className="mt-4 text-xs text-ink-muted">
-              {variant === "portrait" ? "正在综合你说的所有话，找你的模式……" : "正在为你设计三条不同的路线……"}
-            </p>
-          </motion.div>
-        )}
+      {/* Walking phase */}
+      {phase === "walking" && (
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex w-full max-w-2xl flex-col items-center px-6"
+        >
+          <h2 className="mb-2 font-serif text-2xl font-medium text-ink">
+            {title}
+          </h2>
+          <p className="mb-6 text-sm text-ink-muted">
+            {subtitle}
+          </p>
+          <div className="w-full">
+            <WalkProgress
+              progress={walkProgress}
+              accentColor={variant === "portrait" ? "var(--cobalt)" : "var(--purple)"}
+            />
+          </div>
+          <p className="mt-4 text-xs text-ink-muted">
+            {variant === "portrait" ? "正在综合你说的所有话，找你的模式……" : "正在为你设计三条不同的路线……"}
+          </p>
+        </motion.div>
+      )}
 
-        {/* Streaming / content phase */}
-        {phase === "streaming" && !error && (
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="flex w-full max-w-2xl flex-col px-6"
-          >
-            <h2 className="mb-4 font-serif text-xl font-medium text-ink">
-              {variant === "portrait" ? "你的人格画像" : "三条平行人生"}
-            </h2>
-            <div className="max-h-[70dvh] space-y-4 overflow-y-auto">
-              {streamingSections && streamingSections.length > 0 ? (
-                streamingSections
-                  .filter((s) => s.text)
-                  .map((s, i) => (
-                    <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} />
-                  ))
-              ) : (
-                <div className="flex items-center gap-2 text-ink-muted">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
-                  <span className="text-sm">正在生成……</span>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
+      {/* Streaming / content phase */}
+      {(phase === "streaming" || phase === "complete") && !error && (
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex w-full max-w-2xl flex-col px-6"
+        >
+          <h2 className="mb-4 font-serif text-xl font-medium text-ink">
+            {variant === "portrait" ? "你的人格画像" : "三条平行人生"}
+          </h2>
+          <div className="max-h-[70dvh] space-y-4 overflow-y-auto">
+            {streamingSections && streamingSections.length > 0 ? (
+              streamingSections
+                .filter((s) => s.text)
+                .map((s, i) => (
+                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} />
+                ))
+            ) : (
+              <div className="flex items-center gap-2 text-ink-muted">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
+                <span className="text-sm">正在生成……</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
-        {/* Error phase */}
-        {phase === "error" && error && (
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex w-full max-w-md flex-col items-center px-6 text-center"
-          >
-            <div className="mb-4 border-2 border-danger bg-danger-soft/30 p-4">
-              <p className="text-sm text-danger">{error}</p>
-            </div>
-            <div className="flex gap-3">
-              {onRetry && (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
-                >
-                  重试
-                </button>
-              )}
-              {onCancel && (
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  className="border-2 border-ink bg-paper-raised px-4 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
-                >
-                  返回
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
+      {/* Error phase */}
+      {phase === "error" && error && (
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex w-full max-w-md flex-col items-center px-6 text-center"
+        >
+          <div className="mb-4 border-2 border-danger bg-danger-soft/30 p-4">
+            <p className="text-sm text-danger">{error}</p>
+          </div>
+          <div className="flex gap-3">
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
+              >
+                重试
+              </button>
+            )}
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="border-2 border-ink bg-paper-raised px-4 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
+              >
+                返回
+              </button>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
 
