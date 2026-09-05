@@ -601,7 +601,14 @@ export default function PlayPage() {
 
       const doneData = await readSseStream<{ portrait: PersonaPortrait }>(
         res,
-        (d) => { if (!ac.signal.aborted) setStreamingPortrait(d as { essence?: string; trait_summary?: string }); }
+        (d) => {
+          if (ac.signal.aborted) return;
+          // Incremental merge — partial events may carry only a subset of
+          // fields, so keep previously streamed fields instead of replacing.
+          setStreamingPortrait((prev) =>
+            prev ? { ...prev, ...(d as { essence?: string; trait_summary?: string }) } : (d as { essence?: string; trait_summary?: string })
+          );
+        }
       );
       if (ac.signal.aborted) return;
 
@@ -660,7 +667,19 @@ export default function PlayPage() {
         (d) => {
           if (ac.signal.aborted) return;
           const partial = d as { sections?: Array<{ label: string; text: string }> };
-          if (partial.sections) setStreamingFinal(partial.sections);
+          if (partial.sections) {
+            // Merge by label — partials may resend earlier sections or add
+            // new ones, so update existing entries and append new labels.
+            setStreamingFinal((prev) => {
+              const next = prev ? [...prev] : [];
+              for (const s of partial.sections!) {
+                const idx = next.findIndex((x) => x.label === s.label);
+                if (idx >= 0) next[idx] = s;
+                else next.push(s);
+              }
+              return next;
+            });
+          }
         }
       );
       if (ac.signal.aborted) return;

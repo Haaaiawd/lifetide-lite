@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { WalkProgress } from "@/components/play/WalkProgress";
 
@@ -130,7 +130,7 @@ export function GenerationOverlay({
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center"
+      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center bg-paper/95 backdrop-blur-sm"
     >
       {/* Walking phase */}
       {phase === "walking" && (
@@ -174,7 +174,7 @@ export function GenerationOverlay({
               streamingSections
                 .filter((s) => s.text)
                 .map((s, i) => (
-                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} />
+                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} variant={variant} />
                 ))
             ) : (
               <div className="flex items-center gap-2 text-ink-muted">
@@ -184,6 +184,26 @@ export function GenerationOverlay({
             )}
           </div>
         </motion.div>
+      )}
+
+      {/* Cancel controls — anchored to the overlay's bottom-right corner */}
+      {phase === "walking" && onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute bottom-6 right-6 text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+        >
+          返回
+        </button>
+      )}
+      {phase === "streaming" && onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute bottom-6 right-6 border-2 border-ink bg-paper-raised px-4 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
+        >
+          取消
+        </button>
       )}
 
       {/* Error phase */}
@@ -227,10 +247,12 @@ function StreamingSectionCard({
   section,
   delay,
   reduce,
+  variant,
 }: {
   section: StreamingSection;
   delay: number;
   reduce: boolean | null;
+  variant: "portrait" | "final";
 }) {
   return (
     <motion.div
@@ -243,10 +265,28 @@ function StreamingSectionCard({
         {section.label}
       </div>
       <p className="font-serif text-base leading-snug">
-        <span className="stream-wave-text">{section.text}</span>
-        <span className="animate-pulse text-cobalt/50">▎</span>
+        {variant === "final" ? (
+          <TypewriterText text={section.text} />
+        ) : (
+          <>
+            <span className="stream-wave-text">{section.text}</span>
+            <span className="animate-pulse text-cobalt/50">▎</span>
+          </>
+        )}
       </p>
     </motion.div>
+  );
+}
+
+function TypewriterText({ text, cps = 40 }: { text: string; cps?: number }) {
+  const revealed = useTypewriter(text, cps);
+  return (
+    <>
+      {revealed}
+      {revealed.length < text.length && (
+        <span className="animate-pulse text-cobalt/50">▎</span>
+      )}
+    </>
   );
 }
 
@@ -256,39 +296,45 @@ function StreamingSectionCard({
  */
 export function useTypewriter(text: string, cps: number = 40): string {
   const [revealed, setRevealed] = useState("");
+  // Tracks the text already shown so that when `text` grows (streaming
+  // partial updates), the typewriter continues from the revealed prefix
+  // instead of restarting from scratch.
+  const revealedRef = useRef("");
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
   const reduce = useReducedMotion();
 
-  const reset = useCallback(() => {
-    setRevealed("");
-    startRef.current = null;
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-  }, []);
-
   useEffect(() => {
     if (!text) {
+      revealedRef.current = "";
       setRevealed("");
       return;
     }
     if (reduce) {
+      revealedRef.current = text;
       setRevealed(text);
       return;
     }
-    setRevealed("");
+    // Continue from the already-revealed prefix when the new text extends
+    // it; otherwise (text changed entirely) restart from zero.
+    const base = text.startsWith(revealedRef.current) ? revealedRef.current : "";
+    revealedRef.current = base;
+    setRevealed(base);
     startRef.current = null;
     const interval = Math.max(1000 / cps, 14);
 
     const tick = (now: number) => {
       if (startRef.current === null) startRef.current = now;
       const elapsed = now - startRef.current;
-      const chars = Math.floor(elapsed / interval);
+      const chars = base.length + Math.floor(elapsed / interval);
       if (chars >= text.length) {
+        revealedRef.current = text;
         setRevealed(text);
         rafRef.current = null;
         return;
       }
-      setRevealed(text.slice(0, chars));
+      revealedRef.current = text.slice(0, chars);
+      setRevealed(revealedRef.current);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
