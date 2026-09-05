@@ -67,7 +67,7 @@ describe("harness machine transitions", () => {
     expect(actor.getSnapshot().value).toEqual({ interviewing: "orienting_wave" });
   });
 
-  it("rejects a 6th wave", () => {
+  it("rejects a 9th wave", () => {
     const actor = createActor(harnessMachine, { input: {} });
     actor.start();
     actor.send({
@@ -103,7 +103,7 @@ describe("harness machine transitions", () => {
       },
     });
 
-    // Attempt to commit wave with index 6
+    // Attempt to commit wave with index 9
     actor.send({
       type: "WAVE_MISSION_COMMITTED",
       envelope: {
@@ -122,8 +122,8 @@ describe("harness machine transitions", () => {
           proposal_id: "p1",
           generation_provenance: {} as any,
           wave: {
-            id: "w6",
-            index: 6,
+            id: "w9",
+            index: 9,
             kind: "core",
             mission: {},
             status: "open",

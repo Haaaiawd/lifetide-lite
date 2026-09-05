@@ -17,8 +17,7 @@ import type {
 } from "@/lib/state/events";
 import type { Answer, SourceVersion, SourceHead } from "@/lib/state/contracts";
 import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
-import { runSensemakerWave, runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
-import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
+import { runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
 import { runInterviewer } from "@/lib/ai/interviewer";
 import { selectedUncertainty, rankActiveUncertainties } from "@/lib/interview/uncertainty";
 import { deriveShortQuestion } from "@/lib/interview/derive-question";

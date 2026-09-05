@@ -173,7 +173,7 @@ export const harnessMachine = setup({
       if (e.event_type !== "WAVE_MISSION_COMMITTED" && e.event_type !== "NEXT_WAVE_COMMITTED") return false;
       const wave = "wave" in e.payload ? (e.payload as { wave: Wave }).wave : undefined;
       if (!wave) return false;
-      return wave.index >= 1 && wave.index <= 5;
+      return wave.index >= 1 && wave.index <= 8;
     },
     deepDiveWithinLimit: ({ context, event }) => {
       const e = (event as MachineEvent).envelope;
@@ -196,7 +196,7 @@ export const harnessMachine = setup({
         }
       }
       if (wave) {
-        return wave.index >= 1 && wave.index <= 5;
+        return wave.index >= 1 && wave.index <= 8;
       }
       return true;
     },

@@ -16,18 +16,18 @@ export type RankedUncertainties = {
 export function rankActiveUncertainties(memory: WorkingMemory): RankedUncertainties {
   const active = memory.uncertainties
     .filter((u) => u.status === "active")
-    .slice(0, MAX_ACTIVE_UNCERTAINTIES)
-    .map((u) => ({ ...u, priority: recomputeUncertaintyPriority(u.factors) }));
+    .map((u) => ({ ...u, priority: recomputeUncertaintyPriority(u.factors) }))
+    .sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      if (a.created_wave !== b.created_wave) return a.created_wave - b.created_wave;
+      return a.id.localeCompare(b.id);
+    });
 
-  active.sort((a, b) => {
-    if (b.priority !== a.priority) return b.priority - a.priority;
-    if (a.created_wave !== b.created_wave) return a.created_wave - b.created_wave;
-    return a.id.localeCompare(b.id);
-  });
+  const sorted = active.slice(0, MAX_ACTIVE_UNCERTAINTIES);
 
   return {
-    sorted: active,
-    selectedId: active[0]?.id ?? null,
+    sorted,
+    selectedId: sorted[0]?.id ?? null,
   };
 }
 
