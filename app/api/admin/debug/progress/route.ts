@@ -40,11 +40,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  const wm = workingMemory ? JSON.parse(workingMemory.payload) : null;
+  let wm: any = null;
+  if (workingMemory) {
+    try { wm = JSON.parse(workingMemory.payload); } catch { wm = null; }
+  }
 
   // Build dialogue: wave by wave, question + answer pairs
   const dialogue = waves.map((w) => {
-    const questions = JSON.parse(w.questions) as Array<{ id: string; text: string; type?: string }>;
+    let questions: Array<{ id: string; text: string; type?: string }> = [];
+    try { questions = JSON.parse(w.questions); } catch { questions = []; }
     const qaPairs = questions.map((q) => {
       const ans = answers.find((a) => a.questionId === q.id);
       return {
@@ -94,7 +98,7 @@ export async function GET(request: NextRequest) {
   const routeIntents = wm?.route_intents
     ? wm.route_intents.map((r: any) => ({
         id: r.id,
-        label: r.label ?? r.title ?? r.intent,
+        label: r.title_hint ?? r.id,
         status: r.status,
         evidence_count: r.evidence?.length ?? 0,
       }))
@@ -113,8 +117,8 @@ export async function GET(request: NextRequest) {
   const finalPlan = wm?.finalPlan
     ? {
         lives: wm.finalPlan.lives?.map((l: any) => ({
-          title: l.title ?? l.label,
-          ordinary_day_summary: l.ordinary_day?.summary ?? l.ordinary_day?.anchor,
+          title: l.title ?? l.id,
+          ordinary_day_summary: l.ordinary_day ?? "",
         })),
         generated: true,
       }

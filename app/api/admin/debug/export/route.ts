@@ -351,7 +351,7 @@ function buildTxtExport(data: any): string {
       lines.push("");
       lines.push("--- Route Intents ---");
       for (const r of wm.route_intents) {
-        lines.push(`  [${r.status}] ${r.label ?? r.title ?? r.intent} (${r.evidence?.length ?? 0} evidence)`);
+        lines.push(`  [${r.status}] ${r.title_hint ?? r.id} (${r.evidence?.length ?? 0} evidence)`);
       }
     }
 
@@ -369,9 +369,9 @@ function buildTxtExport(data: any): string {
       lines.push("--- Parallel Lives ---");
       for (let i = 0; i < wm.finalPlan.lives.length; i++) {
         const life = wm.finalPlan.lives[i];
-        lines.push(`  Life ${i + 1}: ${life.title ?? life.label}`);
-        if (life.ordinary_day?.summary) {
-          lines.push(`    ordinary_day: ${life.ordinary_day.summary}`);
+        lines.push(`  Life ${i + 1}: ${life.title ?? life.id}`);
+        if (life.ordinary_day) {
+          lines.push(`    ordinary_day: ${life.ordinary_day}`);
         }
       }
     }
