@@ -54,9 +54,20 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let controllerClosed = false;
+      const safeClose = () => {
+        if (controllerClosed) return;
+        controllerClosed = true;
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const sendSSE = (event: string, data: unknown) => {
-        const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(chunk));
+        if (controllerClosed) return;
+        try {
+          const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(chunk));
+        } catch {
+          controllerClosed = true;
+        }
       };
 
       try {
@@ -71,11 +82,11 @@ export async function POST(request: NextRequest) {
         await saveWorkingMemory(session.id, memory);
 
         sendSSE("done", { portrait });
-        controller.close();
+        safeClose();
       } catch (err) {
         console.error("Portrait SSE stream error:", err);
         sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
-        controller.close();
+        safeClose();
       }
     },
   });

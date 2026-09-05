@@ -31,6 +31,79 @@ import type { NextRequest } from "next/server";
 const MAX_WAVES = 8;
 const MAX_QUESTIONS = 50;
 
+/**
+ * If the XState ledger is stuck in "synthesizing_wave" (because a prior
+ * wave's INSIGHT_COMMITTED failed), submit a fallback INSIGHT_COMMITTED
+ * followed by NEXT_WAVE_COMMITTED to advance the machine back to
+ * "orienting_wave" so subsequent WAVE_MISSION_COMMITTED / ANSWER_SUBMITTED
+ * events are accepted.
+ */
+async function recoverStuckSynthesizing(sessionId: string): Promise<void> {
+  const snapshot = await loadPublicSnapshot(sessionId);
+  if (!snapshot) return;
+  const stateValue = (snapshot.state_value_json as { value: unknown }).value;
+  const inSynth = typeof stateValue === "object" && stateValue !== null && (stateValue as any).interviewing === "synthesizing_wave";
+  if (!inSynth) return;
+
+  console.warn("[recoverStuckSynthesizing] State machine stuck in synthesizing_wave, forcing advance");
+
+  // Submit a minimal INSIGHT_COMMITTED to move synthesizing_wave → awaiting_calibration
+  const fallbackProvenanceId = randomUUID();
+  const insightEnvelope = makeEnvelope("INSIGHT_COMMITTED", {
+    session_id: sessionId,
+    actor: "host",
+    base_revision: snapshot.revision,
+    idempotency_key: `insight-recovery-${sessionId}-${snapshot.revision}`,
+    correlation_id: randomUUID(),
+    proposal_id: fallbackProvenanceId,
+    payload: {
+      proposal_id: fallbackProvenanceId,
+      generation_provenance: {
+        proposal_id: fallbackProvenanceId,
+        correlation_id: randomUUID(),
+        model_config_id: "recovery",
+        prompt_version: "recovery",
+        generated_at: new Date().toISOString(),
+      },
+      proposal: {
+        base_revision: snapshot.revision,
+        operations: [],
+        insight: null as any,
+      },
+      insight_status: "skipped",
+    } as unknown as InsightCommitted,
+  });
+  const insightResult = await commitEvent(sessionId, insightEnvelope);
+  if (!insightResult.ok) {
+    console.error("[recoverStuckSynthesizing] INSIGHT_COMMITTED recovery failed:", insightResult.message);
+    return;
+  }
+
+  // Submit NEXT_WAVE_COMMITTED to move awaiting_calibration → orienting_wave
+  const nextWaveEnvelope = makeEnvelope("NEXT_WAVE_COMMITTED", {
+    session_id: sessionId,
+    actor: "host",
+    base_revision: insightResult.nextRevision,
+    idempotency_key: `next-wave-recovery-${sessionId}-${insightResult.nextRevision}`,
+    correlation_id: randomUUID(),
+    proposal_id: randomUUID(),
+    payload: {
+      proposal_id: randomUUID(),
+      generation_provenance: {
+        proposal_id: randomUUID(),
+        correlation_id: randomUUID(),
+        model_config_id: "recovery",
+        prompt_version: "recovery",
+        generated_at: new Date().toISOString(),
+      },
+    } as any,
+  });
+  const nextWaveResult = await commitEvent(sessionId, nextWaveEnvelope);
+  if (!nextWaveResult.ok) {
+    console.error("[recoverStuckSynthesizing] NEXT_WAVE_COMMITTED recovery failed:", nextWaveResult.message);
+  }
+}
+
 function isActiveSourceVersion(memory: WorkingMemory, sv: SourceVersion): boolean {
   if (sv.untrusted) return false;
   const head = memory.source_heads.find((h) => h.source_id === sv.source_id);
@@ -521,6 +594,8 @@ export async function GET(request: NextRequest) {
       generation_provenance: provenance,
       wave,
     };
+    // Recover from stuck synthesizing_wave before trying to commit.
+    await recoverStuckSynthesizing(session.id);
     const snapshot = await loadPublicSnapshot(session.id);
     const envelope = makeEnvelope("WAVE_MISSION_COMMITTED", {
       session_id: session.id,
@@ -674,6 +749,10 @@ export async function POST(request: NextRequest) {
 
   // Commit each answer to the XState ledger. Skipped on resubmit — those
   // events were already committed by the original attempt.
+  // Recover from stuck synthesizing_wave first so ANSWER_SUBMITTED is accepted.
+  if (!resubmit) {
+    await recoverStuckSynthesizing(session.id);
+  }
   const snapshot = await loadPublicSnapshot(session.id);
   let baseRevision = snapshot?.revision ?? 0;
   if (!resubmit) {
@@ -756,9 +835,20 @@ export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let controllerClosed = false;
+      const safeClose = () => {
+        if (controllerClosed) return;
+        controllerClosed = true;
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const sendSSE = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\n`));
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (controllerClosed) return;
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          controllerClosed = true;
+        }
       };
 
       try {
@@ -792,27 +882,30 @@ export async function POST(request: NextRequest) {
 
         if (output.expected_revision !== memory.revision + 1) {
           sendSSE("error", { error: "WorkingMemory revision mismatch" });
-          controller.close();
+          safeClose();
           return;
         }
 
         // Apply memory operations. If operations contain invalid evidence
-        // references (AI hallucinated source_ids), fall back to empty operations
-        // rather than failing the entire wave — the insight is still valid,
-        // just without new claims/constraints/route-intents.
+        // references (AI hallucinated source_ids), try to apply them
+        // individually so one bad operation doesn't discard all the rest.
         // Track which operations were actually applied so the ledger only
         // records what was committed to WorkingMemory.
-        let nextMemory: WorkingMemory;
-        let appliedOperations: typeof output.operations;
-        try {
-          nextMemory = applyMemoryOperations(memory, output.operations, {
-            wave_id,
-            generation_provenance_id: endProvenanceId,
-          });
-          appliedOperations = output.operations;
-        } catch (opErr) {
-          console.error("Memory operations failed, using empty operations:", opErr instanceof Error ? opErr.message : "unknown");
-          appliedOperations = [];
+        let nextMemory: WorkingMemory = memory;
+        let appliedOperations: typeof output.operations = [];
+        for (const op of output.operations) {
+          try {
+            nextMemory = applyMemoryOperations(nextMemory, [op], {
+              wave_id,
+              generation_provenance_id: endProvenanceId,
+            });
+            appliedOperations.push(op);
+          } catch (opErr) {
+            console.error("Memory operation skipped (invalid source ref):", opErr instanceof Error ? opErr.message : "unknown", "op:", op.op);
+          }
+        }
+        // If nothing could be applied, still need a valid nextMemory.
+        if (appliedOperations.length === 0) {
           nextMemory = applyMemoryOperations(memory, [], {
             wave_id,
             generation_provenance_id: endProvenanceId,
@@ -942,7 +1035,7 @@ export async function POST(request: NextRequest) {
           revision: nextMemory.revision,
           insight: fullInsight,
         });
-        controller.close();
+        safeClose();
       } catch (err) {
         console.error("Wave SSE stream error:", err);
         // Recovery: return the wave to "committed" so the client can resubmit,
@@ -962,7 +1055,7 @@ export async function POST(request: NextRequest) {
           console.error("Failed to reset wave after stream error:", cleanupErr);
         }
         sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
-        controller.close();
+        safeClose();
       }
     },
   });
