@@ -345,9 +345,10 @@ export async function GET(request: NextRequest) {
 
   const answerByQuestionId = new Map<string, { value: string | null; skipped: boolean }>();
   for (const a of allAnswerRows) {
-    if (!answerByQuestionId.has(a.questionId)) {
-      answerByQuestionId.set(a.questionId, { value: a.value, skipped: a.skipped });
-    }
+    // Overwrite on each iteration so the map ends up with the latest answer
+    // (allAnswerRows is ordered createdAt asc). This handles answer revisions
+    // where a question was re-answered after going back to edit.
+    answerByQuestionId.set(a.questionId, { value: a.value, skipped: a.skipped });
   }
 
   const insightByWaveId = new Map<

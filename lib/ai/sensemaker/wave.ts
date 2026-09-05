@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { waveSensemakerProposalSchema, immediateInsightProposalSchema, memoryOperationProposalSchema } from "@/lib/state/contracts";
+import type { RadarDimension, RadarDelta } from "@/lib/state/contracts";
 import { generateStructured, streamStructured } from "@/lib/ai/client";
 import { composePrompt, buildProgressSummary } from "@/lib/ai/prompts/compose";
 import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
@@ -185,6 +186,23 @@ function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposa
     .filter((v) => v && v !== "undefined")
     .join("；");
 
+  // Generate from==to radar deltas for all six dimensions so the fallback
+  // is consistent with the sensemaker prompt's requirement to evaluate every
+  // dimension each wave, even when nothing changed.
+  const allDimensions: RadarDimension[] = ["traits", "motivation", "capabilities", "relationships", "environment", "narrative"];
+  const fallbackSourceRef = { source_id: input.wave_id, source_revision: 1 };
+  const radarDeltas: RadarDelta[] = allDimensions.map((dim) => {
+    const cell = input.memory.radar[dim];
+    const state = cell?.state ?? "unseen";
+    return {
+      dimension: dim,
+      from: state,
+      to: state,
+      reason: `降级回退：本波未能生成分析，${dim} 维度状态保持 ${state}。`,
+      source_refs: [fallbackSourceRef],
+    };
+  });
+
   const insight: ImmediateInsightProposal = {
     wave_id: input.wave_id,
     user_told_me: answerSummary
@@ -192,7 +210,7 @@ function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposa
       : "本波回答已记录，但系统未能生成深入理解。",
     current_reading: "目前信息不足以更新理解，需要更多具体场景和行为证据。",
     important_unknown: focus ? focus.topic : "我暂不知晓的是本波回答背后更具体的场景和动机，需要后续波次补充。",
-    radar_deltas: [],
+    radar_deltas: radarDeltas,
     route_impact: "没有新增路线影响。",
     evidence: links.slice(0, 3),
     status: "proposed",
