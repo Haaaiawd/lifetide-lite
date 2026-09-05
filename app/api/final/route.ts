@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
         Connection: "keep-alive",
       },
     });
@@ -211,6 +212,10 @@ export async function POST(request: NextRequest) {
               }
 
               if (sections.length > 0) {
+                console.log("[final SSE] onPartial", {
+                  sectionCount: sections.length,
+                  labels: sections.map((s) => s.label),
+                });
                 sendSSE("partial", { sections });
               }
             },
@@ -486,6 +491,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
       Connection: "keep-alive",
     },
   });

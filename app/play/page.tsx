@@ -56,6 +56,10 @@ async function readSseStream<TDone>(
 
       try {
         const data = JSON.parse(dataLine);
+        console.log("[readSseStream] event", {
+          type: eventType,
+          bytes: dataLine.length,
+        });
         if (eventType === "partial") {
           onPartial(data);
         } else if (eventType === "done") {
@@ -63,14 +67,20 @@ async function readSseStream<TDone>(
         } else if (eventType === "error") {
           streamError = typeof data?.error === "string" ? data.error : "Stream error";
         }
-      } catch {
-        // Ignore malformed events
+      } catch (err) {
+        console.error("[readSseStream] failed to parse event", { eventType, err });
       }
     }
   }
 
-  if (streamError) throw new Error(streamError);
-  if (!doneData) throw new Error("Stream ended without done event");
+  if (streamError) {
+    console.error("[readSseStream] stream error event", streamError);
+    throw new Error(streamError);
+  }
+  if (!doneData) {
+    console.error("[readSseStream] stream ended without done event");
+    throw new Error("Stream ended without done event");
+  }
   return doneData;
 }
 
