@@ -58,11 +58,11 @@ export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: numb
   if (remainingWaves <= 1) {
     lines.push("节奏提醒: 这是最后一个波次（第 8 波），优先补齐最缺证据且最影响决定的维度，不再发散。");
   } else if (currentWave >= 6) {
-    lines.push("节奏提醒: 用户在第 6 波后可自主结束访谈。尽量在本波让所有维度至少达到 signaled，特别是仍 unseen 的维度；已有实质证据的维度不再深入。");
+    lines.push("节奏提醒: 已进入后半程，尽量在本波让所有维度至少达到 signaled，特别是仍 unseen 的维度；已有实质证据的维度不再深入。");
   } else if (currentWave >= 4) {
     lines.push("节奏提醒: 已过半程，优先覆盖未触及维度，确保到第 6 波时六维都有至少 signaled 状态。已有实质证据的维度不再深入。");
   } else if (currentWave === 3) {
-    lines.push("节奏提醒: 第 3 波，还在早期。优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。用户在第 6 波后可自主结束，建议在第 8 波自动进入画像——所以现在要尽量多触达不同维度。");
+    lines.push("节奏提醒: 第 3 波，还在早期。优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。到第 6 波时尽量让所有维度至少达到 signaled。");
   } else if (currentWave <= 2) {
     lines.push("节奏提醒: 还在早期波次，优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。");
   } else {

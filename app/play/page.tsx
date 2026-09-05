@@ -131,7 +131,9 @@ export default function PlayPage() {
     appendItem({
       id: newId(),
       type: "bot",
-      text: `第 ${data.wave_index} 波，来看看几个关键问题。`,
+      text: data.wave_index === 3
+        ? `第 3 波。聊到第 6 波你可以自主结束并生成画像，建议聊到第 8 波自动进入画像——现在还早，慢慢来。`
+        : `第 ${data.wave_index} 波，来看看几个关键问题。`,
     });
 
     if (data.questions.length > 0) {
