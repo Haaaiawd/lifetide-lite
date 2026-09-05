@@ -149,6 +149,7 @@ export async function GET(request: NextRequest) {
       can_generate: stop.canGenerate,
       provisional: stop.provisional,
       reason: "final_or_trial_phase",
+      wave_index: memory.last_wave_index,
     });
     return response;
   }
@@ -187,6 +188,7 @@ export async function GET(request: NextRequest) {
       can_generate: true,
       provisional: false,
       reason: "synthesizing",
+      wave_index: memory.last_wave_index,
     });
     return response;
   }
@@ -308,6 +310,7 @@ export async function GET(request: NextRequest) {
       can_generate: true,
       provisional: false,
       reason: "no_active_uncertainty",
+      wave_index: memory.last_wave_index,
     });
   }
 
@@ -318,6 +321,7 @@ export async function GET(request: NextRequest) {
       can_generate: true,
       provisional: false,
       reason: "no_active_uncertainty",
+      wave_index: memory.last_wave_index,
     });
   }
 
@@ -893,23 +897,25 @@ export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): 
   const hasRouteIntents = activeRouteIntents.length >= 3;
   const hasEvidence = activeSourceVersions(memory).length >= 1;
 
+  const canGenerate = hasRouteIntents && hasEvidence;
+
   if (memory.last_wave_index >= MAX_WAVES) {
-    return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "wave_limit" };
+    return { stop: true, canGenerate, provisional: false, reason: "wave_limit" };
   }
 
   if (answeredQuestions >= MAX_QUESTIONS) {
-    return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "question_limit" };
+    return { stop: true, canGenerate, provisional: false, reason: "question_limit" };
   }
 
   // At Wave 6, the user may choose to stop and generate a portrait.
   // The system recommends Wave 8 for full six-dimensional coverage,
   // but allows early stop at 6 if route intents and evidence are sufficient.
   // Wave 8 is the hard limit — the interview stops automatically.
-  if (memory.last_wave_index >= 6 && hasRouteIntents && hasEvidence) {
+  if (memory.last_wave_index >= 6 && canGenerate) {
     return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
   }
 
-  return { stop: false, canGenerate: hasRouteIntents, provisional: false, reason: "continue" };
+  return { stop: false, canGenerate, provisional: false, reason: "continue" };
 }
 
 async function computeBurden(sessionId: string, memory: WorkingMemory) {

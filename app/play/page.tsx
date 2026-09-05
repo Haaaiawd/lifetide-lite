@@ -50,6 +50,7 @@ export default function PlayPage() {
   const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
+  const [canGenerate, setCanGenerate] = useState<boolean>(true);
   const [streamingPortrait, setStreamingPortrait] = useState<{ essence?: string; trait_summary?: string } | null>(null);
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
   const hasLoadedRef = useRef(false);
@@ -206,6 +207,8 @@ export default function PlayPage() {
 
       if (data.stop) {
         const wIdx = data.wave_index ?? waveIndex;
+        setWaveIndex(wIdx);
+        setCanGenerate(data.can_generate !== false);
         appendItem({
           id: newId(),
           type: "bot",
@@ -628,7 +631,9 @@ export default function PlayPage() {
         setAnswers({});
         setInsight(null);
         setItems([
-          { id: newId(), type: "bot", text: `第 ${pwIndex} 波，继续回答几个关键问题。` },
+          { id: newId(), type: "bot", text: pwIndex === 3
+            ? `第 3 波。聊到第 6 波你可以自主结束并生成画像，建议聊到第 8 波自动进入画像——现在还早，慢慢来。`
+            : `第 ${pwIndex} 波，继续回答几个关键问题。` },
         ]);
         if (progressInfo.pendingWaveQuestions.length > 0) {
           setItems((prev) => [
@@ -831,9 +836,15 @@ export default function PlayPage() {
         >
           <div className="flex flex-col gap-4 p-2">
             {waveIndex >= 8 ? (
-              <p className="text-center text-ink-muted">
-                已经聊完 {waveIndex} 波，六维观察已经充分收集。现在可以生成个人画像了。
-              </p>
+              canGenerate ? (
+                <p className="text-center text-ink-muted">
+                  已经聊完 {waveIndex} 波，六维观察已经充分收集。现在可以生成个人画像了。
+                </p>
+              ) : (
+                <p className="text-center text-ink-muted">
+                  已经聊完 {waveIndex} 波。虽然观察还不够充分，但仍可尝试生成画像——结果可能不完整。
+                </p>
+              )
             ) : waveIndex >= 6 ? (
               <p className="text-center text-ink-muted">
                 已经聊了 {waveIndex} 波，六维观察已经比较充分。你可以现在生成个人画像，也可以继续聊到 8 波让理解更完整。

@@ -55,8 +55,10 @@ export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: numb
     `线索薄维度: ${thinDims}`,
   ];
 
-  if (remainingWaves <= 1) {
-    lines.push("节奏提醒: 这是最后一个波次（第 8 波），优先补齐最缺证据且最影响决定的维度，不再发散。");
+  if (remainingWaves === 0) {
+    lines.push(`节奏提醒: 这是最后一个波次（第 ${currentWave} 波），优先补齐最缺证据且最影响决定的维度，不再发散。`);
+  } else if (remainingWaves === 1) {
+    lines.push(`节奏提醒: 还剩 1 个波次，优先覆盖仍未触及的维度，已有实质证据的维度不再深入。`);
   } else if (currentWave >= 6) {
     lines.push("节奏提醒: 已进入后半程，尽量在本波让所有维度至少达到 signaled，特别是仍 unseen 的维度；已有实质证据的维度不再深入。");
   } else if (currentWave >= 4) {
