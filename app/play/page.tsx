@@ -7,6 +7,7 @@ import { LoadingProgress } from "@/components/LoadingProgress";
 import { RouteCarousel } from "@/components/routes/RouteCarousel";
 import { Conversation, type ConversationItem } from "@/components/play/Conversation";
 import { WaitingBubble } from "@/components/play/WaitingBubble";
+import { GenerationOverlay } from "@/components/play/GenerationOverlay";
 import { PortraitCard } from "@/components/portrait/PortraitCard";
 import { StarPrompt } from "@/components/StarPrompt";
 import type { Route } from "@/lib/fixtures";
@@ -17,7 +18,7 @@ import type { PersonaPortrait } from "@/lib/portrait/types";
 
 const REQUIRED_CONSENTS = [{ type: "ai", given: true }];
 
-type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "portrait" | "routes" | "waiting";
+type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "portrait" | "routes" | "waiting" | "portrait_overlay" | "final_overlay";
 
 // Shared SSE reader: forwards `partial` events to onPartial, captures `done`
 // data, and — crucially — does not swallow `error` events. An `error` event
@@ -562,12 +563,12 @@ export default function PlayPage() {
 
   // Generate persona portrait via SSE, then show portrait card.
   // User clicks "继续生成路线" on the portrait to proceed to final plan.
+  // Uses a full-screen overlay with walking animation + streaming text.
   const handleGenerateFinal = async () => {
     setBadgeExpanded(false);
-    setWaitingVariant("portrait");
     setStreamingPortrait(null);
     setStreamError(null);
-    setStep("waiting");
+    setStep("portrait_overlay");
     try {
       const res = await fetch("/api/portrait", { method: "POST" });
       if (!res.ok) {
@@ -585,16 +586,16 @@ export default function PlayPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setStreamingPortrait(null);
-      // Visible error bar + retry on the waiting step — going back to "stop"
-      // showed the error only as tiny text with no dedicated retry control.
       setStreamError({ message, retry: () => { setStreamError(null); handleGenerateFinal(); } });
     }
   };
 
   // After portrait is shown, user clicks "继续" to generate the final plan.
+  // Uses full-screen overlay with walking animation, then shows results.
+  const [finalOverlayError, setFinalOverlayError] = useState<string | null>(null);
   const handlePortraitContinue = async () => {
-    setWaitingVariant("final");
-    setStep("waiting");
+    setFinalOverlayError(null);
+    setStep("final_overlay");
     try {
       const res = await fetch("/api/final", { method: "POST" });
       if (!res.ok) {
@@ -608,8 +609,8 @@ export default function PlayPage() {
       setBlueprint(data.blueprint ?? null);
       setStep("routes");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setStep("portrait");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setFinalOverlayError(msg);
     }
   };
 
@@ -942,6 +943,38 @@ export default function PlayPage() {
             : ""
         }`}
       />
+
+      {/* Portrait generation overlay — full screen */}
+      {step === "portrait_overlay" && (
+        <GenerationOverlay
+          variant="portrait"
+          title="生成人格画像"
+          subtitle="把你说的所有话综合起来看……"
+          streamingSections={
+            streamingPortrait
+              ? [
+                  { label: "一句话", text: streamingPortrait.essence ?? "" },
+                  { label: "特质概要", text: streamingPortrait.trait_summary ?? "" },
+                ]
+              : null
+          }
+          error={streamError?.message ?? null}
+          onRetry={streamError?.retry}
+          onCancel={() => { setStreamError(null); setStep("stop"); }}
+        />
+      )}
+
+      {/* Final plan generation overlay — full screen */}
+      {step === "final_overlay" && (
+        <GenerationOverlay
+          variant="final"
+          title="设计三条平行人生"
+          subtitle="每条都得是一个真的能过的日子……"
+          error={finalOverlayError}
+          onRetry={() => { setFinalOverlayError(null); handlePortraitContinue(); }}
+          onCancel={() => { setFinalOverlayError(null); setStep("portrait"); }}
+        />
+      )}
 
       {step === "waiting" && (
         <div className="shrink-0 border-t-2 border-ink/10 bg-paper/50 p-4">
