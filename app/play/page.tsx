@@ -116,6 +116,7 @@ export default function PlayPage() {
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
   const [canGenerate, setCanGenerate] = useState<boolean>(true);
   const [streamingPortrait, setStreamingPortrait] = useState<{ essence?: string; trait_summary?: string } | null>(null);
+  const [portraitError, setPortraitError] = useState<{ message: string; retry: () => void } | null>(null);
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
   const hasLoadedRef = useRef(false);
 
@@ -564,13 +565,22 @@ export default function PlayPage() {
   // Generate persona portrait via SSE, then show portrait card.
   // User clicks "继续生成路线" on the portrait to proceed to final plan.
   // Uses a full-screen overlay with walking animation + streaming text.
+  const portraitAbortRef = useRef<AbortController | null>(null);
+  const isGeneratingRef = useRef(false);
   const handleGenerateFinal = async () => {
+    if (isGeneratingRef.current) return;
+    isGeneratingRef.current = true;
+    // Abort any previous in-flight generation.
+    portraitAbortRef.current?.abort();
+    const ac = new AbortController();
+    portraitAbortRef.current = ac;
+
     setBadgeExpanded(false);
     setStreamingPortrait(null);
-    setStreamError(null);
+    setPortraitError(null);
     setStep("portrait_overlay");
     try {
-      const res = await fetch("/api/portrait", { method: "POST" });
+      const res = await fetch("/api/portrait", { method: "POST", signal: ac.signal });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `Portrait generation failed: ${res.status}`);
@@ -578,39 +588,54 @@ export default function PlayPage() {
 
       const doneData = await readSseStream<{ portrait: PersonaPortrait }>(
         res,
-        (d) => setStreamingPortrait(d as { essence?: string; trait_summary?: string })
+        (d) => { if (!ac.signal.aborted) setStreamingPortrait(d as { essence?: string; trait_summary?: string }); }
       );
+      if (ac.signal.aborted) return;
       setPortrait(doneData.portrait);
       setStreamingPortrait(null);
       setStep("portrait");
     } catch (err) {
+      if (ac.signal.aborted) return;
       const message = err instanceof Error ? err.message : "Unknown error";
       setStreamingPortrait(null);
-      setStreamError({ message, retry: () => { setStreamError(null); handleGenerateFinal(); } });
+      setPortraitError({ message, retry: () => { setPortraitError(null); handleGenerateFinal(); } });
+    } finally {
+      isGeneratingRef.current = false;
     }
   };
 
   // After portrait is shown, user clicks "继续" to generate the final plan.
   // Uses full-screen overlay with walking animation, then shows results.
   const [finalOverlayError, setFinalOverlayError] = useState<string | null>(null);
+  const finalAbortRef = useRef<AbortController | null>(null);
   const handlePortraitContinue = async () => {
+    if (isGeneratingRef.current) return;
+    isGeneratingRef.current = true;
+    finalAbortRef.current?.abort();
+    const ac = new AbortController();
+    finalAbortRef.current = ac;
+
     setFinalOverlayError(null);
     setStep("final_overlay");
     try {
-      const res = await fetch("/api/final", { method: "POST" });
+      const res = await fetch("/api/final", { method: "POST", signal: ac.signal });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `生成失败（${res.status}）`);
       }
       const data = await res.json();
+      if (ac.signal.aborted) return;
       const lives: ParallelLife[] = data.lives ?? [];
       setRoutes(lives.map((life, i) => toRouteView(life, i)));
       setFraming(data.framing ?? null);
       setBlueprint(data.blueprint ?? null);
       setStep("routes");
     } catch (err) {
+      if (ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : "Unknown error";
       setFinalOverlayError(msg);
+    } finally {
+      isGeneratingRef.current = false;
     }
   };
 
@@ -958,9 +983,9 @@ export default function PlayPage() {
                 ]
               : null
           }
-          error={streamError?.message ?? null}
-          onRetry={streamError?.retry}
-          onCancel={() => { setStreamError(null); setStep("stop"); }}
+          error={portraitError?.message ?? null}
+          onRetry={portraitError?.retry}
+          onCancel={() => { portraitAbortRef.current?.abort(); setPortraitError(null); setStep("stop"); }}
         />
       )}
 
@@ -972,7 +997,7 @@ export default function PlayPage() {
           subtitle="每条都得是一个真的能过的日子……"
           error={finalOverlayError}
           onRetry={() => { setFinalOverlayError(null); handlePortraitContinue(); }}
-          onCancel={() => { setFinalOverlayError(null); setStep("portrait"); }}
+          onCancel={() => { finalAbortRef.current?.abort(); setFinalOverlayError(null); setStep("portrait"); }}
         />
       )}
 

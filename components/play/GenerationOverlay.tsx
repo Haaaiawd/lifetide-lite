@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { motion, useReducedMotion, AnimatePresence } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { DayProgressAnimation } from "@/components/routes/DayProgressAnimation";
 
 type Phase = "walking" | "streaming" | "error";
@@ -55,10 +55,15 @@ export function GenerationOverlay({
   const walkStartRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Walking phase: 3 seconds, time-driven.
+  // Walking phase: 3 seconds, time-driven. Skipped for reduced motion.
   useEffect(() => {
     if (error) {
       setPhase("error");
+      return;
+    }
+    if (reduce) {
+      setWalkProgress(1);
+      setPhase("streaming");
       return;
     }
     setPhase("walking");
@@ -85,7 +90,7 @@ export function GenerationOverlay({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [error]);
+  }, [error, reduce]);
 
   // If streaming data arrives during walking, transition early.
   const hasStreamContent = streamingSections && streamingSections.some((s) => s.text);
@@ -97,14 +102,12 @@ export function GenerationOverlay({
   }, [hasStreamContent, phase]);
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-paper"
-      >
+    <motion.div
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-paper"
+    >
         {/* Walking phase */}
         {phase === "walking" && (
           <motion.div
@@ -194,7 +197,6 @@ export function GenerationOverlay({
           </motion.div>
         )}
       </motion.div>
-    </AnimatePresence>
   );
 }
 
