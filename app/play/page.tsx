@@ -118,6 +118,12 @@ export default function PlayPage() {
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
   const hasLoadedRef = useRef(false);
 
+  // Reset the floating badge when step/wave changes so it doesn't
+  // reappear in an already-expanded state.
+  useEffect(() => {
+    setBadgeExpanded(false);
+  }, [step, waveIndex, interruptedWaveId]);
+
   // Prefetch: after insight is done, we fire GET /api/wave in the background
   // so the next wave's questions are ready by the time the user clicks continue.
   // The promise is stored in a ref; the result is cached in prefetchedWave.
@@ -308,10 +314,11 @@ export default function PlayPage() {
     setStreamingInsight(null);
     setInterruptedWaveId(null);
 
-    // Remove any previous insight items (e.g. a readonly partial from a
-    // streaming resume) so the conversation doesn't end up with two
-    // active insight cards after a resubmit.
-    setItems((prev) => prev.filter((item) => item.type !== "insight"));
+    // Remove any previous ACTIVE or READONLY insight items (e.g. a
+    // readonly partial from a streaming resume) so the conversation
+    // doesn't end up with two active insight cards after a resubmit.
+    // Inactive historical insight cards are preserved.
+    setItems((prev) => prev.filter((item) => !(item.type === "insight" && (item.isActive || item.readonly))));
 
     appendItem({
       id: newId(),
@@ -929,7 +936,11 @@ export default function PlayPage() {
         onInsightContinue={handleInsightContinue}
         onMaterialSubmit={handleMaterialSubmit}
         onMaterialSkip={handleMaterialSkip}
-        className="flex-1 min-h-0"
+        className={`flex-1 min-h-0 ${
+          waveIndex >= 6 && (step === "insight" || step === "question") && !interruptedWaveId
+            ? "pr-8"
+            : ""
+        }`}
       />
 
       {step === "waiting" && (
@@ -980,13 +991,25 @@ export default function PlayPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 setInterruptedWaveId(null);
-                handleReset();
+                setStep("loading");
+                try {
+                  await fetch("/api/progress/reset", { method: "POST" });
+                  setProgressInfo(null);
+                  setPortrait(null);
+                  setRoutes(null);
+                  setItems([]);
+                  setInsight(null);
+                  loadWave(true);
+                } catch {
+                  setError("重置失败，请重试");
+                  setStep("insight");
+                }
               }}
               className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
             >
-              清除会话重新开始
+              重新开始访谈
             </button>
           </div>
         </div>
@@ -1060,13 +1083,15 @@ export default function PlayPage() {
           stop and generate a portrait without first clicking
           "继续下一波" to reach the stop page.
           Collapsed by default (only a sliver shows); expands on hover
-          (desktop) or first tap (mobile). A second tap triggers the
-          action; on desktop hover already expanded it so click fires. */}
+          (desktop mouse only) or first tap (mobile). A second tap
+          triggers the action. Uses pointer events with pointerType
+          check so touch devices don't synthesize mouseenter and
+          fire both expand + trigger in a single tap. */}
       {waveIndex >= 6 && (step === "insight" || step === "question") && !interruptedWaveId && (
         <button
           type="button"
-          onMouseEnter={() => setBadgeExpanded(true)}
-          onMouseLeave={() => setBadgeExpanded(false)}
+          onPointerEnter={(e) => { if (e.pointerType === "mouse") setBadgeExpanded(true); }}
+          onPointerLeave={(e) => { if (e.pointerType === "mouse") setBadgeExpanded(false); }}
           onClick={() => {
             if (!badgeExpanded) {
               setBadgeExpanded(true);
@@ -1075,7 +1100,7 @@ export default function PlayPage() {
             setBadgeExpanded(false);
             handleGenerateFinal();
           }}
-          className={`fixed right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden rounded-l-full border-2 border-r-0 py-3 pl-3 text-sm font-medium shadow-lg transition-all duration-300 ease-out ${
+          className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center overflow-hidden rounded-l-full border-2 border-r-0 py-3 pl-3 text-sm font-medium shadow-lg transition-all duration-300 ease-out ${
             badgeExpanded ? "pr-5" : "pr-3"
           } ${
             waveIndex >= 8
