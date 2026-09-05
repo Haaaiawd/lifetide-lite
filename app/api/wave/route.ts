@@ -160,6 +160,7 @@ export async function GET(request: NextRequest) {
       can_generate: stop.canGenerate,
       provisional: stop.provisional,
       reason: stop.reason,
+      wave_index: memory.last_wave_index,
     });
     return response;
   }
@@ -170,6 +171,7 @@ export async function GET(request: NextRequest) {
       can_generate: true,
       provisional: false,
       reason: "synthesizing",
+      wave_index: memory.last_wave_index,
     });
     return response;
   }
@@ -272,13 +274,14 @@ export async function GET(request: NextRequest) {
       can_generate: stop.canGenerate,
       provisional: stop.provisional,
       reason: stop.reason,
+      wave_index: memory.last_wave_index,
     });
     return response;
   }
 
   const nextIndex = memory.last_wave_index + 1;
   if (nextIndex > MAX_WAVES) {
-    return NextResponse.json({ stop: true, can_generate: true, provisional: false, reason: "wave_limit" });
+    return NextResponse.json({ stop: true, can_generate: true, provisional: false, reason: "wave_limit", wave_index: memory.last_wave_index });
   }
 
   const existing = await prisma.wave.findUnique({
@@ -898,11 +901,11 @@ export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): 
     return { stop: true, canGenerate: hasRouteIntents, provisional: false, reason: "question_limit" };
   }
 
-  // Sufficient for final after at least four waves (wave1 is fixed template,
-  // so AI-driven waves 2-4 must have had a chance to cover the radar).
-  // Recommended: 8 waves for full six-dimensional coverage, but allow early
-  // stop at 4 if route intents and evidence are already sufficient.
-  if (memory.last_wave_index >= 4 && hasRouteIntents && hasEvidence) {
+  // At Wave 6, the user may choose to stop and generate a portrait.
+  // The system recommends Wave 8 for full six-dimensional coverage,
+  // but allows early stop at 6 if route intents and evidence are sufficient.
+  // Wave 8 is the hard limit — the interview stops automatically.
+  if (memory.last_wave_index >= 6 && hasRouteIntents && hasEvidence) {
     return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
   }
 

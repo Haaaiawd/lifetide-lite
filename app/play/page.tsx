@@ -203,11 +203,14 @@ export default function PlayPage() {
       const data = await res.json();
 
       if (data.stop) {
+        const wIdx = data.wave_index ?? waveIndex;
         appendItem({
           id: newId(),
           type: "bot",
           text: data.can_generate
-            ? `已经聊了 ${waveIndex} 波，可以生成个人画像了，也可以继续补充。`
+            ? wIdx >= 8
+              ? `已经聊完 ${wIdx} 波，六维观察已经充分收集。现在可以生成个人画像了。`
+              : `已经聊了 ${wIdx} 波，可以生成个人画像了，也可以继续聊到 8 波让理解更完整。`
             : "我们再补充一轮，可能会更清楚。",
         });
         setStep("stop");
@@ -827,11 +830,15 @@ export default function PlayPage() {
           <div className="flex flex-col gap-4 p-2">
             {waveIndex >= 8 ? (
               <p className="text-center text-ink-muted">
-                已经聊完 {waveIndex} 波，六维观察已经充分收集。可以生成个人画像了。
+                已经聊完 {waveIndex} 波，六维观察已经充分收集。现在可以生成个人画像了。
+              </p>
+            ) : waveIndex >= 6 ? (
+              <p className="text-center text-ink-muted">
+                已经聊了 {waveIndex} 波，六维观察已经比较充分。你可以现在生成个人画像，也可以继续聊到 8 波让理解更完整。
               </p>
             ) : (
               <p className="text-center text-ink-muted">
-                已经聊了 {waveIndex} 波。建议聊到 8 波再生成画像，理解会更完整；但如果你觉得够了，现在也可以生成。
+                已经聊了 {waveIndex} 波。建议聊到 6 波后可以自主结束，8 波会自动进入画像生成。现在也可以提前生成，但理解可能不够完整。
               </p>
             )}
             <div className="flex gap-3">
