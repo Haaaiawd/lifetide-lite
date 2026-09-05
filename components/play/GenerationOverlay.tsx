@@ -174,7 +174,7 @@ export function GenerationOverlay({
               streamingSections
                 .filter((s) => s.text)
                 .map((s, i) => (
-                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} variant={variant} />
+                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} variant={variant} isComplete={phase === "complete"} />
                 ))
             ) : (
               <div className="flex items-center gap-2 text-ink-muted">
@@ -248,11 +248,13 @@ function StreamingSectionCard({
   delay,
   reduce,
   variant,
+  isComplete,
 }: {
   section: StreamingSection;
   delay: number;
   reduce: boolean | null;
   variant: "portrait" | "final";
+  isComplete?: boolean;
 }) {
   return (
     <motion.div
@@ -266,11 +268,11 @@ function StreamingSectionCard({
       </div>
       <p className="font-serif text-base leading-snug">
         {variant === "final" ? (
-          <TypewriterText text={section.text} />
+          <TypewriterText text={section.text} hideCursor={isComplete} />
         ) : (
           <>
             <span className="stream-wave-text">{section.text}</span>
-            <span className="animate-pulse text-cobalt/50">▎</span>
+            {!isComplete && <span className="animate-pulse text-cobalt/50">▎</span>}
           </>
         )}
       </p>
@@ -278,12 +280,12 @@ function StreamingSectionCard({
   );
 }
 
-function TypewriterText({ text, cps = 40 }: { text: string; cps?: number }) {
+function TypewriterText({ text, cps = 40, hideCursor }: { text: string; cps?: number; hideCursor?: boolean }) {
   const revealed = useTypewriter(text, cps);
   return (
     <>
       {revealed}
-      {revealed.length < text.length && (
+      {!hideCursor && revealed.length < text.length && (
         <span className="animate-pulse text-cobalt/50">▎</span>
       )}
     </>
