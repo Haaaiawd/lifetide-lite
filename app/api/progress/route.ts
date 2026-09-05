@@ -44,13 +44,15 @@ export async function GET(request: NextRequest) {
     lastStep = "routes";
   } else if (hasPortrait) {
     lastStep = "portrait";
-  } else if (hasStreamingInsight) {
-    // A wave is currently being synthesized and the user left mid-stream.
-    // Restore the partial insight card so they can see what was generating.
-    lastStep = "insight";
   } else if (hasPendingInsight) {
     // User was on the insight/calibration page when they refreshed.
     // Restore them there instead of jumping to the stop page.
+    // This takes priority over streaming_insight — a completed insight
+    // should not be shadowed by a stale partial from a prior interruption.
+    lastStep = "insight";
+  } else if (hasStreamingInsight) {
+    // A wave was being synthesized and the user left mid-stream.
+    // No completed insight exists, so show the partial card.
     lastStep = "insight";
   } else if (hasPendingWave) {
     // A wave was generated but not yet submitted — user is mid-wave.

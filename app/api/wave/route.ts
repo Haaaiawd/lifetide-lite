@@ -579,9 +579,14 @@ export async function POST(request: NextRequest) {
   });
 
   // "synthesizing" means a previous synthesis attempt was interrupted before
-  // completing — treat it as retryable so the client can resubmit.
+  // completing — only resubmit is allowed (reuses existing answers).
+  // A non-resubmit POST to a synthesizing wave would create duplicate
+  // answer rows and potentially race with a still-running synthesis.
   if (!wave || (wave.status !== "committed" && wave.status !== "synthesizing")) {
     return NextResponse.json({ error: "Wave not available for submission" }, { status: 409 });
+  }
+  if (wave.status === "synthesizing" && !resubmit) {
+    return NextResponse.json({ error: "Wave is mid-synthesis, use resubmit to retry", resubmit_required: true }, { status: 409 });
   }
 
   const questions: InterviewQuestion[] = JSON.parse(wave.questions);
@@ -735,6 +740,13 @@ export async function POST(request: NextRequest) {
     memory.source_versions.push(sourceVersion);
     memory.source_heads.push(sourceHead);
   }
+  }
+
+  // Persist source versions before streaming starts so a crash mid-synthesis
+  // doesn't lose evidence registration. Without this, resubmit would
+  // undercount hasEvidence and canGenerate.
+  if (!resubmit) {
+    await saveWorkingMemory(session.id, memory);
   }
 
   const endProvenanceId = randomUUID();

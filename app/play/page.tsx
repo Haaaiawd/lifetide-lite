@@ -657,42 +657,11 @@ export default function PlayPage() {
           }
         } catch { /* fall through to next resume branch */ }
       }
-      // Restore a partial insight that was being streamed when the user left.
-      // The synthesis is incomplete, so we show the card but no calibration.
-      if (progressInfo.hasStreamingInsight && progressInfo.streamingInsight) {
-        const insightView = toInsightView(progressInfo.streamingInsight, progressInfo.waveIndex);
-        setInsight(progressInfo.streamingInsight as ImmediateInsight);
-        setWaveIndex(progressInfo.waveIndex);
-        setWaveId(`w${progressInfo.waveIndex}`);
-        const resumeItems: ConversationItem[] = [
-          { id: newId(), type: "bot", text: "上次生成中断了，这条理解还没完成。" },
-        ];
-        if (progressInfo.pendingWaveQuestions) {
-          const total = progressInfo.pendingWaveQuestions.length;
-          resumeItems.push(
-            ...progressInfo.pendingWaveQuestions.map((q) => ({
-              id: newId(),
-              type: "question" as const,
-              question: q,
-              total,
-              isActive: false,
-              answer: { value: "已回答", skipped: false },
-            }))
-          );
-        }
-        resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true, readonly: true });
-        setItems(resumeItems);
-        // The read-only insight card has no calibration controls, so provide
-        // an exit bar: resubmit the interrupted wave (server already has the
-        // answers) or continue to wave loading.
-        setInterruptedWaveId(progressInfo.pendingWaveId ?? `w${progressInfo.waveIndex}`);
-        setStep("insight");
-        return;
-      }
-
       // Restore insight page — user was viewing the immediate insight
       // when they refreshed. Restore the insight content and let them
       // calibrate (accurate/partly/inaccurate) or continue.
+      // This takes priority over streaming_insight — a completed insight
+      // should not be shadowed by a stale partial from a prior interruption.
       if (progressInfo.hasPendingInsight && progressInfo.lastInsight) {
         const insightView = toInsightView(progressInfo.lastInsight, progressInfo.waveIndex);
         setInsight(progressInfo.lastInsight);
@@ -716,6 +685,40 @@ export default function PlayPage() {
         }
         resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true });
         setItems(resumeItems);
+        setStep("insight");
+        return;
+      }
+
+      // Restore a partial insight that was being streamed when the user left.
+      // The synthesis is incomplete, so we show the card but no calibration.
+      if (progressInfo.hasStreamingInsight && progressInfo.streamingInsight) {
+        // The interrupted wave is the pending one (last_wave_index + 1),
+        // not the last completed wave.
+        const interruptedIdx = progressInfo.pendingWaveIndex ?? progressInfo.waveIndex + 1;
+        const interruptedId = progressInfo.pendingWaveId ?? `w${interruptedIdx}`;
+        const insightView = toInsightView(progressInfo.streamingInsight, interruptedIdx);
+        setInsight(progressInfo.streamingInsight as ImmediateInsight);
+        setWaveIndex(interruptedIdx);
+        setWaveId(interruptedId);
+        const resumeItems: ConversationItem[] = [
+          { id: newId(), type: "bot", text: "上次生成中断了，这条理解还没完成。" },
+        ];
+        if (progressInfo.pendingWaveQuestions) {
+          const total = progressInfo.pendingWaveQuestions.length;
+          resumeItems.push(
+            ...progressInfo.pendingWaveQuestions.map((q) => ({
+              id: newId(),
+              type: "question" as const,
+              question: q,
+              total,
+              isActive: false,
+              answer: { value: "已回答", skipped: false },
+            }))
+          );
+        }
+        resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true, readonly: true });
+        setItems(resumeItems);
+        setInterruptedWaveId(interruptedId);
         setStep("insight");
         return;
       }

@@ -150,7 +150,6 @@ function makePrompt(input: SensemakerWaveInput): string {
 }
 
 function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposal {
-  console.log("[Sensemaker] Using fallbackWaveProposal", { wave_id: input.wave_id, wave_index: input.wave_index });
   const answeredLinks = input.answers.filter((a) => !a.skipped).map((a) => evidenceFromAnswer(a, input.questions));
   const links: EvidenceLink[] = answeredLinks.length > 0 ? answeredLinks : [
     {
@@ -323,10 +322,6 @@ export async function runSensemakerWaveStream(
           const derivedOps: MemoryOperationProposal[] = insightResult.data.radar_deltas.map(
             (delta) => ({ op: "update_radar" as const, value: delta })
           );
-          console.log(
-            `[Sensemaker] Recovered insight, derived ${derivedOps.length} radar ops from it` +
-            ` (AI operations discarded to preserve consistency)`
-          );
           return {
             base_revision: input.memory.revision,
             operations: derivedOps,
@@ -339,7 +334,6 @@ export async function runSensemakerWaveStream(
       }
     }
 
-    console.log("[Sensemaker] Using full fallback");
     return {
       ...fallbackWaveProposal(input),
       expected_revision: input.memory.revision + 1,
