@@ -154,20 +154,64 @@ export async function POST(request: NextRequest) {
         try {
           plan = await runSensemakerFinal(input, {
             onPartial: (partial) => {
-              // Extract streaming content for the client: lives titles and ordinary_day text
-              const lives = partial?.lives;
-              if (lives && Array.isArray(lives)) {
-                const streamed = lives
-                  .filter((l) => l && typeof l === "object")
-                  .map((l: Record<string, unknown>, i: number) => ({
-                    index: i,
-                    title: typeof l.title === "string" ? l.title : undefined,
-                    ordinary_day: typeof l.ordinary_day === "string" ? l.ordinary_day : undefined,
-                    core_experience: typeof l.core_experience === "string" ? l.core_experience : undefined,
-                  }));
-                if (streamed.some((s) => s.title || s.ordinary_day)) {
-                  sendSSE("partial", { lives: streamed });
+              // Send whatever text fields have content — analysis arrives
+              // before lives in the schema, so we need both.
+              const sections: Array<{ label: string; text: string }> = [];
+              const p = partial as Record<string, unknown>;
+
+              // Analysis fields arrive first
+              const analysis = p?.analysis as Record<string, unknown> | undefined;
+              if (analysis) {
+                const pf = analysis.problem_frame as Record<string, unknown> | undefined;
+                if (typeof pf?.presenting_question === "string" && pf.presenting_question) {
+                  sections.push({ label: "你的问题", text: pf.presenting_question });
                 }
+                const dash = analysis.life_dashboard as Record<string, unknown> | undefined;
+                if (dash) {
+                  for (const [key, val] of Object.entries(dash)) {
+                    const finding = val as Record<string, unknown> | undefined;
+                    if (typeof finding?.summary === "string" && finding.summary) {
+                      const labelMap: Record<string, string> = {
+                        health: "健康", work_learning: "工作学习", play: "娱乐",
+                        relationships: "关系", cross_domain_effects: "跨领域影响",
+                      };
+                      sections.push({ label: labelMap[key] ?? key, text: finding.summary });
+                    }
+                  }
+                }
+                const compass = analysis.compass as Record<string, unknown> | undefined;
+                if (compass) {
+                  const wv = compass.workview as Record<string, unknown> | undefined;
+                  if (typeof wv?.summary === "string" && wv.summary) {
+                    sections.push({ label: "工作观", text: wv.summary });
+                  }
+                  const lv = compass.lifeview as Record<string, unknown> | undefined;
+                  if (typeof lv?.summary === "string" && lv.summary) {
+                    sections.push({ label: "生活观", text: lv.summary });
+                  }
+                }
+              }
+
+              // Lives arrive last — show title + ordinary_day as they fill in
+              const lives = p?.lives;
+              if (lives && Array.isArray(lives)) {
+                lives.forEach((l, i) => {
+                  if (!l || typeof l !== "object") return;
+                  const life = l as Record<string, unknown>;
+                  const title = typeof life.title === "string" ? life.title : "";
+                  const day = typeof life.ordinary_day === "string" ? life.ordinary_day : "";
+                  const exp = typeof life.core_experience === "string" ? life.core_experience : "";
+                  if (title || day || exp) {
+                    sections.push({
+                      label: `路线 ${i + 1}${title ? `：${title}` : ""}`,
+                      text: day || exp,
+                    });
+                  }
+                });
+              }
+
+              if (sections.length > 0) {
+                sendSSE("partial", { sections });
               }
             },
           });
