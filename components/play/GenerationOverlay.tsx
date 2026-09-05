@@ -131,7 +131,7 @@ export function GenerationOverlay({
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center bg-paper/95 backdrop-blur-sm"
+      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center bg-paper/80 backdrop-blur-sm"
     >
       {/* Walking phase */}
       {phase === "walking" && (
