@@ -612,10 +612,24 @@ export default function PlayPage() {
         setInsight(progressInfo.lastInsight);
         setWaveIndex(progressInfo.waveIndex);
         setWaveId(`w${progressInfo.waveIndex}`);
-        setItems([
+        const resumeItems: ConversationItem[] = [
           { id: newId(), type: "bot", text: "好，我已经整理好一条理解，你看看哪里需要调：" },
-          { id: newId(), type: "insight", insight: insightView, isActive: true },
-        ]);
+        ];
+        if (progressInfo.pendingWaveQuestions) {
+          const total = progressInfo.pendingWaveQuestions.length;
+          resumeItems.push(
+            ...progressInfo.pendingWaveQuestions.map((q) => ({
+              id: newId(),
+              type: "question" as const,
+              question: q,
+              total,
+              isActive: false,
+              answer: { value: "已回答", skipped: false },
+            }))
+          );
+        }
+        resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true });
+        setItems(resumeItems);
         setStep("insight");
         return;
       }

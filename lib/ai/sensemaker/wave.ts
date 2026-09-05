@@ -150,6 +150,7 @@ function makePrompt(input: SensemakerWaveInput): string {
 }
 
 function fallbackWaveProposal(input: SensemakerWaveInput): WaveSensemakerProposal {
+  console.log("[Sensemaker] Using fallbackWaveProposal", { wave_id: input.wave_id, wave_index: input.wave_index });
   const answeredLinks = input.answers.filter((a) => !a.skipped).map((a) => evidenceFromAnswer(a, input.questions));
   const links: EvidenceLink[] = answeredLinks.length > 0 ? answeredLinks : [
     {

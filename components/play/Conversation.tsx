@@ -253,9 +253,8 @@ function ConversationCard({
         className={`w-full rounded-sm border-2 border-ink bg-paper-raised shadow-md ${
           item.isActive ? "min-h-[75dvh] p-4 md:p-6" : "p-4"
         }`}
-        style={{ scrollSnapAlign: item.isActive ? "end" : "start" }}
       >
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence initial={false}>
           {item.isActive ? (
             <motion.div
               key="active"
@@ -301,7 +300,6 @@ function ConversationCard({
         className={`w-full rounded-sm border-2 border-ink bg-paper-raised shadow-md ${
           item.isActive ? "min-h-[75dvh] p-0" : "p-4"
         }`}
-        style={{ scrollSnapAlign: item.isActive ? "end" : "start" }}
       >
         <AnimatePresence initial={false}>
           {item.isActive ? (
@@ -349,7 +347,6 @@ function ConversationCard({
         className={`w-full rounded-sm border-2 border-ink bg-paper-raised shadow-md ${
           item.isActive ? "min-h-[75dvh] p-4 md:p-6" : "p-4"
         }`}
-        style={{ scrollSnapAlign: item.isActive ? "end" : "start" }}
       >
         <AnimatePresence mode="wait" initial={false}>
           {item.isActive ? (
@@ -408,7 +405,7 @@ export function Conversation({
       requestAnimationFrame(() => {
         const active = container.querySelector('[data-active="true"]') as HTMLElement | null;
         if (active) {
-          active.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" });
+          active.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
         } else {
           container.scrollTo({ top: container.scrollHeight, behavior: reduce ? "auto" : "smooth" });
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "motion/react";
 import { Check, X } from "@phosphor-icons/react";
 import { PixelIcon } from "@/components/art/PixelIcon";
@@ -21,31 +21,60 @@ const accuracyLabels: Record<string, string> = {
 
 const easeOutQuart: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+function useInView<T extends HTMLElement>(threshold = 0.3) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setInView(true);
+      },
+      { threshold }
+    );
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return { ref, inView };
+}
+
 export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
   const reduce = useReducedMotion();
   const [accuracy, setAccuracy] = useState<Accuracy>(null);
   const [note, setNote] = useState("");
   const [direction, setDirection] = useState("");
   const [revealIndex, setRevealIndex] = useState(0);
+  const { ref: cardRef, inView } = useInView<HTMLDivElement>();
 
   const segments = [
     {
       label: "你告诉我的",
       content: (
         <div className="space-y-2">
-          {insight.facts.map((fact, i) => (
-            <p key={i} className="text-base leading-relaxed">
-              {fact}
-            </p>
-          ))}
-          {insight.evidence.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-2 text-xs text-ink-muted">
-              {insight.evidence.map((ev, i) => (
-                <li key={i} className="border border-ink px-1.5 py-0.5">
-                  来源：{ev}
-                </li>
+          {insight.facts.length > 0 ? (
+            <>
+              {insight.facts.map((fact, i) => (
+                <p key={i} className="text-base leading-relaxed">
+                  {fact}
+                </p>
               ))}
-            </ul>
+              {insight.evidence.length > 0 && (
+                <ul className="mt-2 flex flex-wrap gap-2 text-xs text-ink-muted">
+                  {insight.evidence.map((ev, i) => (
+                    <li key={i} className="border border-ink px-1.5 py-0.5">
+                      来源：{ev}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="text-base leading-relaxed text-ink-muted">正在生成理解…</p>
           )}
         </div>
       ),
@@ -54,7 +83,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       label: "我目前的理解",
       content: (
         <p className="text-base leading-relaxed">
-          {insight.interpretation}
+          {insight.interpretation || "正在生成理解…"}
         </p>
       ),
     },
@@ -62,7 +91,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       label: "还不确定",
       content: (
         <p className="text-base leading-relaxed text-ink-muted">
-          {insight.uncertainty}
+          {insight.uncertainty || "正在生成理解…"}
         </p>
       ),
     },
@@ -73,6 +102,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       setRevealIndex(segments.length);
       return;
     }
+    if (!inView) return;
     const timers: NodeJS.Timeout[] = [];
     for (let i = 0; i < segments.length; i++) {
       const delay = (i * 0.08 + 0.22) * 1000;
@@ -83,10 +113,11 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
       );
     }
     return () => timers.forEach(clearTimeout);
-  }, [reduce, segments.length]);
+  }, [reduce, inView, segments.length]);
 
   return (
     <motion.div
+      ref={cardRef}
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
