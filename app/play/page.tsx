@@ -13,7 +13,7 @@ import { StarPrompt } from "@/components/StarPrompt";
 import type { Route } from "@/lib/fixtures";
 import { toInsightView } from "@/lib/plans/insight-view";
 import { toRouteView } from "@/lib/plans/route-view";
-import type { InterviewQuestion, ImmediateInsight, ParallelLife } from "@/lib/working-memory/types";
+import type { InterviewQuestion, ImmediateInsight, ParallelLife, FinalPlan } from "@/lib/working-memory/types";
 import type { PersonaPortrait } from "@/lib/portrait/types";
 
 const REQUIRED_CONSENTS = [{ type: "ai", given: true }];
@@ -607,6 +607,7 @@ export default function PlayPage() {
   // After portrait is shown, user clicks "继续" to generate the final plan.
   // Uses full-screen overlay with walking animation, then shows results.
   const [finalOverlayError, setFinalOverlayError] = useState<string | null>(null);
+  const [streamingFinal, setStreamingFinal] = useState<Array<{ index: number; title?: string; ordinary_day?: string; core_experience?: string }> | null>(null);
   const finalAbortRef = useRef<AbortController | null>(null);
   const handlePortraitContinue = async () => {
     if (isGeneratingRef.current) return;
@@ -616,6 +617,7 @@ export default function PlayPage() {
     finalAbortRef.current = ac;
 
     setFinalOverlayError(null);
+    setStreamingFinal(null);
     setStep("final_overlay");
     try {
       const res = await fetch("/api/final", { method: "POST", signal: ac.signal });
@@ -623,16 +625,27 @@ export default function PlayPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `生成失败（${res.status}）`);
       }
-      const data = await res.json();
+
+      const doneData = await readSseStream<FinalPlan>(
+        res,
+        (d) => {
+          if (ac.signal.aborted) return;
+          const partial = d as { lives?: Array<{ index: number; title?: string; ordinary_day?: string; core_experience?: string }> };
+          if (partial.lives) setStreamingFinal(partial.lives);
+        }
+      );
       if (ac.signal.aborted) return;
-      const lives: ParallelLife[] = data.lives ?? [];
+
+      const lives: ParallelLife[] = doneData.lives ?? [];
       setRoutes(lives.map((life, i) => toRouteView(life, i)));
-      setFraming(data.framing ?? null);
-      setBlueprint(data.blueprint ?? null);
+      setFraming(doneData.framing ?? null);
+      setBlueprint(doneData.blueprint ?? null);
+      setStreamingFinal(null);
       setStep("routes");
     } catch (err) {
       if (ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : "Unknown error";
+      setStreamingFinal(null);
       setFinalOverlayError(msg);
     } finally {
       isGeneratingRef.current = false;
@@ -995,6 +1008,16 @@ export default function PlayPage() {
           variant="final"
           title="设计三条平行人生"
           subtitle="每条都得是一个真的能过的日子……"
+          streamingSections={
+            streamingFinal
+              ? streamingFinal
+                  .filter((l) => l.title || l.ordinary_day || l.core_experience)
+                  .map((l) => ({
+                    label: `路线 ${l.index + 1}${l.title ? `：${l.title}` : ""}`,
+                    text: l.ordinary_day ?? l.core_experience ?? "",
+                  }))
+              : null
+          }
           error={finalOverlayError}
           onRetry={() => { setFinalOverlayError(null); handlePortraitContinue(); }}
           onCancel={() => { finalAbortRef.current?.abort(); setFinalOverlayError(null); setStep("portrait"); }}

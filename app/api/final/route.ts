@@ -105,7 +105,6 @@ export async function POST(request: NextRequest) {
   }
 
   const config = getProviderConfig();
-
   const input: SensemakerFinalInput = {
     schema_version: "sensemaker.final.input.v3",
     memory,
@@ -114,25 +113,61 @@ export async function POST(request: NextRequest) {
     prompt_version: "sensemaker.final.v3",
   };
 
-  let plan;
-  try {
-    plan = await runSensemakerFinal(input);
-  } catch (err) {
-    if (err instanceof FinalGenerationError) {
-      const status = err.reason === "validation" ? 422 : 502;
-      return NextResponse.json(
-        { error: err.message, reason: err.reason, retryable: true },
-        { status },
-      );
-    }
-    throw err;
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let controllerClosed = false;
+      const safeClose = () => {
+        if (controllerClosed) return;
+        controllerClosed = true;
+        try { controller.close(); } catch { /* already closed */ }
+      };
+      const sendSSE = (event: string, data: unknown) => {
+        if (controllerClosed) return;
+        try {
+          const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(chunk));
+        } catch {
+          controllerClosed = true;
+        }
+      };
 
-  // Commit final-plan events to the XState ledger.
-  const snapshot = await loadPublicSnapshot(session.id);
-  let baseRevision = snapshot?.revision ?? 0;
-  const stateValue = snapshot ? (snapshot.state_value_json as { value: unknown }).value : null;
-  const inRoutePhase = stateValue === "route_intents" || (typeof stateValue === "object" && stateValue !== null && "route_intents" in stateValue);
+      try {
+        let plan;
+        try {
+          plan = await runSensemakerFinal(input, {
+            onPartial: (partial) => {
+              // Extract streaming content for the client: lives titles and ordinary_day text
+              const lives = partial?.lives;
+              if (lives && Array.isArray(lives)) {
+                const streamed = lives
+                  .filter((l) => l && typeof l === "object")
+                  .map((l: Record<string, unknown>, i: number) => ({
+                    index: i,
+                    title: typeof l.title === "string" ? l.title : undefined,
+                    ordinary_day: typeof l.ordinary_day === "string" ? l.ordinary_day : undefined,
+                    core_experience: typeof l.core_experience === "string" ? l.core_experience : undefined,
+                  }));
+                if (streamed.some((s) => s.title || s.ordinary_day)) {
+                  sendSSE("partial", { lives: streamed });
+                }
+              }
+            },
+          });
+        } catch (err) {
+          if (err instanceof FinalGenerationError) {
+            sendSSE("error", { error: err.message, reason: err.reason, retryable: true });
+            safeClose();
+            return;
+          }
+          throw err;
+        }
+
+        // Commit final-plan events to the XState ledger.
+        const snapshot = await loadPublicSnapshot(session.id);
+        let baseRevision = snapshot?.revision ?? 0;
+        const stateValue = snapshot ? (snapshot.state_value_json as { value: unknown }).value : null;
+        const inRoutePhase = stateValue === "route_intents" || (typeof stateValue === "object" && stateValue !== null && "route_intents" in stateValue);
 
   if (!inRoutePhase) {
     const routeProvenanceId = randomUUID();
@@ -371,6 +406,22 @@ export async function POST(request: NextRequest) {
   await saveWorkingMemory(session.id, memory);
 
   const uiPlan = toUiPlan(plan, plan.prototypes, input.prompt_version, config);
+  sendSSE("done", uiPlan);
+      } catch (err) {
+        console.error("Final plan SSE stream error:", err);
+        sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
+      } finally {
+        safeClose();
+      }
+    },
+  });
 
-  return NextResponse.json(uiPlan);
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

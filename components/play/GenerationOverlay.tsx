@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { DayProgressAnimation } from "@/components/routes/DayProgressAnimation";
+import { WalkProgress } from "@/components/play/WalkProgress";
 
 type Phase = "walking" | "streaming" | "error";
 
@@ -123,10 +123,9 @@ export function GenerationOverlay({
               {subtitle}
             </p>
             <div className="w-full">
-              <DayProgressAnimation
+              <WalkProgress
                 progress={walkProgress}
                 accentColor={variant === "portrait" ? "var(--cobalt)" : "var(--purple)"}
-                className="rounded-none"
               />
             </div>
             <p className="mt-4 text-xs text-ink-muted">

@@ -4,7 +4,7 @@
 
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { generateStructured, getProviderConfig } from "@/lib/ai/client";
+import { streamStructured, getProviderConfig } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
 import { parallelLivesPlanSchema, analysisFindingSchema } from "@/lib/state/contracts";
 import { portraitToContext } from "@/lib/ai/sensemaker/portrait";
@@ -557,6 +557,10 @@ export type SensemakerFinalOutput = ParallelLivesPlan & {
   prototypes: Prototype[];
 };
 
+export type FinalStreamOptions = {
+  onPartial?: (partial: Partial<ParallelLivesPlan>) => void;
+};
+
 export class FinalGenerationError extends Error {
   constructor(message: string, readonly reason: "validation" | "provider" | "timeout") {
     super(message);
@@ -564,14 +568,14 @@ export class FinalGenerationError extends Error {
   }
 }
 
-export async function runSensemakerFinal(input: SensemakerFinalInput): Promise<SensemakerFinalOutput> {
+export async function runSensemakerFinal(input: SensemakerFinalInput, options?: FinalStreamOptions): Promise<SensemakerFinalOutput> {
   const sessionId = input.memory.session_id;
   const config = getProviderConfig();
   const provenanceId = randomUUID();
 
   let raw: ParallelLivesPlan;
   try {
-    raw = await generateStructured<ParallelLivesPlan>({
+    raw = await streamStructured<ParallelLivesPlan>({
       purpose: "sensemaker_final",
       session_id: sessionId,
       prompt: makePrompt(input),
@@ -581,6 +585,7 @@ export async function runSensemakerFinal(input: SensemakerFinalInput): Promise<S
       max_retries: 0,
       prompt_version: PROMPT_VERSION,
       enableThinking: true,
+      onPartial: options?.onPartial,
       fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
     });
   } catch (err) {
