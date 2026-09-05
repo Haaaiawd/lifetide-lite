@@ -62,9 +62,9 @@ export function buildProgressSummary(memory: WorkingMemory, nextWaveIndex?: numb
   } else if (currentWave >= 6) {
     lines.push("节奏提醒: 已进入后半程，尽量在本波让所有维度至少达到 signaled，特别是仍 unseen 的维度；已有实质证据的维度不再深入。");
   } else if (currentWave >= 4) {
-    lines.push("节奏提醒: 已过半程，优先覆盖未触及维度，确保到第 6 波时六维都有至少 signaled 状态。已有实质证据的维度不再深入。");
+    lines.push("节奏提醒: 已过半程，优先覆盖未触及维度，确保到第 6 波时六维都有至少 signaled 状态。已有实质证据的维度不再深入。同时注意话题广度——如果前几波主要围绕事业/学业，现在可以自然延伸到生活、关系、价值观等面向来佐证 relationships、narrative 等维度。");
   } else if (currentWave === 3) {
-    lines.push("节奏提醒: 第 3 波，还在早期。优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。到第 6 波时尽量让所有维度至少达到 signaled。");
+    lines.push("节奏提醒: 第 3 波，还在早期。优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。到第 6 波时尽量让所有维度至少达到 signaled。用户逐渐进入状态，可以从已探索的事业/学业线索自然延伸到生活、感情、价值观、对社会的理解等更广的面向——不是生硬切换话题，而是从当前线索生长（比如从工作节奏问到它对重要关系的影响）。");
   } else if (currentWave <= 2) {
     lines.push("节奏提醒: 还在早期波次，优先打开维度广度（让 signaled 覆盖更多维度），再逐波深化。");
   } else {

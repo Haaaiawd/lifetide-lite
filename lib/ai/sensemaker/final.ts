@@ -6,13 +6,45 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { generateStructured, getProviderConfig } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
-import { parallelLivesPlanSchema } from "@/lib/state/contracts";
+import { parallelLivesPlanSchema, analysisFindingSchema } from "@/lib/state/contracts";
 import { portraitToContext } from "@/lib/ai/sensemaker/portrait";
 import type { EvidenceLink, SourceVersion, SourceHead, WorkingMemory, SensemakerFinalInput } from "@/lib/working-memory/types";
 import type { RouteIntent, Prototype, ParallelLife, ParallelLivesPlan, PrototypeEmbed, DayNarrative, Analysis, AnalysisFinding, DesignBasis } from "@/lib/state/contracts";
 import type { ProviderConfig } from "@/lib/ai/client";
 
 const PROMPT_VERSION = "sensemaker.final.v3";
+
+/**
+ * AI models sometimes return plain strings for AnalysisFinding arrays
+ * (e.g. constraints: ["need income", "family expectations"]) instead of
+ * the full object shape ({summary, kind, evidence_for, uncertainty}).
+ * This preprocessor coerces strings into minimal AnalysisFinding objects
+ * so schema validation passes without losing the semantic content.
+ */
+const coerceFinding = z.preprocess((val) => {
+  if (typeof val === "string") {
+    return { summary: val, kind: "working_inference", evidence_for: [], uncertainty: null };
+  }
+  return val;
+}, analysisFindingSchema);
+
+const coerceFindingArray = z.array(coerceFinding);
+
+const coercedProblemFrameSchema = z.object({
+  presenting_question: z.string().nullable(),
+  constraints: coerceFindingArray,
+  adjustable_factors: coerceFindingArray,
+  assumptions_to_test: coerceFindingArray,
+  design_question: coerceFinding.nullable(),
+});
+
+// Build a coerced version of the full plan schema by extending the original.
+// We use .extend() to override just the problem_frame field.
+const coercedPlanSchema = parallelLivesPlanSchema.extend({
+  analysis: parallelLivesPlanSchema.shape.analysis.extend({
+    problem_frame: coercedProblemFrameSchema,
+  }),
+});
 
 const RANKING_TERMS = ["最佳", "最好", "最适合你", "推荐", "首选", "安全选择", "冠军", "plan b", "b 计划", "最安全"];
 const IRREVERSIBLE_TERMS = ["辞职", "退学", "搬家", "贷款", "手术", "分手", "离婚", "断绝", "公开宣布", "卖房", "卖车", "起诉", "签约三年"];
@@ -543,7 +575,7 @@ export async function runSensemakerFinal(input: SensemakerFinalInput): Promise<S
       purpose: "sensemaker_final",
       session_id: sessionId,
       prompt: makePrompt(input),
-      schema: parallelLivesPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
+      schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
       max_tokens: 16000,
       timeout_ms: 180000,
       max_retries: 0,
