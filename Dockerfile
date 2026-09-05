@@ -43,8 +43,8 @@ COPY --from=builder /app/prompts ./prompts
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+# Create data directory for SQLite and ensure Next.js cache is writable at runtime
+RUN mkdir -p /app/data /app/.next/cache/images && chown -R nextjs:nodejs /app/data /app/.next
 
 USER nextjs
 
