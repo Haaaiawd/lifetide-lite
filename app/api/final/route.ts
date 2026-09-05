@@ -89,11 +89,28 @@ export async function POST(request: NextRequest) {
   const memory = await loadOrCreateWorkingMemory(session.id);
 
   // Idempotent replay: if a plan is already stored for this session, map and return it.
+  // Must return SSE (not plain JSON) because the client reads POST as a stream.
   if (memory.finalPlan) {
     const config = getProviderConfig();
     const prototypes = buildPrototypesForPlan(session.id, memory.finalPlan, memory.finalPlan.generation_provenance_id);
     const uiPlan = toUiPlan(memory.finalPlan, prototypes, "sensemaker.final.v3", config);
-    return NextResponse.json(uiPlan);
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        try {
+          controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify(uiPlan)}\n\n`));
+        } catch { /* already closed */ }
+        try { controller.close(); } catch { /* already closed */ }
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   }
 
   if (memory.last_wave_index === 0) {
@@ -264,7 +281,9 @@ export async function POST(request: NextRequest) {
     baseRevision = intentResult.nextRevision;
   } else {
     console.error("Failed to commit ROUTE_INTENT_CANDIDATES_COMMITTED:", intentResult.message);
-    return NextResponse.json({ error: "Could not persist route candidates" }, { status: 409 });
+    sendSSE("error", { error: "Could not persist route candidates", reason: intentResult.message });
+    safeClose();
+    return;
   }
 
   // Explicitly accept the three validated candidate intents.
@@ -287,7 +306,9 @@ export async function POST(request: NextRequest) {
     baseRevision = acceptedResult.nextRevision;
   } else {
     console.error("Failed to commit ROUTE_INTENTS_ACCEPTED:", acceptedResult.message);
-    return NextResponse.json({ error: "Could not accept route intents" }, { status: 409 });
+    sendSSE("error", { error: "Could not accept route intents", reason: acceptedResult.message });
+    safeClose();
+    return;
   }
 
   // Enter ordinary-day screening before parallel lives.

@@ -41,11 +41,11 @@ export function WalkProgress({
         style={{ width: `${clamped * 100}%`, backgroundColor: accentColor }}
       />
 
-      {/* Traveler — walks in place */}
+      {/* Traveler — walks at the leading edge of the progress bar */}
       <div
         className="absolute z-10"
         style={{
-          left: `calc(${clamped * 90}% + 5%)`,
+          left: `calc(${clamped * 100}% - ${clamped * 36}px)`,
           bottom: "10px",
           width: "36px",
           height: "64px",
