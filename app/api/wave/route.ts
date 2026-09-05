@@ -709,6 +709,11 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        await prisma.wave.update({
+          where: { id: wave.id },
+          data: { status: "synthesizing" },
+        });
+
         const output = await runSensemakerWaveStream(
           {
             schema_version: "sensemaker.wave.input.v3",
@@ -725,6 +730,10 @@ export async function POST(request: NextRequest) {
           },
           (partial) => {
             sendSSE("partial", partial);
+            memory.streaming_insight = partial;
+            saveWorkingMemory(session.id, memory).catch((e) => {
+              console.error("Failed to save streaming insight:", e);
+            });
           }
         );
 
@@ -856,6 +865,7 @@ export async function POST(request: NextRequest) {
         // progress API can't tell the user was mid-calibration and they
         // get sent to the stop page instead.
         nextMemory.last_insight = fullInsight;
+        nextMemory.streaming_insight = undefined;
         await saveWorkingMemory(session.id, nextMemory);
 
         sendSSE("done", {

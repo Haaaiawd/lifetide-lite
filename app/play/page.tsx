@@ -24,12 +24,14 @@ type ProgressInfo = {
   hasPortrait: boolean;
   hasFinalPlan: boolean;
   hasPendingInsight: boolean;
+  hasStreamingInsight: boolean;
   hasPendingWave: boolean;
   pendingWaveId: string | null;
   pendingWaveIndex: number | null;
   pendingWaveQuestions: InterviewQuestion[] | null;
   lastStep: "fresh" | "question" | "stop" | "portrait" | "routes" | "insight";
   lastInsight: ImmediateInsight | null;
+  streamingInsight: Partial<ImmediateInsight> | null;
 };
 
 export default function PlayPage() {
@@ -604,6 +606,35 @@ export default function PlayPage() {
           }
         } catch {}
       }
+      // Restore a partial insight that was being streamed when the user left.
+      // The synthesis is incomplete, so we show the card but no calibration.
+      if (progressInfo.hasStreamingInsight && progressInfo.streamingInsight) {
+        const insightView = toInsightView(progressInfo.streamingInsight, progressInfo.waveIndex);
+        setInsight(progressInfo.streamingInsight as ImmediateInsight);
+        setWaveIndex(progressInfo.waveIndex);
+        setWaveId(`w${progressInfo.waveIndex}`);
+        const resumeItems: ConversationItem[] = [
+          { id: newId(), type: "bot", text: "正在继续生成…" },
+        ];
+        if (progressInfo.pendingWaveQuestions) {
+          const total = progressInfo.pendingWaveQuestions.length;
+          resumeItems.push(
+            ...progressInfo.pendingWaveQuestions.map((q) => ({
+              id: newId(),
+              type: "question" as const,
+              question: q,
+              total,
+              isActive: false,
+              answer: { value: "已回答", skipped: false },
+            }))
+          );
+        }
+        resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true, readonly: true });
+        setItems(resumeItems);
+        setStep("insight");
+        return;
+      }
+
       // Restore insight page — user was viewing the immediate insight
       // when they refreshed. Restore the insight content and let them
       // calibrate (accurate/partly/inaccurate) or continue.

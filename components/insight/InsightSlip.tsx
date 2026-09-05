@@ -8,7 +8,7 @@ import type { InsightView } from "@/lib/working-memory/types";
 
 export type InsightSlipProps = {
   insight: InsightView;
-  onContinue: (feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }) => void | Promise<void>;
+  onContinue?: (feedback: { accuracy: "accurate" | "partial" | "inaccurate"; note: string; direction: string }) => void | Promise<void>;
 };
 
 type Accuracy = "accurate" | "partial" | "inaccurate" | null;
@@ -156,7 +156,7 @@ export function InsightSlip({ insight, onContinue }: InsightSlipProps) {
         ))}
 
         <AnimatePresence>
-          {revealIndex >= segments.length && (
+          {revealIndex >= segments.length && onContinue && (
             <motion.div
               initial={reduce ? false : { opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}

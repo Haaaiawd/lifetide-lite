@@ -159,6 +159,9 @@ export type WorkingMemory = WorkingUnderstanding & {
   // Cleared when the user calibrates (accurate/partly/inaccurate) or
   // moves to the next wave.
   last_insight?: ImmediateInsight;
+  // Insight currently being streamed. Persists if the user leaves before
+  // the stream completes, so the page can resume the partial card.
+  streaming_insight?: Partial<ImmediateInsight>;
 };
 
 // Immediate insight presented to the user. Uses the v3 contract (host-assigned

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const hasFinalPlan = !!memory.finalPlan;
   const waveIndex = memory.last_wave_index;
   const hasPendingInsight = !!memory.last_insight;
+  const hasStreamingInsight = !!memory.streaming_insight;
 
   // Check if there's a committed wave whose index is higher than
   // memory.last_wave_index. This happens when GET /api/wave created
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
     lastStep = "routes";
   } else if (hasPortrait) {
     lastStep = "portrait";
+  } else if (hasStreamingInsight) {
+    // A wave is currently being synthesized and the user left mid-stream.
+    // Restore the partial insight card so they can see what was generating.
+    lastStep = "insight";
   } else if (hasPendingInsight) {
     // User was on the insight/calibration page when they refreshed.
     // Restore them there instead of jumping to the stop page.
@@ -59,12 +64,14 @@ export async function GET(request: NextRequest) {
       hasPortrait,
       hasFinalPlan,
       hasPendingInsight,
+      hasStreamingInsight,
       hasPendingWave,
       pendingWaveId,
       pendingWaveIndex: hasPendingWave ? latestCommittedWaveIndex : null,
       pendingWaveQuestions,
       lastStep,
       lastInsight: memory.last_insight ?? null,
+      streamingInsight: memory.streaming_insight ?? null,
     },
   });
 }

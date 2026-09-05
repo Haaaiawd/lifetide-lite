@@ -26,6 +26,7 @@ export type ConversationItem =
       insight: InsightView;
       feedback?: { accuracy: string; note: string };
       isActive: boolean;
+      readonly?: boolean;
     }
   | {
       id: string;
@@ -312,12 +313,15 @@ function ConversationCard({
             >
               <InsightSlip
                 insight={item.insight}
-                onContinue={(feedback) =>
-                  onInsightContinue(item.id, {
-                    accuracy: feedback.accuracy,
-                    note: feedback.note,
-                    direction: feedback.direction,
-                  })
+                onContinue={
+                  item.readonly
+                    ? undefined
+                    : (feedback) =>
+                        onInsightContinue(item.id, {
+                          accuracy: feedback.accuracy,
+                          note: feedback.note,
+                          direction: feedback.direction,
+                        })
                 }
               />
             </motion.div>
