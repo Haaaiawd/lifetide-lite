@@ -307,6 +307,11 @@ export default function PlayPage() {
     setStreamingInsight(null);
     setInterruptedWaveId(null);
 
+    // Remove any previous insight items (e.g. a readonly partial from a
+    // streaming resume) so the conversation doesn't end up with two
+    // active insight cards after a resubmit.
+    setItems((prev) => prev.filter((item) => item.type !== "insight"));
+
     appendItem({
       id: newId(),
       type: "bot",
@@ -956,7 +961,7 @@ export default function PlayPage() {
       {step === "insight" && interruptedWaveId && (
         <div className="shrink-0 border-t-2 border-ink bg-paper p-4">
           <p className="mb-3 text-center text-sm text-ink-muted">
-            上次生成被中断。你可以重新生成这条理解，或继续访谈。
+            上次生成被中断了。你的回答还在，可以重新生成这条理解。
           </p>
           <div className="flex gap-3">
             <button
@@ -964,6 +969,7 @@ export default function PlayPage() {
               onClick={() => {
                 const w = interruptedWaveId;
                 setInterruptedWaveId(null);
+                setItems((prev) => prev.filter((item) => item.type !== "insight"));
                 resubmitWave(w);
               }}
               className="flex-1 border-2 border-ink bg-cobalt px-4 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
@@ -974,11 +980,11 @@ export default function PlayPage() {
               type="button"
               onClick={() => {
                 setInterruptedWaveId(null);
-                loadWave();
+                handleReset();
               }}
               className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
             >
-              继续
+              清除会话重新开始
             </button>
           </div>
         </div>
