@@ -109,6 +109,7 @@ export default function PlayPage() {
   // Wave whose insight synthesis was interrupted mid-stream (resume path) —
   // when set, the insight step shows an exit bar with resubmit/continue.
   const [interruptedWaveId, setInterruptedWaveId] = useState<string | null>(null);
+  const [badgeExpanded, setBadgeExpanded] = useState(false);
   const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
@@ -555,6 +556,7 @@ export default function PlayPage() {
   // Generate persona portrait via SSE, then show portrait card.
   // User clicks "继续生成路线" on the portrait to proceed to final plan.
   const handleGenerateFinal = async () => {
+    setBadgeExpanded(false);
     setWaitingVariant("portrait");
     setStreamingPortrait(null);
     setStreamError(null);
@@ -1051,6 +1053,49 @@ export default function PlayPage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
         </motion.div>
+      )}
+
+      {/* Floating "生成画像" badge — visible from Wave 6 onwards
+          during insight/question steps, so the user can choose to
+          stop and generate a portrait without first clicking
+          "继续下一波" to reach the stop page.
+          Collapsed by default (only a sliver shows); expands on hover
+          (desktop) or first tap (mobile). A second tap triggers the
+          action; on desktop hover already expanded it so click fires. */}
+      {waveIndex >= 6 && (step === "insight" || step === "question") && !interruptedWaveId && (
+        <button
+          type="button"
+          onMouseEnter={() => setBadgeExpanded(true)}
+          onMouseLeave={() => setBadgeExpanded(false)}
+          onClick={() => {
+            if (!badgeExpanded) {
+              setBadgeExpanded(true);
+              return;
+            }
+            setBadgeExpanded(false);
+            handleGenerateFinal();
+          }}
+          className={`fixed right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden rounded-l-full border-2 border-r-0 py-3 pl-3 text-sm font-medium shadow-lg transition-all duration-300 ease-out ${
+            badgeExpanded ? "pr-5" : "pr-3"
+          } ${
+            waveIndex >= 8
+              ? "animate-pulse border-ink bg-cobalt text-white"
+              : "border-ink bg-paper text-ink hover:bg-cobalt hover:text-white"
+          }`}
+          style={{ maxWidth: badgeExpanded ? "200px" : "1.75rem" }}
+          title={
+            waveIndex >= 8
+              ? "已聊完 8 波，可以生成画像了"
+              : `已聊 ${waveIndex} 波，可以生成画像，也可继续到 8 波`
+          }
+        >
+          <span
+            className="whitespace-nowrap transition-opacity duration-300"
+            style={{ opacity: badgeExpanded ? 1 : 0 }}
+          >
+            生成画像
+          </span>
+        </button>
       )}
     </div>
   );
