@@ -17,15 +17,14 @@ import type {
 } from "@/lib/state/events";
 import type { Answer, SourceVersion, SourceHead } from "@/lib/state/contracts";
 import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
-import { runSensemakerWave, runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
-import { runWave1Sensemaker } from "@/lib/ai/sensemaker/wave1";
+import { runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
 import { runInterviewer } from "@/lib/ai/interviewer";
 import { selectedUncertainty, rankActiveUncertainties } from "@/lib/interview/uncertainty";
 import { deriveShortQuestion } from "@/lib/interview/derive-question";
 import { loadOrCreateWorkingMemory, saveWorkingMemory } from "@/lib/working-memory/store";
 import { applyMemoryOperations } from "@/lib/working-memory/operations";
 import { recomputeUncertaintyPriority } from "@/lib/working-memory/types";
-import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty, WorkingMemory } from "@/lib/working-memory/types";
+import type { InterviewAnswer, InterviewQuestion, InterviewerInput, Uncertainty, WaveHistoryEntry, WorkingMemory } from "@/lib/working-memory/types";
 import { loadUploadChunks } from "@/lib/uploads/load-chunks";
 import type { NextRequest } from "next/server";
 
@@ -324,10 +323,94 @@ export async function GET(request: NextRequest) {
     orderBy: { wave_index: "asc" },
   });
 
+  // Load all prior answers and sensemaker insights so the Interviewer receives
+  // the complete, wave-by-wave memory instead of a truncated recent window.
+  const [allAnswerRows, allInsights] = await Promise.all([
+    prisma.answer.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.immediateInsight.findMany({
+      where: { sessionId: session.id },
+      select: {
+        waveId: true,
+        userToldMe: true,
+        currentReading: true,
+        importantUnknown: true,
+        routeImpact: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const answerByQuestionId = new Map<string, { value: string | null; skipped: boolean }>();
+  for (const a of allAnswerRows) {
+    if (!answerByQuestionId.has(a.questionId)) {
+      answerByQuestionId.set(a.questionId, { value: a.value, skipped: a.skipped });
+    }
+  }
+
+  const insightByWaveId = new Map<
+    string,
+    { userToldMe: string; currentReading: string; importantUnknown: string; routeImpact: string }
+  >();
+  for (const ins of allInsights) {
+    if (!insightByWaveId.has(ins.waveId)) {
+      insightByWaveId.set(ins.waveId, ins);
+    }
+  }
+
+  function resolveAnswerText(raw: string, q: InterviewQuestion): string {
+    if (!q.options || q.options.length === 0) return raw;
+    const optionMap = new Map(q.options.map((o) => [o.id, o.label]));
+    const ids = raw.split(/[,；]/).map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) return raw;
+    const resolved = ids.map((id) => optionMap.get(id) ?? id);
+    return resolved.join("， ");
+  }
+
+  const fullHistory: WaveHistoryEntry[] = [];
   const recentQuestionTexts: string[] = [];
   for (const w of previousWaves) {
     const qs: InterviewQuestion[] = JSON.parse(w.questions);
-    for (const q of qs) recentQuestionTexts.push(q.text);
+    const waveAnswers: WaveHistoryEntry["answers"] = [];
+    for (const q of qs) {
+      recentQuestionTexts.push(q.text);
+      const ans = answerByQuestionId.get(q.id);
+      if (!ans) continue;
+      if (ans.skipped) {
+        waveAnswers.push({
+          question_id: q.id,
+          question_text: q.text,
+          answer_text: "（跳过）",
+          skipped: true,
+        });
+      } else if (ans.value !== null && ans.value !== undefined && ans.value !== "") {
+        const text =
+          q.options && q.options.length > 0 ? resolveAnswerText(ans.value, q) : ans.value;
+        waveAnswers.push({
+          question_id: q.id,
+          question_text: q.text,
+          answer_text: text,
+          skipped: false,
+        });
+      }
+    }
+    const insight = insightByWaveId.get(w.wave_id);
+    fullHistory.push({
+      wave_id: w.wave_id,
+      wave_index: w.wave_index,
+      questions: qs,
+      answers: waveAnswers,
+      insight: insight
+        ? {
+            user_told_me: insight.userToldMe ?? undefined,
+            current_reading: insight.currentReading ?? undefined,
+            important_unknown: insight.importantUnknown ?? undefined,
+            route_impact: insight.routeImpact ?? undefined,
+          }
+        : undefined,
+    });
   }
 
   const activeSources = activeSourceVersions(memory);
@@ -346,42 +429,13 @@ export async function GET(request: NextRequest) {
   // not just the most recent one (issue #20).
   const recentFeedback = memory.recent_feedback.slice(-3);
 
-  // Extract Q&A text from the most recent completed wave so the Interviewer
-  // can build on actual answers instead of repeating similar questions (issue #18).
-  const lastWave = previousWaves[previousWaves.length - 1];
+  // Keep a summary of the most recent wave as a lightweight fallback anchor.
+  const lastWave = fullHistory[fullHistory.length - 1];
   let lastWaveAnswers: { question_text: string; answer_text: string }[] | undefined;
   if (lastWave) {
-    const lastWaveQuestions: InterviewQuestion[] = JSON.parse(lastWave.questions);
-    const lastWaveAnswerRows = await prisma.answer.findMany({
-      where: { sessionId: session.id },
-      orderBy: { createdAt: "asc" },
-    });
-    // Build a map of questionId -> raw answer value for quick lookup.
-    const answerMap = new Map<string, string>();
-    for (const a of lastWaveAnswerRows) {
-      if (a.value && !answerMap.has(a.questionId)) {
-        answerMap.set(a.questionId, a.value);
-      }
-    }
-    lastWaveAnswers = lastWaveQuestions
-      .map((q) => {
-        const raw = answerMap.get(q.id);
-        if (!raw) return null;
-        // Resolve option IDs to labels for choice questions.
-        // Stored answer may be a single option id, comma-joined ids, or free text.
-        let answerText = raw;
-        if (q.options && q.options.length > 0) {
-          const optionMap = new Map(q.options.map((o) => [o.id, o.label]));
-          const ids = raw.split(",").map((s) => s.trim());
-          const resolved = ids.map((id) => optionMap.get(id) ?? id);
-          answerText = resolved.join(", ");
-        }
-        return {
-          question_text: q.text,
-          answer_text: answerText,
-        };
-      })
-      .filter((qa): qa is { question_text: string; answer_text: string } => qa !== null);
+    lastWaveAnswers = lastWave.answers
+      .filter((a) => !a.skipped)
+      .map((a) => ({ question_text: a.question_text, answer_text: a.answer_text.slice(0, 200) }));
     if (lastWaveAnswers.length === 0) lastWaveAnswers = undefined;
   }
 
@@ -401,8 +455,9 @@ export async function GET(request: NextRequest) {
     relevant_constraints: relevantConstraints,
     latest_feedback: latestFeedback,
     recent_feedback: recentFeedback.length > 0 ? recentFeedback : undefined,
-    recent_question_texts: recentQuestionTexts.slice(-8),
+    recent_question_texts: recentQuestionTexts,
     last_wave_answers: lastWaveAnswers,
+    full_history: fullHistory,
     upload_chunks: uploadChunks && uploadChunks.length > 0 ? uploadChunks : undefined,
     burden,
     prompt_version: "v0-draft",

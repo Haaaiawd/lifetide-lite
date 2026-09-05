@@ -91,9 +91,9 @@ describe("harness limit property tests", () => {
     );
   });
 
-  it("machine rejects wave index > 5 or < 1", () => {
+  it("machine rejects wave index > 8 or < 1", () => {
     fc.assert(
-      fc.property(fc.integer({ min: -3, max: 8 }), (index) => {
+      fc.property(fc.integer({ min: -3, max: 10 }), (index) => {
         const actor = createActor(harnessMachine, { input: {} });
         actor.start();
         actor.send({
@@ -162,7 +162,7 @@ describe("harness limit property tests", () => {
           },
         });
         const after = JSON.stringify(actor.getSnapshot().value);
-        const ok = index >= 1 && index <= 5;
+        const ok = index >= 1 && index <= 8;
         if (ok) {
           expect(after).not.toBe(before);
         } else {

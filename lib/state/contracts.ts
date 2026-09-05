@@ -278,7 +278,7 @@ export type WaveStopReason = z.infer<typeof waveStopReasonSchema>;
 
 export const waveSchema = z.object({
   id: idSchema,
-  index: z.number().int().min(1).max(5),
+  index: z.number().int().min(1).max(8),
   kind: waveKindSchema,
   mission: waveMissionSchema,
   status: z.enum(["open", "synthesizing", "awaiting_calibration", "closed"]),

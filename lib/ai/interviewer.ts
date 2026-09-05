@@ -69,10 +69,24 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
   }
   const feedbackSection = feedbackLines.join("\n");
 
-  // Render Q&A from the most recent completed wave so the Interviewer can
-  // build on actual answers instead of repeating similar questions (issue #18).
-  const lastWaveSection = (input.last_wave_answers ?? [])
-    .map((qa) => `问：${qa.question_text}\n答：${qa.answer_text.slice(0, 200)}`)
+  // Render the complete, wave-by-wave memory: every prior question, the user's
+  // answer, and the sensemaker insight produced for that wave. This is the main
+  // signal the Interviewer uses to avoid repeating already-answered directions.
+  const fullHistorySection = input.full_history
+    .map((wave) => {
+      const qa = wave.answers
+        .map((a) => `  问：${a.question_text}\n  答：${a.answer_text.slice(0, 200)}${a.skipped ? "（已跳过）" : ""}`)
+        .join("\n");
+      const insight = wave.insight
+        ? [
+            `  - 我了解到：${(wave.insight.user_told_me ?? "").slice(0, 200)}`,
+            `  - 当前解读：${(wave.insight.current_reading ?? "").slice(0, 200)}`,
+            `  - 重要未知：${(wave.insight.important_unknown ?? "").slice(0, 200)}`,
+            `  - 路线影响：${(wave.insight.route_impact ?? "").slice(0, 200)}`,
+          ].join("\n")
+        : "  （本波尚无分析）";
+      return `--- Wave ${wave.wave_index} (${wave.wave_id}) ---\n问题与回答：\n${qa || "  （无回答）"}\n本波分析：\n${insight}`;
+    })
     .join("\n\n");
 
   return [
@@ -83,6 +97,9 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     `selected_uncertainty_topic: ${unc.topic}`,
     `selected_uncertainty_question: ${unc.question}`,
     `selected_uncertainty_plan_consequence: ${unc.plan_consequence}`,
+    `design_question: ${memory.design_question ?? "（尚未设定）"}`,
+    `declined_topics: ${memory.declined_topics.length > 0 ? memory.declined_topics.join("、") : "（无）"}`,
+    `route_intents: ${memory.route_intents.length > 0 ? memory.route_intents.map((r) => `${r.title_hint} [${r.status}]`).join("、") : "（无）"}`,
     "",
     "=== 进度概览 ===",
     buildProgressSummary(memory, input.next_wave_index),
@@ -96,13 +113,13 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     "=== 相关约束 ===",
     constraints || "（无）",
     "",
-    "=== 上一波问答摘要（在此基础上深入，不要重复相同方向）===",
-    lastWaveSection || "（无）",
+    "=== 完整历史记忆（逐波：题目、回答、分析者洞察）===",
+    fullHistorySection || "（无）",
     "",
     "=== 最近反馈（校准信号）===",
     feedbackSection || "（无）",
     "",
-    "=== 最近问过的问题（不要重复）===",
+    "=== 全部已问问题（不要重复）===",
     recent || "（无）",
     "",
     "=== 上传材料片段（仅当与焦点未知相关时引用）===",
@@ -113,6 +130,12 @@ function buildInterviewerEnvelope(input: InterviewerInput, memory: WorkingMemory
     `- 平均回答长度：${input.burden.median_answer_chars} 字`,
     `- 已进行：${input.burden.elapsed_minutes.toFixed(0)} 分钟`,
     `- 用户要求缩短：${input.burden.user_requested_shorter ? "是" : "否"}`,
+    "",
+    "记忆使用原则：",
+    "- selected_uncertainty 仅是分析者建议的焦点参考，不是约束；你的出题优先级以完整历史记忆和六维雷达缺口为准。",
+    "- 基于全部历史记忆逐波演进，不得重复已回答或明确拒绝的问题。",
+    "- 每个波次优先探索新的领域或维度，而不是重复已充分探索的方向。",
+    "- 同一话题连续出现建议不超过三题，但这是建议而非硬性规则；如该话题仍有高价值未挖尽信号，可适当延续。",
     "",
     "注意：一次产出 5-8 道问题，不再使用 continue_wave 分批模式。",
   ].join("\n");
