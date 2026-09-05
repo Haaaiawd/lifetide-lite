@@ -80,6 +80,7 @@ export function GenerationOverlay({
       setPhase(hasStreamContent ? "streaming" : "walking");
       return;
     }
+    if (phase !== "walking") return; // 避免重入时重置 phase
     setPhase("walking");
     setWalkProgress(0);
     walkStartRef.current = null;
@@ -111,7 +112,7 @@ export function GenerationOverlay({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [error, reduce, hasStreamContent]);
+  }, [error, reduce, hasStreamContent, phase]);
 
   // Once streaming, show streaming content. When complete, wait a beat
   // before calling onComplete so the user actually sees the final text.
