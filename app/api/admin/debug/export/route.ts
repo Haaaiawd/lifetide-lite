@@ -315,6 +315,66 @@ function buildTxtExport(data: any): string {
     lines.push(`Recent feedback: ${wm.recent_feedback?.length ?? 0}`);
     if (wm.persona_portrait) lines.push(`Portrait: yes`);
     if (wm.finalPlan) lines.push(`Final plan: yes`);
+
+    // Six-dimensional radar
+    if (wm.radar) {
+      lines.push("");
+      lines.push("--- Six-Dimensional Radar ---");
+      for (const [dim, cell] of Object.entries(wm.radar)) {
+        const c = cell as any;
+        lines.push(`  ${dim}: ${c.state} (${c.evidence?.length ?? 0} evidence)`);
+        lines.push(`    reason: ${c.reason}`);
+      }
+    }
+
+    // Last insight
+    if (wm.last_insight) {
+      const ins = wm.last_insight;
+      lines.push("");
+      lines.push("--- Last Insight ---");
+      lines.push(`  wave: ${ins.wave_id}`);
+      lines.push(`  user_told_me: ${ins.user_told_me}`);
+      lines.push(`  current_reading: ${ins.current_reading}`);
+      lines.push(`  important_unknown: ${ins.important_unknown}`);
+      lines.push(`  route_impact: ${ins.route_impact}`);
+      lines.push(`  language_strength: ${ins.language_strength}`);
+      if (ins.radar_deltas?.length > 0) {
+        lines.push(`  radar_deltas:`);
+        for (const d of ins.radar_deltas) {
+          lines.push(`    ${d.dimension}: ${d.from} -> ${d.to}`);
+        }
+      }
+    }
+
+    // Route intents
+    if (wm.route_intents?.length > 0) {
+      lines.push("");
+      lines.push("--- Route Intents ---");
+      for (const r of wm.route_intents) {
+        lines.push(`  [${r.status}] ${r.label ?? r.title ?? r.intent} (${r.evidence?.length ?? 0} evidence)`);
+      }
+    }
+
+    // Portrait details
+    if (wm.persona_portrait) {
+      lines.push("");
+      lines.push("--- Portrait ---");
+      lines.push(`  essence: ${wm.persona_portrait.essence}`);
+      lines.push(`  trait_summary: ${wm.persona_portrait.trait_summary}`);
+    }
+
+    // Final plan lives
+    if (wm.finalPlan?.lives?.length > 0) {
+      lines.push("");
+      lines.push("--- Parallel Lives ---");
+      for (let i = 0; i < wm.finalPlan.lives.length; i++) {
+        const life = wm.finalPlan.lives[i];
+        lines.push(`  Life ${i + 1}: ${life.title ?? life.label}`);
+        if (life.ordinary_day?.summary) {
+          lines.push(`    ordinary_day: ${life.ordinary_day.summary}`);
+        }
+      }
+    }
   }
 
   lines.push("");

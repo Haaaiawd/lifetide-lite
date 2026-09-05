@@ -62,6 +62,75 @@ type AdminUser = {
 
 type Tab = "overview" | "invites" | "users" | "sessions" | "logs";
 
+type ProgressData = {
+  meta: {
+    session_id: string;
+    user_email: string;
+    created_at: string;
+    last_wave_index: number;
+    revision: number;
+  };
+  dialogue: Array<{
+    wave_index: number;
+    wave_id: string;
+    status: string;
+    created_at: string;
+    qa_pairs: Array<{
+      question_id: string;
+      question_text: string;
+      question_type: string;
+      answer_value: string | null;
+      answered_at: string | null;
+    }>;
+  }>;
+  radar: Array<{
+    dimension: string;
+    state: string;
+    reason: string;
+    evidence_count: number;
+    updated_at: string;
+  }>;
+  last_insight: {
+    wave_id: string;
+    user_told_me: string;
+    current_reading: string;
+    important_unknown: string;
+    route_impact: string;
+    language_strength: string;
+    radar_deltas: Array<{ dimension: string; from: string; to: string }>;
+    generated_at: string;
+  } | null;
+  route_intents: Array<{ id: string; label: string; status: string; evidence_count: number }>;
+  portrait: { essence: string; trait_summary: string; generated: boolean } | null;
+  final_plan: { lives: Array<{ title: string; ordinary_day_summary: string }>; generated: boolean } | null;
+  streaming_insight: { partial: boolean; user_told_me?: string } | null;
+};
+
+const RADAR_DIMENSION_LABELS: Record<string, string> = {
+  traits: "特质",
+  motivation: "动机",
+  capabilities: "能力",
+  relationships: "关系",
+  environment: "环境",
+  narrative: "叙事",
+};
+
+const RADAR_STATE_LABELS: Record<string, string> = {
+  unseen: "未观察",
+  signaled: "已信号",
+  grounded: "已落地",
+  conflicted: "冲突",
+  declined: "已拒绝",
+};
+
+const RADAR_STATE_COLORS: Record<string, string> = {
+  unseen: "border-ink/20 bg-paper text-ink-muted",
+  signaled: "border-cobalt/40 bg-cobalt-soft/50 text-cobalt",
+  grounded: "border-success/40 bg-success-soft/50 text-success",
+  conflicted: "border-amber/40 bg-amber-soft/50 text-amber",
+  declined: "border-danger/40 bg-danger-soft/50 text-danger",
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -251,6 +320,27 @@ export default function AdminPage() {
 
   // Debug export
   const [exportingId, setExportingId] = useState<string | null>(null);
+
+  // Progress viewer
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [progressLoadingId, setProgressLoadingId] = useState<string | null>(null);
+
+  async function handleViewProgress(sessionId: string) {
+    if (progressData?.meta.session_id === sessionId) {
+      setProgressData(null);
+      return;
+    }
+    setProgressLoadingId(sessionId);
+    try {
+      const res = await fetch(`/api/admin/debug/progress?session_id=${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProgressData(data);
+      }
+    } finally {
+      setProgressLoadingId(null);
+    }
+  }
 
   async function handleExport(sessionId: string, format: "txt" | "json") {
     setExportingId(sessionId);
@@ -671,40 +761,54 @@ export default function AdminPage() {
               <div className="px-4 py-6 text-center text-sm text-ink-muted">还没有会话</div>
             )}
             {recentSessions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">
-                    {s.userEmail ?? "guest"}
+              <div key={s.id}>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">
+                      {s.userEmail ?? "guest"}
+                    </div>
+                    <div className="text-xs text-ink-muted">
+                      {s.progress} · 创建 {s.createdAt.slice(0, 16).replace("T", " ")} · 过期 {s.expiresAt.slice(0, 10)}
+                    </div>
                   </div>
-                  <div className="text-xs text-ink-muted">
-                    {s.progress} · 创建 {s.createdAt.slice(0, 16).replace("T", " ")} · 过期 {s.expiresAt.slice(0, 10)}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleViewProgress(s.id)}
+                      disabled={progressLoadingId === s.id}
+                      className="border-2 border-ink bg-purple px-2 py-1 text-[10px] font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-purple/80 disabled:opacity-50"
+                    >
+                      {progressLoadingId === s.id ? "..." : progressData?.meta.session_id === s.id ? "收起" : "进展"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExport(s.id, "txt")}
+                      disabled={exportingId === s.id}
+                      className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
+                    >
+                      {exportingId === s.id ? "..." : "TXT"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExport(s.id, "json")}
+                      disabled={exportingId === s.id}
+                      className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
+                    >
+                      {exportingId === s.id ? "..." : "JSON"}
+                    </button>
+                    <div className={`border px-2 py-0.5 text-[10px] ${
+                      new Date(s.expiresAt) > new Date()
+                        ? "border-success/40 bg-success-soft/50 text-success"
+                        : "border-ink/20 bg-paper text-ink-muted"
+                    }`}>
+                      {new Date(s.expiresAt) > new Date() ? "活跃" : "过期"}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleExport(s.id, "txt")}
-                    disabled={exportingId === s.id}
-                    className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
-                  >
-                    {exportingId === s.id ? "..." : "TXT"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExport(s.id, "json")}
-                    disabled={exportingId === s.id}
-                    className="border-2 border-ink bg-paper-raised px-2 py-1 text-[10px] font-medium shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-cobalt-soft disabled:opacity-50"
-                  >
-                    {exportingId === s.id ? "..." : "JSON"}
-                  </button>
-                  <div className={`border px-2 py-0.5 text-[10px] ${
-                    new Date(s.expiresAt) > new Date()
-                      ? "border-success/40 bg-success-soft/50 text-success"
-                      : "border-ink/20 bg-paper text-ink-muted"
-                  }`}>
-                    {new Date(s.expiresAt) > new Date() ? "活跃" : "过期"}
-                  </div>
-                </div>
+                {/* Progress panel */}
+                {progressData?.meta.session_id === s.id && (
+                  <ProgressPanel data={progressData} />
+                )}
               </div>
             ))}
           </div>
@@ -809,6 +913,164 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     <div className={`border-2 p-3 shadow-sm ${colorMap[color] ?? colorMap.ink}`}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs font-medium opacity-80">{label}</div>
+    </div>
+  );
+}
+
+function ProgressPanel({ data }: { data: ProgressData }) {
+  return (
+    <div className="border-t border-ink/10 bg-paper/50 px-4 py-4 space-y-4">
+      {/* Meta */}
+      <div className="flex flex-wrap gap-3 text-xs text-ink-muted">
+        <span>Wave {data.meta.last_wave_index}</span>
+        <span>Revision {data.meta.revision}</span>
+        <span>{data.meta.user_email}</span>
+        {data.streaming_insight && (
+          <span className="border border-amber/40 bg-amber-soft/50 px-1.5 py-0.5 text-amber">
+            流式中断
+          </span>
+        )}
+      </div>
+
+      {/* Radar */}
+      <div>
+        <h4 className="mb-2 text-xs font-medium text-ink">六维观察</h4>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {data.radar.map((cell) => (
+            <div
+              key={cell.dimension}
+              className={`border px-2 py-1.5 text-xs ${RADAR_STATE_COLORS[cell.state] ?? RADAR_STATE_COLORS.unseen}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {RADAR_DIMENSION_LABELS[cell.dimension] ?? cell.dimension}
+                </span>
+                <span className="text-[10px]">
+                  {RADAR_STATE_LABELS[cell.state] ?? cell.state}
+                </span>
+              </div>
+              <div className="mt-1 line-clamp-2 text-[10px] opacity-80">
+                {cell.reason}
+              </div>
+              <div className="mt-0.5 text-[10px] opacity-60">
+                {cell.evidence_count} 条证据
+              </div>
+            </div>
+          ))}
+          {data.radar.length === 0 && (
+            <span className="text-xs text-ink-muted">暂无 radar 数据</span>
+          )}
+        </div>
+      </div>
+
+      {/* Last insight */}
+      {data.last_insight && (
+        <div>
+          <h4 className="mb-2 text-xs font-medium text-ink">最近一条理解</h4>
+          <div className="border border-ink/20 bg-paper p-3 text-xs space-y-2">
+            <div>
+              <span className="text-ink-muted">用户说：</span>
+              <span>{data.last_insight.user_told_me}</span>
+            </div>
+            <div>
+              <span className="text-ink-muted">我的解读：</span>
+              <span>{data.last_insight.current_reading}</span>
+            </div>
+            <div>
+              <span className="text-ink-muted">还不确定：</span>
+              <span>{data.last_insight.important_unknown}</span>
+            </div>
+            <div>
+              <span className="text-ink-muted">路线影响：</span>
+              <span>{data.last_insight.route_impact}</span>
+            </div>
+            {data.last_insight.radar_deltas.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {data.last_insight.radar_deltas.map((d, i) => (
+                  <span key={i} className="border border-ink/20 px-1 py-0.5 text-[10px]">
+                    {RADAR_DIMENSION_LABELS[d.dimension] ?? d.dimension}: {d.from} → {d.to}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="text-[10px] text-ink-muted">
+              {data.last_insight.language_strength} · {data.last_insight.generated_at.slice(0, 16).replace("T", " ")}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Route intents */}
+      {data.route_intents.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-xs font-medium text-ink">路线意图（{data.route_intents.length}）</h4>
+          <div className="flex flex-wrap gap-2">
+            {data.route_intents.map((r) => (
+              <div key={r.id} className="border border-ink/20 bg-paper px-2 py-1 text-xs">
+                <span className="font-medium">{r.label}</span>
+                <span className="ml-1 text-[10px] text-ink-muted">
+                  {r.status} · {r.evidence_count} 证据
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Portrait */}
+      {data.portrait && (
+        <div>
+          <h4 className="mb-2 text-xs font-medium text-ink">人格画像</h4>
+          <div className="border border-ink/20 bg-paper p-3 text-xs space-y-1">
+            <div><span className="text-ink-muted">核心：</span>{data.portrait.essence}</div>
+            <div><span className="text-ink-muted">特质：</span>{data.portrait.trait_summary}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Final plan */}
+      {data.final_plan && (
+        <div>
+          <h4 className="mb-2 text-xs font-medium text-ink">三条平行人生</h4>
+          <div className="space-y-2">
+            {data.final_plan.lives.map((life, i) => (
+              <div key={i} className="border border-ink/20 bg-paper p-2 text-xs">
+                <div className="font-medium">{life.title}</div>
+                <div className="mt-0.5 text-[10px] text-ink-muted">
+                  {life.ordinary_day_summary}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dialogue */}
+      <div>
+        <h4 className="mb-2 text-xs font-medium text-ink">对话记录（{data.dialogue.length} 波）</h4>
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {data.dialogue.map((wave) => (
+            <div key={wave.wave_id} className="border-l-2 border-ink/20 pl-3">
+              <div className="text-[10px] font-medium text-ink-muted">
+                Wave {wave.wave_index} · {wave.status}
+              </div>
+              {wave.qa_pairs.map((qa, i) => (
+                <div key={qa.question_id} className="mt-1.5 text-xs">
+                  <div className="text-ink">
+                    <span className="text-ink-muted">Q{i + 1}:</span> {qa.question_text}
+                  </div>
+                  <div className="ml-4 text-ink-muted">
+                    {qa.answer_value ?? "(未回答)"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+          {data.dialogue.length === 0 && (
+            <span className="text-xs text-ink-muted">暂无对话数据</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
