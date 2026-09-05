@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
                   const exp = typeof life.core_experience === "string" ? life.core_experience : "";
                   if (title || day || exp) {
                     sections.push({
-                      label: `路线 ${i + 1}${title ? `：${title}` : ""}`,
+                      label: `路线 ${i + 1}`,
                       text: day || exp,
                     });
                   }
