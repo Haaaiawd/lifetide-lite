@@ -64,17 +64,24 @@ export async function saveWorkingMemory(
   memory: WorkingMemory
 ): Promise<WorkingMemory> {
   const next = { ...memory, updated_at: new Date().toISOString() };
-  await prisma.workingMemory.upsert({
-    where: { sessionId },
-    create: {
-      sessionId,
-      revision: next.revision,
-      payload: JSON.stringify(next),
-    },
-    update: {
-      revision: next.revision,
-      payload: JSON.stringify(next),
-    },
+  const payload = JSON.stringify(next);
+  // Revision-guarded write (CAS): streaming partial saves run fire-and-forget
+  // at the base revision and can land after the final commit (revision+1).
+  // Reject writes that would overwrite a newer stored revision so a stale
+  // partial cannot clobber the committed memory.
+  const updated = await prisma.workingMemory.updateMany({
+    where: { sessionId, revision: { lte: next.revision } },
+    data: { revision: next.revision, payload },
   });
+  if (updated.count === 0) {
+    try {
+      await prisma.workingMemory.create({
+        data: { sessionId, revision: next.revision, payload },
+      });
+    } catch {
+      // Row exists at a newer revision — a later write already won the race.
+      console.warn(`saveWorkingMemory: dropped stale write for session ${sessionId} (rev ${next.revision})`);
+    }
+  }
   return next;
 }

@@ -23,8 +23,11 @@ export async function GET(request: NextRequest) {
   // a new wave but the user hasn't submitted answers yet (POST /api/wave).
   // In that case the user is mid-wave and should resume to the question
   // view, not the stop page.
+  // "synthesizing" waves are included: a synthesis interrupted mid-stream
+  // (client disconnect, server restart, stream error) leaves the wave in
+  // that state, and it must surface as pending so the user can retry.
   const committedWaves = await prisma.wave.findMany({
-    where: { sessionId: session.id, status: "committed" },
+    where: { sessionId: session.id, status: { in: ["committed", "synthesizing"] } },
     orderBy: { wave_index: "desc" },
     take: 1,
   });

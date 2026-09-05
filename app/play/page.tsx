@@ -19,6 +19,60 @@ const REQUIRED_CONSENTS = [{ type: "ai", given: true }];
 
 type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "portrait" | "routes" | "waiting";
 
+// Shared SSE reader: forwards `partial` events to onPartial, captures `done`
+// data, and — crucially — does not swallow `error` events. An `error` event
+// or a stream that ends without `done` throws, so callers can surface a
+// visible error bar with a retry button instead of hanging.
+async function readSseStream<TDone>(
+  res: Response,
+  onPartial: (data: Record<string, unknown>) => void
+): Promise<TDone> {
+  if (!res.body) throw new Error("No response body");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let doneData: TDone | null = null;
+  let streamError: string | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // Parse SSE events from buffer
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+
+    for (const eventBlock of events) {
+      const lines = eventBlock.split("\n");
+      let eventType = "";
+      let dataLine = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) eventType = line.slice(7);
+        else if (line.startsWith("data: ")) dataLine = line.slice(6);
+      }
+      if (!eventType || !dataLine) continue;
+
+      try {
+        const data = JSON.parse(dataLine);
+        if (eventType === "partial") {
+          onPartial(data);
+        } else if (eventType === "done") {
+          doneData = data as TDone;
+        } else if (eventType === "error") {
+          streamError = typeof data?.error === "string" ? data.error : "Stream error";
+        }
+      } catch {
+        // Ignore malformed events
+      }
+    }
+  }
+
+  if (streamError) throw new Error(streamError);
+  if (!doneData) throw new Error("Stream ended without done event");
+  return doneData;
+}
+
 type ProgressInfo = {
   waveIndex: number;
   hasPortrait: boolean;
@@ -49,6 +103,12 @@ export default function PlayPage() {
   const [framing, setFraming] = useState<string | null>(null);
   const [blueprint, setBlueprint] = useState<{ current_coordinate: string; key_tensions: string[]; recurring_elements: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Error bar shown inside the conversation view (waiting step) when an
+  // SSE stream or wave fetch fails — carries its own retry action.
+  const [streamError, setStreamError] = useState<{ message: string; retry: () => void } | null>(null);
+  // Wave whose insight synthesis was interrupted mid-stream (resume path) —
+  // when set, the insight step shows an exit bar with resubmit/continue.
+  const [interruptedWaveId, setInterruptedWaveId] = useState<string | null>(null);
   const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
@@ -97,6 +157,7 @@ export default function PlayPage() {
         }
       })
       .catch(() => {
+        setError("加载进度失败，请检查网络后重试");
         setStep("consent");
       });
   }, []);
@@ -167,6 +228,7 @@ export default function PlayPage() {
   };
 
   const loadWave = async (isInitial = false) => {
+    setStreamError(null);
     // Initial load uses full-screen loading (no conversation to show yet).
     // Subsequent loads use the waiting animation at the bottom of the conversation.
     if (isInitial) {
@@ -226,17 +288,49 @@ export default function PlayPage() {
 
       applyWaveData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setStep("consent");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      // Surface a visible, retryable error inside the conversation view
+      // instead of silently bouncing to a wrong step (e.g. consent).
+      setStep("waiting");
+      setStreamError({ message, retry: () => { setStreamError(null); loadWave(); } });
     }
   };
 
   const currentQuestion = questions[questionIndex];
 
+  // Shared success path after a wave's insight stream completes: show the
+  // insight card and prefetch the next wave while the user reads.
+  const finishInsight = (doneData: { wave_id: string; wave_index: number; revision: number; insight: ImmediateInsight }) => {
+    const insightView = toInsightView(doneData.insight, doneData.wave_index);
+    setInsight(doneData.insight);
+    setWaveIndex(doneData.wave_index);
+    setStreamingInsight(null);
+    setInterruptedWaveId(null);
+
+    appendItem({
+      id: newId(),
+      type: "bot",
+      text: "好，我已经整理好一条理解，你看看哪里需要调：",
+    });
+    appendItem({
+      id: newId(),
+      type: "insight",
+      insight: insightView,
+      isActive: true,
+    });
+
+    setStep("insight");
+
+    // Start prefetching the next wave while the user reads the insight.
+    // The server allows GET during awaiting_calibration state.
+    startPrefetch();
+  };
+
   const submitWave = async (answerState?: Record<string, { value?: string | string[] | number; skipped: boolean }>) => {
     if (!currentQuestion) return;
     setWaitingVariant("insight");
     setStreamingInsight(null);
+    setStreamError(null);
     setStep("waiting");
     // Use the passed answerState if available — advance() calls submitWave
     // immediately after setAnswers, and the closure `answers` may not have
@@ -258,75 +352,58 @@ export default function PlayPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(`Wave submission failed: ${res.status}`);
-      if (!res.body) throw new Error("No response body");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let doneData: { wave_id: string; wave_index: number; revision: number; insight: ImmediateInsight } | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // Parse SSE events from buffer
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-
-        for (const eventBlock of events) {
-          const lines = eventBlock.split("\n");
-          let eventType = "";
-          let dataLine = "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) eventType = line.slice(7);
-            else if (line.startsWith("data: ")) dataLine = line.slice(6);
-          }
-          if (!eventType || !dataLine) continue;
-
-          try {
-            const data = JSON.parse(dataLine);
-            if (eventType === "partial") {
-              setStreamingInsight(data);
-            } else if (eventType === "done") {
-              doneData = data;
-            } else if (eventType === "error") {
-              throw new Error(data.error ?? "Stream error");
-            }
-          } catch (parseErr) {
-            // Ignore malformed events
-          }
-        }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Wave submission failed: ${res.status}`);
       }
 
-      if (!doneData) throw new Error("Stream ended without done event");
-      const insightView = toInsightView(doneData.insight, doneData.wave_index);
-      setInsight(doneData.insight);
-      setWaveIndex(doneData.wave_index);
-      setStreamingInsight(null);
-
-      appendItem({
-        id: newId(),
-        type: "bot",
-        text: "好，我已经整理好一条理解，你看看哪里需要调：",
-      });
-      appendItem({
-        id: newId(),
-        type: "insight",
-        insight: insightView,
-        isActive: true,
-      });
-
-      setStep("insight");
-
-      // Start prefetching the next wave while the user reads the insight.
-      // The server allows GET during awaiting_calibration state.
-      startPrefetch();
+      const doneData = await readSseStream<{
+        wave_id: string;
+        wave_index: number;
+        revision: number;
+        insight: ImmediateInsight;
+      }>(res, (d) => setStreamingInsight(d as { user_told_me?: string; current_reading?: string; important_unknown?: string }));
+      finishInsight(doneData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const message = err instanceof Error ? err.message : "Unknown error";
       setStreamingInsight(null);
-      setStep("question");
+      // Stay on the waiting step and show a visible error bar with retry —
+      // bouncing back to "question" left no actionable control and looked
+      // like the UI had hung (the Wave 6 deadlock).
+      setStreamError({ message, retry: () => { setStreamError(null); submitWave(); } });
+    }
+  };
+
+  // Resubmit a wave whose synthesis was interrupted (e.g. the user refreshed
+  // mid-stream). The server already has the answers — `resubmit` tells it to
+  // reuse them and re-run synthesis instead of requiring fresh answers.
+  const resubmitWave = async (wId: string) => {
+    setWaitingVariant("insight");
+    setStreamingInsight(null);
+    setStreamError(null);
+    setStep("waiting");
+    try {
+      const res = await fetch("/api/wave", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wave_id: wId, answers: [], resubmit: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Wave resubmission failed: ${res.status}`);
+      }
+
+      const doneData = await readSseStream<{
+        wave_id: string;
+        wave_index: number;
+        revision: number;
+        insight: ImmediateInsight;
+      }>(res, (d) => setStreamingInsight(d as { user_told_me?: string; current_reading?: string; important_unknown?: string }));
+      finishInsight(doneData);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setStreamingInsight(null);
+      setStreamError({ message, retry: () => { setStreamError(null); resubmitWave(wId); } });
     }
   };
 
@@ -444,8 +521,11 @@ export default function PlayPage() {
 
       await loadWave();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setStep("insight");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      // Stay on the waiting step with a visible retry — going back to the
+      // insight step would leave the insight card inactive with no exit.
+      setStep("waiting");
+      setStreamError({ message, retry: () => { setStreamError(null); handleInsightContinue(id, feedback); } });
     }
   };
 
@@ -472,57 +552,28 @@ export default function PlayPage() {
   const handleGenerateFinal = async () => {
     setWaitingVariant("portrait");
     setStreamingPortrait(null);
+    setStreamError(null);
     setStep("waiting");
     try {
       const res = await fetch("/api/portrait", { method: "POST" });
-      if (!res.ok) throw new Error(`Portrait generation failed: ${res.status}`);
-      if (!res.body) throw new Error("No response body");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let doneData: { portrait: PersonaPortrait } | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-
-        for (const eventBlock of events) {
-          const lines = eventBlock.split("\n");
-          let eventType = "";
-          let dataLine = "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) eventType = line.slice(7);
-            else if (line.startsWith("data: ")) dataLine = line.slice(6);
-          }
-          if (!eventType || !dataLine) continue;
-
-          try {
-            const data = JSON.parse(dataLine);
-            if (eventType === "partial") {
-              setStreamingPortrait(data);
-            } else if (eventType === "done") {
-              doneData = data;
-            } else if (eventType === "error") {
-              throw new Error(data.error ?? "Stream error");
-            }
-          } catch {
-            // Ignore malformed events
-          }
-        }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Portrait generation failed: ${res.status}`);
       }
 
-      if (!doneData) throw new Error("Stream ended without done event");
+      const doneData = await readSseStream<{ portrait: PersonaPortrait }>(
+        res,
+        (d) => setStreamingPortrait(d as { essence?: string; trait_summary?: string })
+      );
       setPortrait(doneData.portrait);
       setStreamingPortrait(null);
       setStep("portrait");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setStep("stop");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setStreamingPortrait(null);
+      // Visible error bar + retry on the waiting step — going back to "stop"
+      // showed the error only as tiny text with no dedicated retry control.
+      setStreamError({ message, retry: () => { setStreamError(null); handleGenerateFinal(); } });
     }
   };
 
@@ -590,7 +641,7 @@ export default function PlayPage() {
               return;
             }
           }
-        } catch {}
+        } catch { /* fall through to next resume branch */ }
       }
       if (progressInfo.hasPortrait) {
         // Load portrait and show portrait step
@@ -604,7 +655,7 @@ export default function PlayPage() {
               return;
             }
           }
-        } catch {}
+        } catch { /* fall through to next resume branch */ }
       }
       // Restore a partial insight that was being streamed when the user left.
       // The synthesis is incomplete, so we show the card but no calibration.
@@ -614,7 +665,7 @@ export default function PlayPage() {
         setWaveIndex(progressInfo.waveIndex);
         setWaveId(`w${progressInfo.waveIndex}`);
         const resumeItems: ConversationItem[] = [
-          { id: newId(), type: "bot", text: "正在继续生成…" },
+          { id: newId(), type: "bot", text: "上次生成中断了，这条理解还没完成。" },
         ];
         if (progressInfo.pendingWaveQuestions) {
           const total = progressInfo.pendingWaveQuestions.length;
@@ -631,6 +682,10 @@ export default function PlayPage() {
         }
         resumeItems.push({ id: newId(), type: "insight", insight: insightView, isActive: true, readonly: true });
         setItems(resumeItems);
+        // The read-only insight card has no calibration controls, so provide
+        // an exit bar: resubmit the interrupted wave (server already has the
+        // answers) or continue to wave loading.
+        setInterruptedWaveId(progressInfo.pendingWaveId ?? `w${progressInfo.waveIndex}`);
         setStep("insight");
         return;
       }
@@ -713,6 +768,7 @@ export default function PlayPage() {
         setRoutes(null);
         setItems([]);
         setInsight(null);
+        setInterruptedWaveId(null);
         loadWave(true);
       } catch {
         setError("重置失败，请重试");
@@ -868,7 +924,60 @@ export default function PlayPage() {
 
       {step === "waiting" && (
         <div className="shrink-0 border-t-2 border-ink/10 bg-paper/50 p-4">
-          <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
+          {streamError ? (
+            <div className="border-2 border-red-600 bg-red-50 p-4">
+              <p className="text-sm text-red-700">{streamError.message}</p>
+              <div className="mt-3 flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={streamError.retry}
+                  className="border-2 border-red-600 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
+                >
+                  重试
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
+                >
+                  清除会话重新开始
+                </button>
+              </div>
+            </div>
+          ) : (
+            <WaitingBubble variant={waitingVariant} streamingInsight={streamingInsight} streamingPortrait={streamingPortrait} />
+          )}
+        </div>
+      )}
+
+      {step === "insight" && interruptedWaveId && (
+        <div className="shrink-0 border-t-2 border-ink bg-paper p-4">
+          <p className="mb-3 text-center text-sm text-ink-muted">
+            上次生成被中断。你可以重新生成这条理解，或继续访谈。
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const w = interruptedWaveId;
+                setInterruptedWaveId(null);
+                resubmitWave(w);
+              }}
+              className="flex-1 border-2 border-ink bg-cobalt px-4 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+            >
+              重新生成理解
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInterruptedWaveId(null);
+                loadWave();
+              }}
+              className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+            >
+              继续
+            </button>
+          </div>
         </div>
       )}
 

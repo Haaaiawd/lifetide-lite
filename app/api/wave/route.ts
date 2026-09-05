@@ -290,7 +290,10 @@ export async function GET(request: NextRequest) {
     where: { sessionId_wave_id: { sessionId: session.id, wave_id: `w${nextIndex}` } },
   });
 
-  if (existing && existing.status === "committed") {
+  // A "synthesizing" wave means a previous POST was interrupted mid-stream.
+  // Return its questions so the client can resume/resubmit — falling through
+  // to wave generation would hit the unique constraint on wave_id and 500.
+  if (existing && (existing.status === "committed" || existing.status === "synthesizing")) {
     const questions: InterviewQuestion[] = JSON.parse(existing.questions);
     const response = NextResponse.json({
       wave_id: existing.wave_id,
@@ -559,14 +562,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "AI consent required", missing: ["ai"] }, { status: 403 });
   }
 
-  let body: { wave_id: string; answers: Array<{ question_id: string; value?: string | string[] | number; skipped?: boolean }> };
+  let body: { wave_id: string; answers: Array<{ question_id: string; value?: string | string[] | number; skipped?: boolean }>; resubmit?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { wave_id, answers } = body;
+  const { wave_id, answers, resubmit } = body;
   if (!wave_id || !Array.isArray(answers)) {
     return NextResponse.json({ error: "wave_id and answers array required" }, { status: 400 });
   }
@@ -575,14 +578,16 @@ export async function POST(request: NextRequest) {
     where: { sessionId_wave_id: { sessionId: session.id, wave_id } },
   });
 
-  if (!wave || wave.status !== "committed") {
+  // "synthesizing" means a previous synthesis attempt was interrupted before
+  // completing — treat it as retryable so the client can resubmit.
+  if (!wave || (wave.status !== "committed" && wave.status !== "synthesizing")) {
     return NextResponse.json({ error: "Wave not available for submission" }, { status: 409 });
   }
 
   const questions: InterviewQuestion[] = JSON.parse(wave.questions);
   const questionById = new Map(questions.map((q) => [q.id, q]));
 
-  if (answers.length !== questions.length) {
+  if (!resubmit && answers.length !== questions.length) {
     return NextResponse.json(
       { error: "Answer count does not match question count" },
       { status: 400 }
@@ -590,9 +595,38 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date();
-  const createdAnswers: InterviewAnswer[] = [];
+  let createdAnswers: InterviewAnswer[] = [];
 
+  if (resubmit) {
+    // Recovery path: reuse the answers already persisted for this wave
+    // instead of requiring the client to resend them (e.g. resuming after
+    // a refresh mid-synthesis).
+    const existingAnswers = await prisma.answer.findMany({
+      where: { sessionId: session.id, questionId: { in: questions.map((q) => q.id) } },
+      orderBy: { createdAt: "asc" },
+    });
+    const byQuestionId = new Map(existingAnswers.map((a) => [a.questionId, a]));
+    if (existingAnswers.length === 0 || questions.some((q) => !byQuestionId.has(q.id))) {
+      return NextResponse.json({ error: "No submitted answers to resume" }, { status: 409 });
+    }
+    createdAnswers = questions.map((q) => {
+      const a = byQuestionId.get(q.id)!;
+      return {
+        id: a.id,
+        question_id: q.id,
+        wave_id: q.wave_id,
+        value: a.value ?? undefined,
+        skipped: a.skipped,
+        submitted_at: a.createdAt.toISOString(),
+      };
+    });
+  } else {
   await prisma.$transaction(async (tx) => {
+    // Idempotent retry: a failed synthesis leaves the wave resubmittable, so
+    // drop answers recorded by a previous attempt before inserting new ones.
+    await tx.answer.deleteMany({
+      where: { sessionId: session.id, questionId: { in: questions.map((q) => q.id) } },
+    });
     for (const answer of answers) {
       const question = questionById.get(answer.question_id);
       if (!question) {
@@ -631,10 +665,13 @@ export async function POST(request: NextRequest) {
       });
     }
   });
+  }
 
-  // Commit each answer to the XState ledger.
+  // Commit each answer to the XState ledger. Skipped on resubmit — those
+  // events were already committed by the original attempt.
   const snapshot = await loadPublicSnapshot(session.id);
   let baseRevision = snapshot?.revision ?? 0;
+  if (!resubmit) {
   for (const createdAnswer of createdAnswers) {
     const question = questionById.get(createdAnswer.question_id)!;
     const sourceId = createdAnswer.id;
@@ -670,11 +707,14 @@ export async function POST(request: NextRequest) {
       console.error("Failed to commit ANSWER_SUBMITTED:", result.message);
     }
   }
+  }
 
   const memory = await loadOrCreateWorkingMemory(session.id);
   const waveIndex = parseWaveIndex(wave_id);
 
-  // Register the new source versions in WorkingMemory before the sensemaker reads them.
+  // Register the new source versions in WorkingMemory before the sensemaker
+  // reads them. On resubmit they were already registered by the first attempt.
+  if (!resubmit) {
   for (const createdAnswer of createdAnswers) {
     const question = questionById.get(createdAnswer.question_id)!;
     const sourceVersion: SourceVersion = {
@@ -694,6 +734,7 @@ export async function POST(request: NextRequest) {
     };
     memory.source_versions.push(sourceVersion);
     memory.source_heads.push(sourceHead);
+  }
   }
 
   const endProvenanceId = randomUUID();
@@ -799,6 +840,12 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
         };
 
+        // Refresh the base revision — commits may have landed between the
+        // initial snapshot load and the end of a long synthesis stream
+        // (or this may be a retry where earlier events replayed idempotently).
+        const latestSnapshot = await loadPublicSnapshot(session.id);
+        baseRevision = latestSnapshot?.revision ?? baseRevision;
+
         const waveEndPayload: WaveEndCommitted = {
           proposal_id: endProvenance.proposal_id,
           generation_provenance: endProvenance,
@@ -817,7 +864,18 @@ export async function POST(request: NextRequest) {
         const waveEndResult = await commitEvent(session.id, waveEndEnvelope);
         if (waveEndResult.ok) {
           baseRevision = waveEndResult.nextRevision;
+        } else {
+          console.error("Failed to commit WAVE_END_COMMITTED:", waveEndResult.message);
+          // On a retry the wave-end may already be committed (idempotency
+          // conflict, or the machine already sits in synthesizing_wave where
+          // WAVE_END has no transition). Refresh the base revision so the
+          // INSIGHT_COMMITTED below can still move the machine forward —
+          // skipping it would leave the session stuck in synthesizing_wave.
+          const retrySnapshot = await loadPublicSnapshot(session.id);
+          baseRevision = retrySnapshot?.revision ?? baseRevision;
+        }
 
+        {
           const insightProposal = {
             base_revision: output.base_revision,
             operations: appliedOperations,
@@ -842,8 +900,6 @@ export async function POST(request: NextRequest) {
           if (!insightResult.ok) {
             console.error("Failed to commit INSIGHT_COMMITTED:", insightResult.message);
           }
-        } else {
-          console.error("Failed to commit WAVE_END_COMMITTED:", waveEndResult.message);
         }
 
         await prisma.wave.update({
@@ -877,6 +933,22 @@ export async function POST(request: NextRequest) {
         controller.close();
       } catch (err) {
         console.error("Wave SSE stream error:", err);
+        // Recovery: return the wave to "committed" so the client can resubmit,
+        // and clear the persisted partial insight. Guarded on the current
+        // status so a wave that already reached "synthesized" is untouched.
+        try {
+          await prisma.wave.updateMany({
+            where: { id: wave.id, status: "synthesizing" },
+            data: { status: "committed" },
+          });
+          const latestMemory = await loadOrCreateWorkingMemory(session.id);
+          if (latestMemory.streaming_insight !== undefined) {
+            latestMemory.streaming_insight = undefined;
+            await saveWorkingMemory(session.id, latestMemory);
+          }
+        } catch (cleanupErr) {
+          console.error("Failed to reset wave after stream error:", cleanupErr);
+        }
         sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
         controller.close();
       }
