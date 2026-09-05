@@ -65,6 +65,7 @@ async function runTwoWaves(request: any, sessionId: string) {
   expect(stop.stop).toBe(true);
   expect(stop.can_generate).toBe(true);
   expect(stop.provisional).toBe(false);
+  expect(stop.wave_index).toBeDefined();
 }
 
 test.describe("Parallel lives and prototype contract", () => {

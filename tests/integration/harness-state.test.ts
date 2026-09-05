@@ -75,6 +75,7 @@ test.describe("XState ledger end-to-end", () => {
     const stop = await stopRes.json();
     expect(stop.stop).toBe(true);
     expect(stop.can_generate).toBe(true);
+    expect(stop.wave_index).toBeDefined();
 
     const finalRes = await request.post(`${baseURL}/api/final`);
     expect(finalRes.status()).toBe(200);

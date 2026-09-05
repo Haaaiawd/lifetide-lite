@@ -146,6 +146,7 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     expect(stop.stop).toBe(true);
     expect(stop.can_generate).toBe(true);
     expect(stop.provisional).toBe(false);
+    expect(stop.wave_index).toBeDefined();
 
     // Generate portrait before final plan (required by API).
     const portraitRes = await request.post(`${baseURL}/api/portrait`);
