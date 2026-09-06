@@ -216,6 +216,6 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
       "如果不用担心准备，你现在最想试什么？",
     ],
     essence:
-      "一个在备考节奏里能自律、课表固定时容易随大流的人，正在找方向但还没真正开始——可能不是缺方向，是对'开始'的门槛太高。",
+      "你既是连自己都救不了的无能者，也是每次都冲在最前面的勇者。",
   };
 }
