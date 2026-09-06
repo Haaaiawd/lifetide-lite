@@ -546,10 +546,13 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
 }
 
 function makePrompt(input: SensemakerFinalInput): string {
-  return composePrompt<ParallelLivesPlan>(
-    "sensemaker_futures",
-    buildFinalEnvelope(input),
-    parallelLivesPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
+  return (
+    composePrompt<ParallelLivesPlan>(
+      "sensemaker_futures",
+      buildFinalEnvelope(input),
+      parallelLivesPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
+    ) +
+    "\n\n额外要求：在最终输出前，先在 `thinking` 字段中输出你的思考过程，比如你是如何从用户画像、约束和路线种子中推导出这三条生活的。这个字段会实时展示给用户，帮助他们理解这三条人生是怎么来的。"
   );
 }
 
@@ -559,10 +562,11 @@ export type SensemakerFinalOutput = ParallelLivesPlan & {
 
 export type FinalStreamOptions = {
   onPartial?: (partial: Partial<ParallelLivesPlan>) => void;
+  abortSignal?: AbortSignal;
 };
 
 export class FinalGenerationError extends Error {
-  constructor(message: string, readonly reason: "validation" | "provider" | "timeout") {
+  constructor(message: string, readonly reason: "validation" | "provider" | "timeout" | "aborted") {
     super(message);
     this.name = "FinalGenerationError";
   }
@@ -581,16 +585,20 @@ export async function runSensemakerFinal(input: SensemakerFinalInput, options?: 
       prompt: makePrompt(input),
       schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
       max_tokens: 16000,
-      timeout_ms: 180000,
+      timeout_ms: 0,
       max_retries: 0,
       prompt_version: PROMPT_VERSION,
       enableThinking: true,
       onPartial: options?.onPartial,
+      abortSignal: options?.abortSignal,
       fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
     console.error("Sensemaker final provider call failed:", msg);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new FinalGenerationError("生成被中断。如果等待过久，请重试。", "aborted");
+    }
     throw new FinalGenerationError(`生成失败：${msg}`, "provider");
   }
 

@@ -125,7 +125,7 @@ export default function PlayPage() {
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
   const [canGenerate, setCanGenerate] = useState<boolean>(true);
-  const [streamingPortrait, setStreamingPortrait] = useState<{ essence?: string; trait_summary?: string } | null>(null);
+  const [streamingPortrait, setStreamingPortrait] = useState<{ thinking?: string; essence?: string; trait_summary?: string } | null>(null);
   const [portraitError, setPortraitError] = useState<{ message: string; retry: () => void } | null>(null);
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
   const hasLoadedRef = useRef(false);
@@ -616,7 +616,7 @@ export default function PlayPage() {
           // Incremental merge — partial events may carry only a subset of
           // fields, so keep previously streamed fields instead of replacing.
           setStreamingPortrait((prev) =>
-            prev ? { ...prev, ...(d as { essence?: string; trait_summary?: string }) } : (d as { essence?: string; trait_summary?: string })
+            prev ? { ...prev, ...(d as { thinking?: string; essence?: string; trait_summary?: string }) } : (d as { thinking?: string; essence?: string; trait_summary?: string })
           );
         }
       );
@@ -1045,9 +1045,10 @@ export default function PlayPage() {
           streamingSections={
             streamingPortrait
               ? [
+                  ...(streamingPortrait.thinking ? [{ label: "思考中", text: streamingPortrait.thinking }] : []),
                   { label: "一句话", text: streamingPortrait.essence ?? "" },
                   { label: "特质概要", text: streamingPortrait.trait_summary ?? "" },
-                ]
+                ].filter((s) => s.text)
               : null
           }
           isComplete={portraitComplete}

@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
           onPartial: (partial: Partial<PersonaPortraitProposal>) => {
             sendSSE("partial", partial);
           },
+          abortSignal: request.signal,
         });
 
         // Persist portrait into WorkingMemory.
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
       Connection: "keep-alive",
     },
   });

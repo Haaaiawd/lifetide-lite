@@ -43,7 +43,7 @@ export function WaitingBubble({
 }: {
   variant?: "insight" | "final" | "wave" | "portrait";
   streamingInsight?: StreamingInsight | null;
-  streamingPortrait?: { essence?: string; trait_summary?: string } | null;
+  streamingPortrait?: { thinking?: string; essence?: string; trait_summary?: string } | null;
 }) {
   const reduce = useReducedMotion();
 
@@ -53,7 +53,7 @@ export function WaitingBubble({
     return <StreamingBubble streamingInsight={streamingInsight} reduce={reduce} />;
   }
 
-  if (streamingPortrait && (streamingPortrait.essence || streamingPortrait.trait_summary)) {
+  if (streamingPortrait && (streamingPortrait.thinking || streamingPortrait.essence || streamingPortrait.trait_summary)) {
     return <StreamingPortraitBubble streamingPortrait={streamingPortrait} reduce={reduce} />;
   }
 
@@ -98,8 +98,9 @@ function StreamingBubble({ streamingInsight, reduce }: { streamingInsight: Strea
 }
 
 /** Shows real streaming portrait text as it arrives from SSE. */
-function StreamingPortraitBubble({ streamingPortrait, reduce }: { streamingPortrait: { essence?: string; trait_summary?: string }; reduce: boolean | null }) {
+function StreamingPortraitBubble({ streamingPortrait, reduce }: { streamingPortrait: { thinking?: string; essence?: string; trait_summary?: string }; reduce: boolean | null }) {
   const sections = [
+    { label: "思考中", text: streamingPortrait.thinking },
     { label: "一句话", text: streamingPortrait.essence },
     { label: "特质概要", text: streamingPortrait.trait_summary },
   ].filter((s) => s.text);

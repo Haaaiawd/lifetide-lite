@@ -146,6 +146,7 @@ export type GenerateStructuredOptions<T> = {
   prompt: string;
   schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   max_tokens?: number;
+  /** Set to 0 to disable the internal timeout. A client/connection abort signal is still respected. */
   timeout_ms?: number;
   max_retries?: number;
   temperature?: number;
@@ -155,6 +156,8 @@ export type GenerateStructuredOptions<T> = {
   // When true, the aiping fetch wrapper will NOT inject /no_think,
   // allowing Qwen3 hybrid thinking to run. Default false.
   enableThinking?: boolean;
+  // Optional external abort signal (e.g., client disconnect).
+  abortSignal?: AbortSignal;
 };
 
 export type ModelCallRecord = {
@@ -205,7 +208,7 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
   const model = createLanguageModel(config);
   const timeoutMs = options.timeout_ms ?? 30000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
     const jsonPrompt = options.prompt.includes("输出 JSON")
@@ -220,7 +223,7 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
       output: Output.json(),
       abortSignal: controller.signal,
     });
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
 
     console.log(`[AI RESPONSE] purpose=${options.purpose} textLen=${text?.length ?? 0} preview=${text?.slice(0, 300) ?? "(empty)"}`);
 
@@ -242,7 +245,7 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
 
     return parsed as T;
   } catch (err) {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
     await logModelCall({
       sessionId: options.session_id,
       wave_id: options.wave_id,
@@ -292,7 +295,12 @@ export async function streamStructured<T>(
   const model = createLanguageModel(config, options.enableThinking);
   const timeoutMs = options.timeout_ms ?? 120000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  // Honour external abort signals (e.g., client disconnect). Merging with
+  // the internal timeout signal lets either event stop the model call.
+  const onExternalAbort = () => controller.abort();
+  options.abortSignal?.addEventListener("abort", onExternalAbort, { once: true });
 
   try {
     const jsonPrompt = options.prompt.includes("输出 JSON")
@@ -316,7 +324,8 @@ export async function streamStructured<T>(
       }
     }
 
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
+    options.abortSignal?.removeEventListener("abort", onExternalAbort);
 
     const finalObject = await result.object;
     console.log(`[AI STREAM] purpose=${options.purpose} objectKeys=${Object.keys(finalObject ?? {}).join(",")}`);
@@ -353,7 +362,8 @@ export async function streamStructured<T>(
 
     return parsed;
   } catch (err) {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
+    options.abortSignal?.removeEventListener("abort", onExternalAbort);
     await logModelCall({
       sessionId: options.session_id,
       wave_id: options.wave_id,

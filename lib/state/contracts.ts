@@ -788,6 +788,9 @@ export const analysisSchema = z.object({
 export type Analysis = z.infer<typeof analysisSchema>;
 
 export const parallelLivesPlanSchema = z.object({
+  // Optional reasoning stream — shown live during generation.
+  thinking: z.string().optional(),
+
   id: idSchema,
   session_id: idSchema,
   generation_provenance_id: idSchema,

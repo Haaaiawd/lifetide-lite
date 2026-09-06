@@ -150,17 +150,31 @@ export async function POST(request: NextRequest) {
         }
       };
 
+      // Detect client disconnect (browser close / navigate away) so the model
+      // call is aborted instead of running to completion for no one.
+      const abortCtrl = new AbortController();
+      const onClientAbort = () => {
+        console.log("[final SSE] client disconnected, aborting generation");
+        abortCtrl.abort();
+      };
+      request.signal.addEventListener("abort", onClientAbort, { once: true });
+
       try {
         let plan;
         try {
           plan = await runSensemakerFinal(input, {
             onPartial: (partial) => {
-              // Send whatever text fields have content — analysis arrives
-              // before lives in the schema, so we need both.
+              // Send whatever text fields have content — thinking arrives first,
+              // then analysis, then lives.
               const sections: Array<{ label: string; text: string }> = [];
               const p = partial as Record<string, unknown>;
 
-              // Analysis fields arrive first
+              // Thinking stream — show the model's live reasoning.
+              if (typeof p?.thinking === "string" && p.thinking) {
+                sections.push({ label: "思考中", text: p.thinking });
+              }
+
+              // Analysis fields arrive next
               const analysis = p?.analysis as Record<string, unknown> | undefined;
               if (analysis) {
                 const pf = analysis.problem_frame as Record<string, unknown> | undefined;
@@ -219,6 +233,7 @@ export async function POST(request: NextRequest) {
                 sendSSE("partial", { sections });
               }
             },
+            abortSignal: abortCtrl.signal,
           });
         } catch (err) {
           if (err instanceof FinalGenerationError) {
@@ -481,6 +496,7 @@ export async function POST(request: NextRequest) {
         console.error("Final plan SSE stream error:", err);
         sendSSE("error", { error: err instanceof Error ? err.message : "Unknown error" });
       } finally {
+        request.signal.removeEventListener("abort", onClientAbort);
         safeClose();
       }
     },

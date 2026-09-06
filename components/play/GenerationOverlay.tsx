@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, AnimatePresence } from "motion/react";
 import { WalkProgress } from "@/components/play/WalkProgress";
 
 type Phase = "walking" | "streaming" | "complete" | "error";
@@ -43,6 +43,7 @@ const STREAMING_SETTLE_MS = 2500; // ms — how long to show streamed content be
  *    phase ends as soon as real streaming content arrives — it does NOT wait
  *    for a fixed duration.
  * 2. Streaming phase: text content fades in section by section as it arrives.
+ *    The model's live reasoning is shown first, then the generated content.
  * 3. Complete phase: when isComplete becomes true, the overlay waits a short
  *    moment so the user can see the final content, then calls onComplete.
  *
@@ -68,8 +69,10 @@ export function GenerationOverlay({
 
   const hasStreamContent = streamingSections && streamingSections.some((s) => s.text);
 
-  // Walking phase: advances until either (a) stream content arrives, or
-  // (b) the safety cap is reached. Not fixed to a set duration.
+  // Walking phase: advances until either (a) stream content arrives,
+  // (b) the generation is already complete, or (c) the safety cap is reached.
+  // Not fixed to a set duration. If content/complete arrives early, end
+  // immediately without resetting the progress bar (avoids flicker).
   useEffect(() => {
     if (error) {
       setPhase("error");
@@ -77,11 +80,19 @@ export function GenerationOverlay({
     }
     if (reduce) {
       setWalkProgress(1);
-      setPhase(hasStreamContent ? "streaming" : "walking");
+      setPhase(isComplete ? "complete" : hasStreamContent ? "streaming" : "walking");
       return;
     }
-    if (phase !== "walking") return; // 避免重入时重置 phase
-    setPhase("walking");
+    if (phase !== "walking") return;
+
+    // Stream content or done already arrived — hand over to streaming.
+    if (hasStreamContent || isComplete) {
+      setWalkProgress(1);
+      setPhase("streaming");
+      return;
+    }
+
+    // Start fresh walking animation only on the first mount/entry into walking.
     setWalkProgress(0);
     walkStartRef.current = null;
 
@@ -91,15 +102,14 @@ export function GenerationOverlay({
       const p = Math.min(elapsed / MAX_WALK_DURATION, 1);
       setWalkProgress(p);
 
-      // Stream content arrived — end walking and hand over to streaming.
-      if (hasStreamContent) {
+      if (hasStreamContent || isComplete) {
         setWalkProgress(1);
         setPhase("streaming");
         rafRef.current = null;
         return;
       }
 
-      // Safety cap: if nothing arrives for a long time, show "正在生成……".
+      // Safety cap: if nothing arrives for a long time, still show streaming UI.
       if (p >= 1) {
         setPhase("streaming");
         rafRef.current = null;
@@ -112,13 +122,21 @@ export function GenerationOverlay({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [error, reduce, hasStreamContent, phase]);
+  }, [error, reduce, hasStreamContent, isComplete, phase]);
 
-  // Once streaming, show streaming content. When complete, wait a beat
-  // before calling onComplete so the user actually sees the final text.
+  // Move from streaming to complete as soon as the generation is done.
   useEffect(() => {
-    if (phase !== "streaming" || !isComplete || !onComplete) return;
-    setPhase("complete");
+    if (phase === "streaming" && isComplete) {
+      setPhase("complete");
+    }
+  }, [phase, isComplete]);
+
+  // Once complete, let the user see the final streamed content for a moment
+  // before invoking onComplete. This effect is intentionally independent of
+  // the phase-transition effect above so that setPhase("complete") does not
+  // cancel the settle timer.
+  useEffect(() => {
+    if (phase !== "complete" || !onComplete) return;
     const timer = setTimeout(() => {
       if (!isComplete) return;
       onComplete();
@@ -126,12 +144,16 @@ export function GenerationOverlay({
     return () => clearTimeout(timer);
   }, [phase, isComplete, onComplete]);
 
+  // Separate the thinking section from the rest so it can be styled differently.
+  const thinkingSection = streamingSections?.find((s) => s.label === "思考中");
+  const contentSections = streamingSections?.filter((s) => s.label !== "思考中") ?? [];
+
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center bg-paper/80 backdrop-blur-sm"
+      className="fixed inset-0 bottom-0 top-14 z-[60] flex flex-col items-center justify-center graph-paper"
     >
       {/* Walking phase */}
       {phase === "walking" && (
@@ -165,24 +187,46 @@ export function GenerationOverlay({
           initial={reduce ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="flex w-full max-w-2xl flex-col px-6"
+          className="flex h-[calc(100dvh-3.5rem)] w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-8"
         >
-          <h2 className="mb-4 font-serif text-xl font-medium text-ink">
-            {variant === "portrait" ? "你的人格画像" : "三条平行人生"}
-          </h2>
-          <div className="max-h-[70dvh] space-y-4 overflow-y-auto">
-            {streamingSections && streamingSections.length > 0 ? (
-              streamingSections
-                .filter((s) => s.text)
-                .map((s, i) => (
-                  <StreamingSectionCard key={i} section={s} delay={i * 0.3} reduce={reduce} variant={variant} isComplete={phase === "complete"} />
-                ))
-            ) : (
+          <div className="mb-4 text-center">
+            <h2 className="font-serif text-xl font-medium text-ink md:text-2xl">
+              {variant === "portrait" ? "你的人格画像" : "三条平行人生"}
+            </h2>
+            <p className="text-xs text-ink-muted md:text-sm">
+              {variant === "portrait" ? "正在整理你的模式……" : "正在从你的生活里长出三条路……"}
+            </p>
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+            <AnimatePresence>
+              {thinkingSection?.text && (
+                <ThinkingCard
+                  key="thinking"
+                  text={thinkingSection.text}
+                  reduce={reduce}
+                />
+              )}
+            </AnimatePresence>
+
+            {contentSections.length > 0 ? (
+              <div className="space-y-3">
+                {contentSections.map((s, i) => (
+                  <StreamingSectionCard
+                    key={s.label}
+                    section={s}
+                    index={i}
+                    reduce={reduce}
+                    isComplete={phase === "complete"}
+                  />
+                ))}
+              </div>
+            ) : !thinkingSection?.text ? (
               <div className="flex items-center gap-2 text-ink-muted">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
                 <span className="text-sm">正在生成……</span>
               </div>
-            )}
+            ) : null}
           </div>
         </motion.div>
       )}
@@ -197,7 +241,7 @@ export function GenerationOverlay({
           返回
         </button>
       )}
-      {phase === "streaming" && onCancel && (
+      {(phase === "streaming" || phase === "complete") && onCancel && (
         <button
           type="button"
           onClick={onCancel}
@@ -244,44 +288,63 @@ export function GenerationOverlay({
   );
 }
 
-function StreamingSectionCard({
-  section,
-  delay,
-  reduce,
-  variant,
-  isComplete,
-}: {
-  section: StreamingSection;
-  delay: number;
-  reduce: boolean | null;
-  variant: "portrait" | "final";
-  isComplete?: boolean;
-}) {
+function ThinkingCard({ text, reduce }: { text: string; reduce: boolean | null }) {
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-      className="border-l-4 border-cobalt/40 bg-paper-raised/60 px-4 py-3"
+      initial={reduce ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="border-2 border-dashed border-ink/30 bg-paper-raised p-4 shadow-sm md:p-5"
     >
-      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-muted/70">
-        {section.label}
+      <div className="mb-2 flex items-center gap-2 text-ink-muted">
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
+        <span className="text-xs font-medium uppercase tracking-wide">思考中</span>
       </div>
-      <p className="font-serif text-base leading-snug">
-        {variant === "final" ? (
-          <TypewriterText text={section.text} hideCursor={isComplete} />
-        ) : (
-          <>
-            <span className="stream-wave-text">{section.text}</span>
-            {!isComplete && <span className="animate-pulse text-cobalt/50">▎</span>}
-          </>
-        )}
+      <p className="font-serif text-sm leading-relaxed text-ink md:text-base">
+        <TypewriterText text={text} hideCursor={false} />
       </p>
     </motion.div>
   );
 }
 
-function TypewriterText({ text, cps = 40, hideCursor }: { text: string; cps?: number; hideCursor?: boolean }) {
+function StreamingSectionCard({
+  section,
+  index,
+  reduce,
+  isComplete,
+}: {
+  section: StreamingSection;
+  index: number;
+  reduce: boolean | null;
+  isComplete?: boolean;
+}) {
+  const isThinking = section.label === "思考中";
+  const accentColor = isThinking ? "var(--cobalt)" : "var(--purple)";
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, x: -16, y: 8 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      transition={{
+        duration: 0.45,
+        delay: index * 0.12,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="border-l-4 bg-paper-raised px-4 py-3 shadow-sm md:px-5 md:py-4"
+      style={{ borderLeftColor: accentColor }}
+    >
+      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-muted/70">
+        {section.label}
+      </div>
+      <p className="font-serif text-base leading-snug text-ink">
+        <TypewriterText text={section.text} hideCursor={isComplete} />
+      </p>
+    </motion.div>
+  );
+}
+
+function TypewriterText({ text, cps = 45, hideCursor }: { text: string; cps?: number; hideCursor?: boolean }) {
   const revealed = useTypewriter(text, cps);
   return (
     <>

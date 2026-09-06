@@ -75,6 +75,9 @@ export type RadarSnapshot = z.infer<typeof radarSnapshotSchema>;
 // ── Full portrait (model output schema) ──
 
 export const personaPortraitSchema = z.object({
+  // Optional thinking stream — shown to the user as a live reasoning trace.
+  thinking: z.string().optional(),
+
   // Layer 1: 5 trait scales + summary paragraph
   trait_scales: z.array(traitScaleSchema).length(5),
   trait_summary: z.string().min(1),

@@ -102,10 +102,13 @@ function buildPortraitEnvelope(memory: WorkingMemory): string {
 }
 
 function makePrompt(memory: WorkingMemory): string {
-  return composePrompt<PersonaPortraitProposal>(
-    "portrait",
-    buildPortraitEnvelope(memory),
-    personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>
+  return (
+    composePrompt<PersonaPortraitProposal>(
+      "portrait",
+      buildPortraitEnvelope(memory),
+      personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>
+    ) +
+    "\n\n额外要求：在最终输出前，先在 `thinking` 字段中输出你的思考过程，比如你是如何从用户的回答中提取关键模式、矛盾和隐性偏好的。这个字段会实时展示给用户，帮助他们理解这个人格画像是怎么来的。"
   );
 }
 
@@ -126,6 +129,7 @@ function decoratePortrait(
 
 export type PortraitStreamOptions = {
   onPartial?: (partial: Partial<PersonaPortraitProposal>) => void;
+  abortSignal?: AbortSignal;
 };
 
 export async function generatePortrait(
@@ -142,12 +146,13 @@ export async function generatePortrait(
     prompt: makePrompt(memory),
     schema: personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>,
     max_tokens: 16000,
-    timeout_ms: 180000,
+    timeout_ms: 0,
     max_retries: 0,
     temperature: 0.7,
     prompt_version: PROMPT_VERSION,
     enableThinking: true,
     onPartial: options?.onPartial,
+    abortSignal: options?.abortSignal,
     fixture: () => Promise.resolve(makeFixturePortrait(memory)),
   });
 
