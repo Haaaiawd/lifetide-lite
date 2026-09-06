@@ -5,9 +5,9 @@ import { useReducedMotion } from "motion/react";
 import Image from "next/image";
 
 /**
- * Minimal walking character on a progress bar.
- * Stripped-down version of DayProgressAnimation — no sky, clouds, or scenery.
- * Just the pixel traveler walking in place on a thin line.
+ * Brutalist walking progress bar: thick ink border, hard offset shadow,
+ * high-contrast fill. The pixel traveler walks on top of the bar and
+ * follows the leading edge of the fill.
  */
 export function WalkProgress({
   progress,
@@ -31,22 +31,26 @@ export function WalkProgress({
   }, [reduce]);
 
   return (
-    <div className={`relative w-full ${className ?? ""}`} style={{ height: "80px" }}>
-      {/* Ground line */}
-      <div className="absolute bottom-4 left-0 right-0 h-[2px] bg-ink/20" />
+    <div className={`relative w-full ${className ?? ""}`} style={{ height: "104px" }}>
+      {/* Track — thick bordered slab with a hard shadow */}
+      <div className="absolute bottom-4 left-0 right-0 h-8 border-[3px] border-ink bg-paper-raised shadow-md">
+        {/* Filled progress — chunky high-contrast block with a hard cap */}
+        <div
+          className="h-full transition-all duration-500 ease-out"
+          style={{
+            width: `${clamped * 100}%`,
+            backgroundColor: accentColor,
+            borderRight: clamped > 0 ? "3px solid var(--ink)" : undefined,
+          }}
+        />
+      </div>
 
-      {/* Filled progress */}
-      <div
-        className="absolute bottom-4 left-0 h-[2px] transition-all duration-500"
-        style={{ width: `${clamped * 100}%`, backgroundColor: accentColor }}
-      />
-
-      {/* Traveler — walks at the leading edge of the progress bar */}
+      {/* Traveler — walks on top of the bar at the leading edge of the fill */}
       <div
         className="absolute z-10"
         style={{
           left: `calc(${clamped * 100}% - ${clamped * 36}px)`,
-          bottom: "10px",
+          bottom: "44px",
           width: "36px",
           height: "64px",
           transition: "left 0.3s ease-out",

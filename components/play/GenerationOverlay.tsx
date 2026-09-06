@@ -200,13 +200,15 @@ export function GenerationOverlay({
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
             <AnimatePresence>
-              {thinkingSection?.text && (
+              {thinkingSection?.text ? (
                 <ThinkingCard
                   key="thinking"
                   text={thinkingSection.text}
                   reduce={reduce}
                 />
-              )}
+              ) : phase === "streaming" ? (
+                <FakeThinkingCard key="fake-thinking" reduce={reduce} />
+              ) : null}
             </AnimatePresence>
 
             {contentSections.length > 0 ? (
@@ -221,7 +223,7 @@ export function GenerationOverlay({
                   />
                 ))}
               </div>
-            ) : !thinkingSection?.text ? (
+            ) : !thinkingSection?.text && phase !== "streaming" ? (
               <div className="flex items-center gap-2 text-ink-muted">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
                 <span className="text-sm">正在生成……</span>
@@ -306,6 +308,108 @@ function ThinkingCard({ text, reduce }: { text: string; reduce: boolean | null }
       </p>
     </motion.div>
   );
+}
+
+/**
+ * Pseudo thinking card shown while the model hasn't produced any real
+ * thinking text yet, so the streaming phase never renders a blank page.
+ * Types scripted lines with uneven pacing — quick bursts, slow stretches,
+ * and occasional stalls — until real thinking content replaces it.
+ */
+const FAKE_THINKING_LINES = [
+  "正在梳理你的生活模式……",
+  "考虑不同的人生可能性……",
+  "评估各条路线的可行性……",
+  "把零散的线索拼成完整的故事……",
+  "权衡每条路线的代价与收获……",
+];
+
+function FakeThinkingCard({ reduce }: { reduce: boolean | null }) {
+  const text = useFakeThinking(reduce);
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="border-2 border-dashed border-ink/30 bg-paper-raised p-4 shadow-sm md:p-5"
+    >
+      <div className="mb-2 flex items-center gap-2 text-ink-muted">
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
+        <span className="text-xs font-medium uppercase tracking-wide">思考中</span>
+      </div>
+      <p className="font-serif text-sm leading-relaxed text-ink md:text-base">
+        {text}
+        <span className="animate-pulse text-cobalt/50">▎</span>
+      </p>
+    </motion.div>
+  );
+}
+
+/**
+ * Fake-streaming hook for the pseudo thinking card.
+ * Types each line character by character with irregular delays —
+ * mostly fast, sometimes slower, occasionally pausing mid-line —
+ * then holds briefly and moves on to the next line.
+ */
+function useFakeThinking(reduce: boolean | null): string {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let line = 0;
+    let char = 0;
+    let cancelled = false;
+
+    const schedule = (fn: () => void, delay: number) => {
+      timer = setTimeout(() => {
+        if (!cancelled) fn();
+      }, delay);
+    };
+
+    if (reduce) {
+      // No typing animation — just rotate the full lines slowly.
+      setText(FAKE_THINKING_LINES[0]);
+      const cycle = () => {
+        line = (line + 1) % FAKE_THINKING_LINES.length;
+        setText(FAKE_THINKING_LINES[line]);
+        schedule(cycle, 2600);
+      };
+      schedule(cycle, 2600);
+      return () => {
+        cancelled = true;
+        if (timer) clearTimeout(timer);
+      };
+    }
+
+    const step = () => {
+      const msg = FAKE_THINKING_LINES[line % FAKE_THINKING_LINES.length];
+      if (char <= msg.length) {
+        setText(msg.slice(0, char));
+        char += 1;
+        const r = Math.random();
+        let delay = 30 + Math.random() * 50; // quick burst
+        if (r < 0.1) delay = 500 + Math.random() * 700; // stall — "卡顿"
+        else if (r < 0.3) delay = 140 + Math.random() * 200; // slow stretch
+        schedule(step, delay);
+      } else {
+        // Line complete — hold, then move to the next line.
+        schedule(() => {
+          char = 0;
+          line += 1;
+          step();
+        }, 900 + Math.random() * 700);
+      }
+    };
+    step();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [reduce]);
+
+  return text;
 }
 
 function StreamingSectionCard({

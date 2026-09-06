@@ -286,7 +286,17 @@ export async function POST(request: NextRequest) {
     if (routeResult.ok) {
       baseRevision = routeResult.nextRevision;
     } else {
-      console.error("Failed to commit ROUTE_PHASE_ENTERED:", routeResult.message);
+      // Without the phase transition every subsequent ledger event is
+      // guaranteed to be rejected — stop here with a detailed error.
+      console.error("Failed to commit ROUTE_PHASE_ENTERED:", routeResult.code, routeResult.message);
+      sendSSE("error", {
+        error: `无法进入路线生成阶段（${routeResult.code}: ${routeResult.message}）`,
+        reason: routeResult.message,
+        code: routeResult.code,
+        retryable: routeResult.code === "PERSISTENCE_ERROR" || routeResult.code === "REVISION_CONFLICT",
+      });
+      safeClose();
+      return;
     }
   }
 
@@ -344,8 +354,13 @@ export async function POST(request: NextRequest) {
   if (intentResult.ok) {
     baseRevision = intentResult.nextRevision;
   } else {
-    console.error("Failed to commit ROUTE_INTENT_CANDIDATES_COMMITTED:", intentResult.message);
-    sendSSE("error", { error: "Could not persist route candidates", reason: intentResult.message });
+    console.error("Failed to commit ROUTE_INTENT_CANDIDATES_COMMITTED:", intentResult.code, intentResult.message);
+    sendSSE("error", {
+      error: `无法保存路线候选（${intentResult.code}: ${intentResult.message}）`,
+      reason: intentResult.message,
+      code: intentResult.code,
+      retryable: intentResult.code === "PERSISTENCE_ERROR" || intentResult.code === "REVISION_CONFLICT",
+    });
     safeClose();
     return;
   }
@@ -369,8 +384,13 @@ export async function POST(request: NextRequest) {
   if (acceptedResult.ok) {
     baseRevision = acceptedResult.nextRevision;
   } else {
-    console.error("Failed to commit ROUTE_INTENTS_ACCEPTED:", acceptedResult.message);
-    sendSSE("error", { error: "Could not accept route intents", reason: acceptedResult.message });
+    console.error("Failed to commit ROUTE_INTENTS_ACCEPTED:", acceptedResult.code, acceptedResult.message);
+    sendSSE("error", {
+      error: `无法确认路线选择（${acceptedResult.code}: ${acceptedResult.message}）`,
+      reason: acceptedResult.message,
+      code: acceptedResult.code,
+      retryable: acceptedResult.code === "PERSISTENCE_ERROR" || acceptedResult.code === "REVISION_CONFLICT",
+    });
     safeClose();
     return;
   }
