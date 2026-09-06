@@ -207,7 +207,7 @@ export function GenerationOverlay({
                   reduce={reduce}
                 />
               ) : phase === "streaming" ? (
-                <FakeThinkingCard key="fake-thinking" reduce={reduce} />
+                <FakeThinkingCard key="fake-thinking" variant={variant} reduce={reduce} />
               ) : null}
             </AnimatePresence>
 
@@ -311,24 +311,47 @@ function ThinkingCard({ text, reduce }: { text: string; reduce: boolean | null }
 }
 
 /**
- * Pseudo thinking card shown while the model hasn't produced any real
- * thinking text yet, so the streaming phase never renders a blank page.
- * Types scripted lines with uneven pacing — quick bursts, slow stretches,
- * and occasional stalls — until real thinking content replaces it.
+ * Scripted pseudo-thinking text for the two overlay variants.  The lines are
+ * stitched into one continuous stream so the typing never blanks out between
+ * “sentences”.
  */
-const FAKE_THINKING_LINES = [
-  "正在梳理你的生活模式……",
-  "考虑不同的人生可能性……",
-  "评估各条路线的可行性……",
-  "把零散的线索拼成完整的故事……",
-  "权衡每条路线的代价与收获……",
-  "寻找那些被你忽略的细节……",
-  "把过去的经历连成一条暗线……",
-  "试着理解你真正在意的是什么……",
+const PORTRAIT_FAKE_THINKING_LINES = [
+  "先把你说过的线索摊开来……",
+  "看看哪些词反复出现，而不是只出现一次……",
+  "工作和学习那边，你真正在回避的也许不是任务本身……",
+  "关系维度上，你的倾向是少而深，不是广而浅……",
+  "娱乐和自我照护之间有一条隐形的取舍线……",
+  "把这些模式串起来的时候，出现了一个反复出现的主题……",
+  "不是贴标签，是找一个能解释你多个行为的假设……",
+  "再检查一下：这个画像是不是只反映了你的其中一面……",
+  "如果把这个假设反过来，还能解释同样的事吗？",
+  "最后把它收敛成一句话，和一组可观察的特质……",
 ];
 
-function FakeThinkingCard({ reduce }: { reduce: boolean | null }) {
-  const text = useFakeThinking(reduce);
+const FINAL_FAKE_THINKING_LINES = [
+  "已经聊了好几波，画像和路线种子都在手上了……",
+  "现在不是给建议，是先把这些种子展开成三条真的能过的日子……",
+  "第一条从现在的节奏出发：改变最小，成本在哪？",
+  "第二条做一个邻近转向：把你已有的能力和想试的方向接起来……",
+  "第三条再放开一点想：如果资源约束暂时放宽，会是什么生活？",
+  "每条路都要有一个具体的普通一天，否则只是口号……",
+  "检查一下这三条路是不是足够不一样，不是同一个答案的三种包装……",
+  "再回头看你的约束：时间、金钱、健康、关系……",
+  "有些选项听起来诱人，但和你的现实约束对不上……",
+  "最后加上每个方向的关键不确定和下一步可以试的最小行动……",
+];
+
+const MAX_FAKE_VISIBLE_CHARS = 280;
+
+function buildFakeStream(lines: string[]): string {
+  // Join lines with a single space so the output reads as one continuous
+  // thought stream. A trailing space keeps the loop from slamming the first
+  // character of the first line against the last character of the last line.
+  return lines.map((l) => l.trim()).filter(Boolean).join(" ") + " ";
+}
+
+function FakeThinkingCard({ variant, reduce }: { variant: "portrait" | "final"; reduce: boolean | null }) {
+  const text = useFakeThinking(variant, reduce);
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 8 }}
@@ -341,76 +364,85 @@ function FakeThinkingCard({ reduce }: { reduce: boolean | null }) {
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
         <span className="text-xs font-medium uppercase tracking-wide">思考中</span>
       </div>
-      <p className="font-serif text-sm leading-relaxed text-ink md:text-base">
+      <p className="font-serif text-sm leading-relaxed break-words text-ink md:text-base">
         {text}
-        <span className="animate-pulse text-cobalt/50">▎</span>
+        {text && <span className="animate-pulse text-cobalt/50">▎</span>}
       </p>
     </motion.div>
   );
 }
 
 /**
- * Fake-streaming hook for the pseudo thinking card.
- * Types each line character by character with irregular delays —
- * mostly fast, sometimes slower, occasionally pausing mid-line —
- * then holds briefly and moves on to the next line.
+ * Continuous fake-streaming hook for the pseudo thinking card.
+ *
+ * The stream is a rolling tail of characters: it types at 15-40ms per
+ * character with a 5% chance of a 300-800ms "卡顿", and it moves straight
+ * from one scripted phrase to the next without clearing the text.  This gives
+ * the impression of an LLM thinking out loud instead of a line-by-line
+ * typewriter resetting after every sentence.
  */
-function useFakeThinking(reduce: boolean | null): string {
+function useFakeThinking(variant: "portrait" | "final", reduce: boolean | null): string {
+  const lines = variant === "portrait" ? PORTRAIT_FAKE_THINKING_LINES : FINAL_FAKE_THINKING_LINES;
   const [text, setText] = useState("");
+  const streamRef = useRef(buildFakeStream(lines));
+  const bufferRef = useRef("");
+  const posRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let line = 0;
-    let char = 0;
     let cancelled = false;
+    streamRef.current = buildFakeStream(lines);
+    bufferRef.current = "";
+    posRef.current = 0;
+    setText("");
 
     const schedule = (fn: () => void, delay: number) => {
-      timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         if (!cancelled) fn();
       }, delay);
     };
 
     if (reduce) {
       // No typing animation — just rotate the full lines slowly.
-      setText(FAKE_THINKING_LINES[0]);
+      setText(lines[0]);
+      let line = 0;
       const cycle = () => {
-        line = (line + 1) % FAKE_THINKING_LINES.length;
-        setText(FAKE_THINKING_LINES[line]);
+        line = (line + 1) % lines.length;
+        setText(lines[line]);
         schedule(cycle, 2600);
       };
       schedule(cycle, 2600);
       return () => {
         cancelled = true;
-        if (timer) clearTimeout(timer);
+        if (timerRef.current) clearTimeout(timerRef.current);
       };
     }
 
     const step = () => {
-      const msg = FAKE_THINKING_LINES[line % FAKE_THINKING_LINES.length];
-      if (char <= msg.length) {
-        setText(msg.slice(0, char));
-        char += 1;
-        const r = Math.random();
-        let delay = 18 + Math.random() * 22; // mostly 18-40ms for fast, natural typing
-        if (r < 0.04) delay = 300 + Math.random() * 500; // rare stall — “卡顿”
-        else if (r < 0.15) delay = 60 + Math.random() * 100; // occasional slow char
-        schedule(step, delay);
-      } else {
-        // Almost no hold between lines — start next line after a short pause.
-        schedule(() => {
-          char = 0;
-          line += 1;
-          step();
-        }, 120 + Math.random() * 180);
+      const stream = streamRef.current;
+      const ch = stream[posRef.current % stream.length];
+      posRef.current += 1;
+      bufferRef.current += ch;
+      if (bufferRef.current.length > MAX_FAKE_VISIBLE_CHARS) {
+        bufferRef.current = bufferRef.current.slice(-MAX_FAKE_VISIBLE_CHARS);
       }
+      setText(bufferRef.current);
+
+      const r = Math.random();
+      let delay = 15 + Math.random() * 25; // 15-40ms for natural typing
+      if (r < 0.05) {
+        // Occasional hesitation — “卡顿”.
+        delay = 300 + Math.random() * 500;
+      }
+      schedule(step, delay);
     };
     step();
 
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [reduce]);
+  }, [variant, reduce, lines]);
 
   return text;
 }

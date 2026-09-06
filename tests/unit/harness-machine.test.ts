@@ -260,4 +260,92 @@ describe("harness machine transitions", () => {
     });
     expect(actor.getSnapshot().value).toEqual({ interviewing: "orienting_wave" });
   });
+
+  it("transitions from interviewing through final route events to parallel_lives_ready", () => {
+    const actor = createActor(harnessMachine, { input: {} });
+    actor.start();
+
+    const send = (type: string, baseRevision: number, payload: unknown) => {
+      actor.send({
+        type,
+        envelope: {
+          event_id: `e${baseRevision + 1}`,
+          event_type: type,
+          schema_version: 3,
+          session_id: "s1",
+          actor: "host",
+          base_revision: baseRevision,
+          emitted_at: new Date().toISOString(),
+          idempotency_key: `k${baseRevision + 1}`,
+          correlation_id: `c${baseRevision + 1}`,
+          payload_hash: `h${baseRevision + 1}`,
+          payload,
+        } as any,
+      });
+    };
+
+    send("SESSION_STARTED", 0, { guest_token_hash: "abc", expires_at: new Date().toISOString() });
+    send("CONSENT_RECORDED", 1, { consent_version: "v1", ai: true, upload: false });
+    expect(actor.getSnapshot().value).toEqual({ interviewing: "orienting_wave" });
+
+    send("ROUTE_PHASE_ENTERED", 2, { reason: "mission_sufficient", interview_snapshot_revision: 2 });
+    expect(actor.getSnapshot().value).toBe("route_intents");
+
+    const makeIntent = (id: string, status = "seed") => ({
+      id,
+      generation_provenance_id: "p1",
+      title_hint: `route ${id}`,
+      life_shape: {
+        daily_rhythm: "daily",
+        work_or_study: "work",
+        relationships: "rel",
+        environment: "env",
+        responsibilities: "resp",
+        resources: "res",
+      },
+      real_cost: "cost",
+      evidence: [
+        {
+          source_id: "s1",
+          source_revision: 1,
+          epistemic_status: "user_stated",
+          evidence_shape: "concrete_scene",
+          relevance: "rel",
+        },
+      ],
+      status,
+    });
+
+    const intents = [makeIntent("i1"), makeIntent("i2"), makeIntent("i3")];
+    send("ROUTE_INTENT_CANDIDATES_COMMITTED", 3, {
+      proposal_id: "p1",
+      generation_provenance: {},
+      intents,
+    } as any);
+    expect(actor.getSnapshot().value).toBe("route_intents");
+
+    send("ROUTE_INTENTS_ACCEPTED", 4, {
+      intents: intents.map((i) => ({ ...i, status: "accepted" })),
+    } as any);
+    expect(actor.getSnapshot().value).toBe("route_intents");
+
+    send("ORDINARY_DAY_SCREENING_STARTED", 5, {
+      accepted_intent_ids: ["i1", "i2", "i3"],
+    } as any);
+    expect(actor.getSnapshot().value).toBe("ordinary_day_screening");
+
+    send("ORDINARY_DAYS_COMMITTED", 6, {
+      proposal_id: "p2",
+      generation_provenance: {},
+      days: [],
+    } as any);
+    expect(actor.getSnapshot().value).toBe("ordinary_day_screening");
+
+    send("PARALLEL_LIVES_COMMITTED", 7, {
+      proposal_id: "p3",
+      generation_provenance: {},
+      plan: {},
+    } as any);
+    expect(actor.getSnapshot().value).toBe("parallel_lives_ready");
+  });
 });
