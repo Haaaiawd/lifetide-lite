@@ -164,12 +164,12 @@ export async function POST(request: NextRequest) {
         try {
           plan = await runSensemakerFinal(input, {
             onPartial: (partial) => {
-              const sections: Array<{ label: string; text: string }> = [];
+              const sections: Array<{ key: string; label: string; text: string }> = [];
               const p = partial as Record<string, unknown>;
 
               const blueprint = p?.blueprint as Record<string, unknown> | undefined;
               if (typeof blueprint?.current_coordinate === "string" && blueprint.current_coordinate) {
-                sections.push({ label: "先说一句真话", text: blueprint.current_coordinate });
+                sections.push({ key: "blueprint", label: "先说一句真话", text: blueprint.current_coordinate });
               }
 
               // Lives arrive last — show title + ordinary_day as they fill in
@@ -179,11 +179,13 @@ export async function POST(request: NextRequest) {
                   if (!l || typeof l !== "object") return;
                   const life = l as Record<string, unknown>;
                   const title = typeof life.title === "string" ? life.title : "";
-                  const label = title ? `路线 ${i + 1} · ${title}` : `路线 ${i + 1}`;
+                  const completeTitle = [...title].length >= 2 ? title : "正在成形";
+                  const label = `路线 ${i + 1} · ${completeTitle}`;
                   const day = typeof life.ordinary_day === "string" ? life.ordinary_day : "";
                   const exp = typeof life.core_experience === "string" ? life.core_experience : "";
                   if (title || day || exp) {
                     sections.push({
+                      key: `life-${i}`,
                       label,
                       text: day || exp,
                     });

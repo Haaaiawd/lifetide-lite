@@ -2,34 +2,17 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { CaretDown, CaretUp, Play, Pause, X, Check } from "@phosphor-icons/react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import type { Route } from "@/lib/fixtures";
-import type { TrialStatus } from "@/lib/working-memory/types";
 
 export type LifeAnalysisProps = {
   route: Route;
   accentColor: string;
 };
 
-const statusCopy: Record<TrialStatus, { label: string; tone: "neutral" | "cobalt" | "success" }> = {
-  not_started: { label: "未开始", tone: "neutral" },
-  active: { label: "进行中", tone: "cobalt" },
-  paused: { label: "已暂停", tone: "neutral" },
-  completed: { label: "已完成", tone: "success" },
-  exited: { label: "已退出", tone: "neutral" },
-};
-
-function classForTone(tone: "neutral" | "cobalt" | "success", accent: string) {
-  if (tone === "cobalt") return accent;
-  if (tone === "success") return "var(--success)";
-  return "var(--ink-muted)";
-}
-
 export function LifeAnalysis({ route, accentColor }: LifeAnalysisProps) {
   const reduce = useReducedMotion();
   const [showPrototype, setShowPrototype] = useState(false);
-  const [trialStatus, setTrialStatus] = useState<TrialStatus>(route.trialStatus ?? "not_started");
-  const isStarted = trialStatus !== "not_started";
 
   return (
     <div className="flex flex-col gap-6">
@@ -159,15 +142,9 @@ export function LifeAnalysis({ route, accentColor }: LifeAnalysisProps) {
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-ink">{route.prototype.hypothesis}</p>
           </div>
-          <span
-            className="text-xs font-medium"
-            style={{ color: classForTone(statusCopy[trialStatus].tone, accentColor) }}
-          >
-            {statusCopy[trialStatus].label}
-          </span>
         </div>
 
-        {!showPrototype && !isStarted && (
+        {!showPrototype && (
           <button
             type="button"
             onClick={() => setShowPrototype(true)}
@@ -175,11 +152,11 @@ export function LifeAnalysis({ route, accentColor }: LifeAnalysisProps) {
             style={{ color: accentColor }}
           >
             <CaretDown size={16} />
-            查看试玩计划
+            查看三天计划
           </button>
         )}
 
-        {(showPrototype || isStarted) && (
+        {showPrototype && (
           <motion.div
             initial={reduce ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -220,62 +197,15 @@ export function LifeAnalysis({ route, accentColor }: LifeAnalysisProps) {
             <p className="text-sm leading-relaxed"><span className="text-ink-muted">暂停 / 退出：</span>{route.prototype.pauseOrExitNote}</p>
             <p className="text-sm leading-relaxed"><span className="text-ink-muted">安全边界：</span>{route.prototype.safetyCheck}</p>
 
-            <div className="mt-2 flex flex-wrap gap-2">
-              {!isStarted && (
-                <button
-                  type="button"
-                  onClick={() => { setShowPrototype(true); setTrialStatus("active"); }}
-                  className="flex items-center gap-1 border-2 border-ink px-4 py-2 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  <Play size={16} weight="fill" />
-                  开始试玩
-                </button>
-              )}
-              {isStarted && (
-                <>
-                  {trialStatus === "active" && (
-                    <button
-                      type="button"
-                      onClick={() => setTrialStatus("paused")}
-                      className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                    >
-                      <Pause size={16} weight="fill" />
-                      暂停
-                    </button>
-                  )}
-                  {trialStatus === "paused" && (
-                    <button
-                      type="button"
-                      onClick={() => setTrialStatus("active")}
-                      className="flex items-center gap-1 border-2 border-ink px-3 py-2 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                      style={{ backgroundColor: accentColor }}
-                    >
-                      <Play size={16} weight="fill" />
-                      继续
-                    </button>
-                  )}
-                  {trialStatus !== "exited" && (
-                    <button
-                      type="button"
-                      onClick={() => setTrialStatus("exited")}
-                      className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                    >
-                      <X size={16} />
-                      退出
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setTrialStatus("completed")}
-                    className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                  >
-                    <Check size={16} weight="bold" />
-                    完成
-                  </button>
-                </>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowPrototype(false)}
+              className="mt-2 flex items-center gap-1 text-sm font-medium transition-colors"
+              style={{ color: accentColor }}
+            >
+              <CaretUp size={16} />
+              收起
+            </button>
           </motion.div>
         )}
       </section>

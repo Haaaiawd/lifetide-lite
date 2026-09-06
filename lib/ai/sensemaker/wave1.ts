@@ -47,11 +47,12 @@ function labelForChoice(
   answer?: InterviewAnswer
 ): string | undefined {
   if (!answer || answer.skipped) return undefined;
-  const value = Array.isArray(answer.value) ? answer.value[0] : answer.value;
-  if (typeof value !== "string") return undefined;
+  const values = Array.isArray(answer.value) ? answer.value : [answer.value];
   const q = findQuestion(questions, questionId);
-  const opt = q?.options?.find((o) => o.id === value);
-  return opt?.label ?? value;
+  const labels = values
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => q?.options?.find((option) => option.id === value)?.label ?? value);
+  return labels.length > 0 ? labels.join("、") : undefined;
 }
 
 function sourceRef(answer: InterviewAnswer): SourceRef {

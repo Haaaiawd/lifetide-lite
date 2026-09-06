@@ -126,3 +126,13 @@ body {
   color: transparent;
   animation: stream-sweep 3.2s linear infinite;
 }
+
+/* Word-style redaction: text is present (keeps natural width/rhythm) but
+   hidden behind a solid block, like blacking out text in a document. */
+.redacted-char {
+  background-color: var(--ink, #171717);
+  color: transparent;
+  border-radius: 1px;
+  padding: 0 0.5px;
+  margin: 0 -0.5px;
+}

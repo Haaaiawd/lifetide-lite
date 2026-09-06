@@ -63,23 +63,62 @@ function containsIrreversible(text: string): boolean {
   return IRREVERSIBLE_TERMS.some((t) => text.includes(t));
 }
 
-function tokenSetSimilarity(a: string, b: string): number {
-  const tokensA = new Set(a.split(/\s+/).filter(Boolean));
-  const tokensB = new Set(b.split(/\s+/).filter(Boolean));
-  if (tokensA.size === 0 && tokensB.size === 0) return 1;
-  const intersection = new Set([...tokensA].filter((x) => tokensB.has(x)));
-  const union = new Set([...tokensA, ...tokensB]);
+export function tokenSetSimilarity(a: string, b: string): number {
+  // For Chinese text, whitespace tokenization is ineffective.
+  // Use character bigram overlap as the primary signal, which captures
+  // shared phrases and vocabulary without requiring a segmentation library.
+  const bigramsA = charBigrams(a);
+  const bigramsB = charBigrams(b);
+  if (bigramsA.size === 0 && bigramsB.size === 0) return 1;
+  if (bigramsA.size === 0 || bigramsB.size === 0) return 0;
+  const intersection = new Set([...bigramsA].filter((x) => bigramsB.has(x)));
+  const union = new Set([...bigramsA, ...bigramsB]);
   return intersection.size / union.size;
 }
 
-function planNotDistinct(lives: ParallelLife[]): boolean {
+function charBigrams(text: string): Set<string> {
+  const chars = [...text].filter((c) => c.trim().length > 0 && !/\s/.test(c));
+  const bigrams = new Set<string>();
+  for (let i = 0; i < chars.length - 1; i++) {
+    bigrams.add(chars[i] + chars[i + 1]);
+  }
+  return bigrams;
+}
+
+// Structural axes that should differ across lives. Two lives that share the
+// same root in their title or read nearly identically across these axes are
+// not meaningfully distinct, even if job titles or salaries differ.
+const STRUCTURAL_AXES = ["ordinary_day", "core_experience", "year_1"] as const;
+
+export function planNotDistinct(lives: ParallelLife[]): boolean {
   for (let i = 0; i < lives.length; i++) {
     for (let j = i + 1; j < lives.length; j++) {
       const a = lives[i];
       const b = lives[j];
+
+      // Exact title or full-summary match is always a failure.
       const summaryA = `${a.title} ${a.core_experience} ${a.ordinary_day} ${a.year_1}`;
       const summaryB = `${b.title} ${b.core_experience} ${b.ordinary_day} ${b.year_1}`;
-      if (a.title === b.title || summaryA === summaryB || tokenSetSimilarity(summaryA, summaryB) > 0.82) {
+      if (a.title === b.title || summaryA === summaryB) {
+        return true;
+      }
+
+      // High overall similarity means the lives are paraphrases, not distinct.
+      if (tokenSetSimilarity(summaryA, summaryB) > 0.82) {
+        return true;
+      }
+
+      // Check that at least 2 of 3 structural axes are clearly different.
+      // "Clearly different" = bigram similarity below 0.75 on that axis.
+      let similarAxes = 0;
+      for (const axis of STRUCTURAL_AXES) {
+        const axisSim = tokenSetSimilarity(
+          String(a[axis] ?? ""),
+          String(b[axis] ?? "")
+        );
+        if (axisSim >= 0.75) similarAxes++;
+      }
+      if (similarAxes >= 2) {
         return true;
       }
     }

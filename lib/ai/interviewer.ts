@@ -309,9 +309,9 @@ export async function runInterviewer(input: InterviewerInput, memory: WorkingMem
     }
 
     throw new Error(`Interviewer output validation failed: ${validation.reason}`);
-  } catch {
-    const fallback = fallbackInterviewerOutput(input);
-    return { ...fallback, proposal: fallbackToProposal(input, fallback) };
+  } catch (err) {
+    console.error(`[Interviewer] generation failed for ${input.next_wave_id}:`, err);
+    throw err;
   }
 }
 
@@ -359,59 +359,4 @@ function fixtureInterviewerRaw(input: InterviewerInput): InterviewerProposal {
     reason: "当前焦点需要更多具体经历来降低未知。",
     route_decision_affected: input.selected_uncertainty.plan_consequence,
   };
-}
-
-function fallbackToProposal(input: InterviewerInput, fallback: InterviewerOutput): InterviewerProposal {
-  return {
-    mode: "open_wave",
-    mission: {
-      decision_to_improve: input.selected_uncertainty.topic,
-      target_dimensions: ["traits", "motivation", "capabilities"],
-      known_source_refs: [],
-      important_unknown: input.selected_uncertainty.topic,
-      why_now: "用户主动开启访谈，希望更清楚当前决策。",
-      exit_condition: "能够描述一个影响决策的具体片段和一个关键约束。",
-      sensitivity_ceiling: "ordinary",
-      elicitation_units: fallback.questions.map((q) => ({
-        decision_target: q.text,
-        target_dimensions: ["traits", "motivation", "capabilities"],
-        precovered_by: [],
-      })),
-    },
-    action: "continue",
-    bridge: "我们继续围绕这个焦点展开。",
-    mission_status: "opening",
-    questions: fallback.questions.map((q, _idx) => ({
-      text: q.text,
-      why_this_matters: q.why_this_matters ?? "",
-      response_kind: toV3ResponseKind(q.response_kind),
-      sensitivity: q.sensitivity === "sensitive" ? "sensitive" : "ordinary",
-      decision_target: input.selected_uncertainty.question,
-      asks_for_concrete_example: q.asks_for_concrete_example,
-      allows_skip: true,
-      allows_free_text: true,
-      options: q.options?.map((o) => ({ label: o.label })) ?? [],
-      elicitation_unit_index: _idx,
-    })),
-    reason: fallback.focus_reason,
-    route_decision_affected: input.selected_uncertainty.plan_consequence,
-  };
-}
-
-function fallbackInterviewerOutput(input: InterviewerInput): InterviewerOutput {
-  const questions = defaultFallbackQuestions(
-    input.next_wave_id,
-    input.next_wave_index,
-    input.selected_uncertainty
-  ) as InterviewerOutput["questions"];
-
-  const output: InterviewerOutput = {
-    schema_version: "interviewer.output.v3",
-    focus_uncertainty_id: input.selected_uncertainty_id,
-    focus_reason: "当前焦点需要更多具体经历来降低未知。",
-    questions,
-    proposal: fallbackToProposal(input, { schema_version: "interviewer.output.v3", focus_uncertainty_id: input.selected_uncertainty_id, focus_reason: "当前焦点需要更多具体经历来降低未知。", questions } as InterviewerOutput),
-  };
-
-  return output;
 }

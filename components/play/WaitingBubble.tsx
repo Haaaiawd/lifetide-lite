@@ -7,34 +7,28 @@ import { PixelIcon } from "@/components/art/PixelIcon";
 // Fallback "thinking" text shown before any real stream data arrives.
 // Loops: types out, pauses, restarts.
 const INSIGHT_THINKING = [
-  "让我想想你说的这些……你提到的几件事之间，好像有些联系。",
-  "你说最近节奏不太规律，身边的人主要是同学——这两个放在一起看……",
-  "你来的原因是想更清楚接下来怎么走，现在还在读，还没想好……",
+  "正在整理你刚才的回答",
+  "正在核对前后出现的线索",
+  "正在写下这一波的理解",
 ];
 
 const FINAL_THINKING = [
-  "在把你说的整理成几条不同的路线……每条都得是一个真的能过的日子。",
-  "第一条想从你现在的节奏出发，看看不换环境能调整什么……",
-  "第二条想试试把你想做的那些事串起来……第三条再放开一点想……",
+  "正在展开三种不同的生活",
+  "正在检查三条路是否太相似",
+  "正在整理每条路的真实代价",
 ];
 
 const WAVE_THINKING = [
-  "在准备下一组问题……想基于你刚才说的，找到更具体的切入点。",
-  "你提到的几个方向，我想挑一个最关键的展开……",
-  "不是随便问，是想让下一轮帮你看清一个真的需要决定的事……",
+  "正在准备下一组问题",
+  "正在寻找自然的继续方向",
+  "正在避开已经问过的内容",
 ];
 
 const PORTRAIT_THINKING = [
-  "在把你说的所有话综合起来看……不只是整理，是在找你自己可能没注意到的模式。",
-  "你说喜欢自由，但三次都选了有框架的安排——这种差距值得想一下……",
-  "在找反复出现的东西……不是贴标签，是找一个真正能解释你几个行为的模式……",
+  "正在综合这几波对话",
+  "正在核对反复出现的线索",
+  "正在保留尚未确定的部分",
 ];
-
-const HIDDEN_GLYPHS = "▓▒░";
-
-function maskThinking(text: string): string {
-  return [...text].map((char, i) => /\s/.test(char) ? char : HIDDEN_GLYPHS[(i * 7 + 3) % HIDDEN_GLYPHS.length]).join("");
-}
 
 type StreamingInsight = {
   user_told_me?: string;
@@ -192,27 +186,23 @@ function ThinkingBubble({ variant, reduce }: { variant: "insight" | "final" | "w
     };
   }, [currentLine, reduce, lines.length]);
 
-  const visibleText = currentLine.slice(0, charCount);
-  const fadeLen = 14;
-  const fadeText = currentLine.slice(charCount, charCount + fadeLen);
+  const visibleText = reduce ? currentLine : currentLine.slice(0, charCount);
 
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className="flex w-full gap-3 justify-start"
+      className="flex w-full justify-start gap-3"
     >
       <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink bg-paper-raised shadow-sm">
         <PixelIcon name="sparkle" size={12} className="text-cobalt" />
       </span>
-      <div className="max-w-[85%] rounded-sm border-2 border-ink bg-paper-raised px-4 py-3 text-base leading-snug shadow-sm">
-        <p aria-hidden="true" className="select-none font-serif text-lg leading-snug tracking-[0.15em]">
-          <span className="text-ink/40">{maskThinking(visibleText)}</span>
-          <span className="text-ink/20">{maskThinking(fadeText)}</span>
-          <span className="animate-pulse text-cobalt/50">▎</span>
+      <div className="flex min-h-14 w-[min(85%,34rem)] items-center rounded-sm border-2 border-ink bg-paper-raised px-4 py-3 shadow-sm">
+        <p className="font-serif text-base leading-snug text-ink/65 md:text-lg" aria-live="polite">
+          {visibleText}
+          {!reduce && <span className="ml-0.5 animate-pulse text-cobalt/60">▎</span>}
         </p>
-        <span className="sr-only">正在整理思路</span>
       </div>
     </motion.div>
   );

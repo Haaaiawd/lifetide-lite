@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { Question } from "@/lib/state/contracts";
 import type { InterviewQuestion } from "@/lib/working-memory/types";
 
-export const WAVE_1_VERSION = "2026.09.02-w1";
+export const WAVE_1_VERSION = "2026.09.03-w1";
 export const WAVE_1_ID = "w1";
 
 export function makeWave1Questions(): InterviewQuestion[] {
@@ -57,7 +57,7 @@ export function makeWave1Questions(): InterviewQuestion[] {
         { id: "w1q3-esfj", label: "ESFJ" },
         { id: "w1q3-enfj", label: "ENFJ" },
         { id: "w1q3-entj", label: "ENTJ" },
-        { id: "w1q3-unknown", label: "还没测过 / 不确定" },
+        { id: "w1q3-unknown", label: "没测过或不确定" },
       ],
       allows_custom: false,
       sensitivity: "normal",
@@ -72,13 +72,12 @@ export function makeWave1Questions(): InterviewQuestion[] {
       why_this_matters: "了解一下你现在的日常框架，后面聊起来有个起点。",
       response_kind: "single_choice",
       options: [
-        { id: "w1q4-fixed", label: "朝九晚五，比较固定" },
-        { id: "w1q4-flex", label: "时间灵活，但工作和生活容易混" },
-        { id: "w1q4-class", label: "按课表走，比较固定" },
-        { id: "w1q4-exam", label: "在备考，节奏自己定" },
-        { id: "w1q4-irregular", label: "不太规律，看阶段" },
-        { id: "w1q4-night", label: "偏晚上，白天不太在状态" },
-        { id: "w1q4-reactive", label: "主要被会议和消息推着走" },
+        { id: "w1q4-fixed", label: "工作日比较固定" },
+        { id: "w1q4-class", label: "上课为主" },
+        { id: "w1q4-flex", label: "大部分时间自己安排" },
+        { id: "w1q4-irregular", label: "轮班或作息不固定" },
+        { id: "w1q4-exam", label: "正在备考或申请" },
+        { id: "w1q4-open", label: "暂时没有固定安排" },
       ],
       allows_custom: true,
       sensitivity: "normal",
@@ -93,11 +92,11 @@ export function makeWave1Questions(): InterviewQuestion[] {
       why_this_matters: "知道你想获得什么，后面的对话才能对准你的方向。",
       response_kind: "single_choice",
       options: [
-        { id: "w1q5-direction", label: "想更清楚自己接下来该怎么走" },
-        { id: "w1q5-decision", label: "有一个具体的决定在纠结" },
-        { id: "w1q5-change", label: "感觉到了变化，但说不清是什么" },
-        { id: "w1q5-curious", label: "就是好奇，想试试这个东西" },
-        { id: "w1q5-talk", label: "想找人聊聊，整理一下自己" },
+        { id: "w1q5-understand", label: "更了解自己" },
+        { id: "w1q5-decision", label: "想清楚一个决定" },
+        { id: "w1q5-direction", label: "想换个方向" },
+        { id: "w1q5-change", label: "最近有点迷茫" },
+        { id: "w1q5-curious", label: "好奇，来看看" },
       ],
       allows_custom: true,
       sensitivity: "normal",
@@ -110,13 +109,14 @@ export function makeWave1Questions(): InterviewQuestion[] {
       order: 6,
       text: "最近主要和谁待在一起？",
       why_this_matters: "你重要的关系和责任会影响哪些选择真的可行，后面会用到。",
-      response_kind: "single_choice",
+      response_kind: "multi_choice",
       options: [
-        { id: "w1q6-partner", label: "有伴侣或家人在身边" },
-        { id: "w1q6-solo", label: "自己住，关系比较自由" },
-        { id: "w1q6-care", label: "需要照顾家里人" },
-        { id: "w1q6-friends", label: "主要是朋友和兴趣圈子" },
-        { id: "w1q6-classmates", label: "主要是同学或室友" },
+        { id: "w1q6-partner", label: "伴侣" },
+        { id: "w1q6-family", label: "家人" },
+        { id: "w1q6-friends", label: "朋友" },
+        { id: "w1q6-classmates", label: "同学或室友" },
+        { id: "w1q6-coworkers", label: "同事" },
+        { id: "w1q6-solo", label: "大多数时候自己" },
       ],
       allows_custom: true,
       sensitivity: "normal",
@@ -131,11 +131,12 @@ export function makeWave1Questions(): InterviewQuestion[] {
       why_this_matters: "知道你现在的阶段，后面才知道从哪里开始聊、哪些选择值得展开。",
       response_kind: "single_choice",
       options: [
-        { id: "w1q7-student", label: "在读，还没想好接下来做什么" },
-        { id: "w1q7-exam", label: "在备考或申请（考研/保研/留学等）" },
+        { id: "w1q7-student", label: "在读" },
+        { id: "w1q7-exam", label: "在备考或申请" },
         { id: "w1q7-jobhunt", label: "在找工作或实习" },
-        { id: "w1q7-working", label: "工作了一段时间，在考虑要不要换方向" },
-        { id: "w1q7-transition", label: "刚换了状态（毕业/辞职/搬家），还在适应" },
+        { id: "w1q7-working", label: "正在工作" },
+        { id: "w1q7-transition", label: "刚毕业、辞职或搬家" },
+        { id: "w1q7-break", label: "暂时休息或待业" },
       ],
       allows_custom: true,
       sensitivity: "normal",

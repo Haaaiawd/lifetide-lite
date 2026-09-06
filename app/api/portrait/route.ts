@@ -45,9 +45,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Idempotent: if portrait already exists, return it directly.
+  // Idempotent: if portrait already exists, replay it through the same SSE contract.
   if (memory.persona_portrait) {
-    return NextResponse.json({ portrait: memory.persona_portrait });
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ portrait: memory.persona_portrait })}\n\n`));
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        Connection: "keep-alive",
+      },
+    });
   }
 
   const encoder = new TextEncoder();

@@ -2,56 +2,25 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Pause, Play, X, Check, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import { PixelIcon } from "@/components/art/PixelIcon";
 import type { Route } from "@/lib/fixtures";
-import type { TrialStatus } from "@/lib/working-memory/types";
 
 export type RouteCoverProps = {
   route: Route;
   active?: boolean;
   expanded?: boolean;
-  trialStatus?: TrialStatus;
   onToggle?: () => void;
-  onTrialStatusChange?: (status: TrialStatus) => void;
 };
-
-const statusCopy: Record<TrialStatus, { label: string; tone: "neutral" | "cobalt" | "success" }> = {
-  not_started: { label: "未开始", tone: "neutral" },
-  active: { label: "进行中", tone: "cobalt" },
-  paused: { label: "已暂停", tone: "neutral" },
-  completed: { label: "已完成", tone: "success" },
-  exited: { label: "已退出", tone: "neutral" },
-};
-
-function classForTone(tone: "neutral" | "cobalt" | "success") {
-  if (tone === "cobalt") return "text-cobalt";
-  if (tone === "success") return "text-success";
-  return "text-ink-muted";
-}
 
 export function RouteCover({
   route,
   active,
   expanded = false,
-  trialStatus = "not_started",
   onToggle,
-  onTrialStatusChange,
 }: RouteCoverProps) {
   const reduce = useReducedMotion();
-  const [showFullPrototype, setShowFullPrototype] = useState(trialStatus !== "not_started");
-
-  const isStarted = trialStatus !== "not_started";
-
-  const handleStart = () => {
-    setShowFullPrototype(true);
-    onTrialStatusChange?.("active");
-  };
-
-  const handlePause = () => onTrialStatusChange?.("paused");
-  const handleResume = () => onTrialStatusChange?.("active");
-  const handleExit = () => onTrialStatusChange?.("exited");
-  const handleComplete = () => onTrialStatusChange?.("completed");
+  const [showFullPrototype, setShowFullPrototype] = useState(false);
 
   return (
     <article
@@ -198,10 +167,18 @@ export function RouteCover({
                 <h3 className="text-xs font-medium uppercase tracking-wide text-cobalt">最小原型</h3>
                 <p className="mt-1 text-sm leading-snug line-clamp-2">{route.prototype.hypothesis}</p>
               </div>
-              <span className={`text-xs font-medium ${classForTone(statusCopy[trialStatus].tone)}`}>
-                {statusCopy[trialStatus].label}
-              </span>
             </div>
+
+            {!showFullPrototype && (
+              <button
+                type="button"
+                onClick={() => setShowFullPrototype(true)}
+                className="mt-3 flex items-center gap-1 text-sm font-medium text-cobalt transition-colors"
+              >
+                <CaretDown size={16} />
+                查看三天计划
+              </button>
+            )}
 
             {showFullPrototype && (
               <div className="mt-3 flex flex-col gap-3 border-t-2 border-ink/20 pt-3">
@@ -229,64 +206,16 @@ export function RouteCover({
                 <p className="text-sm leading-snug"><span className="text-ink-muted">继续信号：</span>{route.prototype.continueSignal}</p>
                 <p className="text-sm leading-snug"><span className="text-ink-muted">暂停 / 退出：</span>{route.prototype.pauseOrExitNote}</p>
                 <p className="text-sm leading-snug"><span className="text-ink-muted">安全检查：</span>{route.prototype.safetyCheck}</p>
-              </div>
-            )}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {!isStarted && (
                 <button
                   type="button"
-                  onClick={handleStart}
-                  className="flex items-center gap-1 border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+                  onClick={() => setShowFullPrototype(false)}
+                  className="mt-1 flex items-center gap-1 text-sm font-medium text-cobalt transition-colors"
                 >
-                  <Play size={16} weight="fill" />
-                  开始试玩
+                  <CaretUp size={16} />
+                  收起
                 </button>
-              )}
-
-              {isStarted && (
-                <>
-                  {trialStatus === "active" && (
-                    <button
-                      type="button"
-                      onClick={handlePause}
-                      className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                    >
-                      <Pause size={16} weight="fill" />
-                      暂停
-                    </button>
-                  )}
-                  {trialStatus === "paused" && (
-                    <button
-                      type="button"
-                      onClick={handleResume}
-                      className="flex items-center gap-1 border-2 border-ink bg-cobalt px-3 py-2 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                    >
-                      <Play size={16} weight="fill" />
-                      继续
-                    </button>
-                  )}
-                  {trialStatus !== "exited" && (
-                    <button
-                      type="button"
-                      onClick={handleExit}
-                      className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                    >
-                      <X size={16} />
-                      退出
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleComplete}
-                    className="flex items-center gap-1 border-2 border-ink bg-paper-raised px-3 py-2 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
-                  >
-                    <Check size={16} weight="bold" />
-                    完成
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </section>
         </motion.div>
       )}

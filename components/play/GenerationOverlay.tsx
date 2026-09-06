@@ -7,6 +7,7 @@ import { WalkProgress } from "@/components/play/WalkProgress";
 type Phase = "walking" | "streaming" | "complete" | "error";
 
 type StreamingSection = {
+  key?: string;
   label: string;
   text: string;
 };
@@ -215,7 +216,7 @@ export function GenerationOverlay({
               <div className="space-y-3">
                 {contentSections.map((s, i) => (
                   <StreamingSectionCard
-                    key={s.label}
+                    key={s.key ?? s.label}
                     section={s}
                     index={i}
                     reduce={reduce}
@@ -306,9 +307,9 @@ function ThinkingCard({ text, reduce }: { text: string; reduce: boolean | null }
       <p
         aria-hidden="true"
         className="select-none font-serif text-sm leading-relaxed tracking-[0.15em] text-ink/40 md:text-base"
-      >
-        {obscureText(text)}<span className="animate-pulse text-cobalt/50">▎</span>
-      </p>
+        dangerouslySetInnerHTML={{ __html: obscureText(text) }}
+      />
+      <span className="animate-pulse text-cobalt/50">▎</span>
       <span className="sr-only">正在整理思路</span>
     </motion.div>
   );
@@ -352,11 +353,23 @@ const MAX_FAKE_VISIBLE_CHARS = 280;
  * replace every glyph so the scripted content can never be read. Deterministic
  * per-index mapping keeps already-rendered characters stable between frames.
  */
-const HIDDEN_GLYPHS = "▓▒░";
+/**
+ * Word-style redaction: the original text is still in the DOM (so it occupies
+ * the right width and has the natural rhythm of real writing), but each
+ * non-space character is wrapped in a span with a solid background and
+ * transparent text color — like selecting text in Word and blacking it out.
+ * The viewer sees blocks of varying width that feel like text, not a wall of
+ * identical squares.
+ */
 function obscureText(text: string): string {
   let out = "";
   for (let i = 0; i < text.length; i++) {
-    out += /\S/.test(text[i]) ? HIDDEN_GLYPHS[(i * 7 + 3) % HIDDEN_GLYPHS.length] : text[i];
+    const ch = text[i];
+    if (/\s/.test(ch)) {
+      out += ch;
+    } else {
+      out += `<span class="redacted-char">${ch}</span>`;
+    }
   }
   return out;
 }
@@ -385,10 +398,9 @@ function FakeThinkingCard({ variant, reduce }: { variant: "portrait" | "final"; 
       <p
         aria-hidden="true"
         className="select-none font-serif text-sm leading-relaxed break-words tracking-[0.15em] text-ink/40 md:text-base"
-      >
-        {obscureText(text)}
-        {text && <span className="animate-pulse text-cobalt/50">▎</span>}
-      </p>
+        dangerouslySetInnerHTML={{ __html: obscureText(text) }}
+      />
+      {text && <span className="animate-pulse text-cobalt/50">▎</span>}
       <span className="sr-only">正在整理思路</span>
     </motion.div>
   );

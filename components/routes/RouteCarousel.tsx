@@ -19,23 +19,17 @@ export type RouteCarouselProps = {
 const ROUTE_THEMES = [
   {
     accent: "var(--cobalt)",
-    accentSoft: "var(--cobalt-soft)",
     tape: "rgba(36, 87, 230, 0.22)",
-    label: "靛蓝",
     rot: -1.2,
   },
   {
     accent: "var(--amber)",
-    accentSoft: "var(--amber-soft)",
     tape: "rgba(201, 123, 47, 0.22)",
-    label: "赭石",
     rot: 0.8,
   },
   {
     accent: "var(--teal)",
-    accentSoft: "var(--teal-soft)",
     tape: "rgba(42, 138, 138, 0.22)",
-    label: "青绿",
     rot: -0.6,
   },
 ] as const;
@@ -46,7 +40,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteCarouselProps) {
+export function RouteCarousel({ routes, framing, onNavigate }: RouteCarouselProps) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -97,52 +91,6 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:gap-8 md:py-12">
-      {blueprint && (
-        <motion.section
-          initial={reduce ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="relative mx-auto w-full max-w-2xl bg-paper-raised/90 p-6 shadow-[4px_4px_0_rgba(23,23,23,0.08)] md:p-8"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 30%, rgba(36,87,230,0.04) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(201,123,47,0.04) 0%, transparent 40%)",
-          }}
-        >
-          <div
-            className="absolute -left-2 top-6 h-10 w-5 -rotate-6 bg-amber-soft/70 opacity-60"
-            style={{ boxShadow: "inset 0 0 0 1px rgba(23,23,23,0.08)" }}
-          />
-          <h2 className="mb-3 font-serif text-lg md:text-xl">当前坐标</h2>
-          <p className="text-base leading-relaxed text-ink md:text-lg">
-            {blueprint.current_coordinate}
-          </p>
-          {blueprint.key_tensions.length > 0 && (
-            <div className="mt-4 flex flex-col gap-2">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-                关键张力
-              </h3>
-              {blueprint.key_tensions.map((tension, i) => (
-                <p key={i} className="text-sm leading-relaxed text-ink-muted">
-                  · {tension}
-                </p>
-              ))}
-            </div>
-          )}
-          {blueprint.recurring_elements.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {blueprint.recurring_elements.map((el, i) => (
-                <span
-                  key={i}
-                  className="border border-ink/20 bg-paper px-2 py-0.5 text-xs text-ink-muted"
-                >
-                  {el}
-                </span>
-              ))}
-            </div>
-          )}
-        </motion.section>
-      )}
-
       {framing && (
         <p className="max-w-2xl self-center text-center text-sm leading-relaxed text-ink-muted md:text-base">
           {framing}
@@ -198,7 +146,7 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
               return (
                 <div key={route.id} className="w-full flex-shrink-0 px-1 md:px-6">
                   <article
-                    className="relative mx-auto flex min-h-[520px] max-w-2xl flex-col bg-paper-raised p-5 md:p-8"
+                    className="relative mx-auto flex min-h-[380px] max-w-2xl flex-col bg-paper-raised p-6 md:min-h-[420px] md:p-10"
                     style={{
                       transform: `rotate(${rotate}deg)`,
                       boxShadow:
@@ -234,135 +182,12 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
                             {route.title}
                           </h3>
                         </div>
-                        <span
-                          className="w-fit rounded-sm px-2 py-0.5 text-xs font-medium uppercase tracking-wide"
-                          style={{
-                            color: theme.accent,
-                            backgroundColor: theme.accentSoft,
-                          }}
-                        >
-                          {theme.label}
-                        </span>
                       </div>
                     </div>
 
-                    <p className="mb-6 font-serif text-base italic leading-snug text-ink md:text-lg">
+                    <p className="mb-8 max-w-xl font-serif text-lg italic leading-relaxed text-ink md:text-xl">
                       “{route.coreExperience}”
                     </p>
-
-                    {/* Ordinary day as a torn-note block with the day's
-                        one-sentence scenes laid out like a quiet timeline */}
-                    {(route.ordinaryDay || route.dayNarrative?.scenes?.length) && (
-                      <div
-                        className="mb-6 border-l-4 pl-4 pr-2 py-2"
-                        style={{
-                          borderLeftColor: theme.accent,
-                          backgroundColor: theme.accentSoft,
-                        }}
-                      >
-                        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-ink-muted/70">
-                          普通的一天
-                        </span>
-                        {route.ordinaryDay && (
-                          <p className="text-sm leading-snug text-ink/90 md:text-base">
-                            {route.ordinaryDay}
-                          </p>
-                        )}
-                        {route.dayNarrative?.scenes?.length ? (
-                          <ol className="mt-3 flex flex-col gap-2">
-                            {route.dayNarrative.scenes.map((scene, si) => {
-                              const isLast = si === route.dayNarrative.scenes.length - 1;
-                              return (
-                                <li
-                                  key={si}
-                                  className={`flex items-start gap-2 text-sm leading-relaxed md:text-base ${
-                                    isLast
-                                      ? "mt-1 font-serif italic"
-                                      : "text-ink/80"
-                                  }`}
-                                  style={isLast ? { color: theme.accent } : undefined}
-                                >
-                                  <span
-                                    aria-hidden
-                                    className="mt-[0.55em] inline-block h-px w-3 shrink-0"
-                                    style={{ backgroundColor: theme.accent, opacity: isLast ? 0.9 : 0.45 }}
-                                  />
-                                  <span>{scene.text}</span>
-                                </li>
-                              );
-                            })}
-                          </ol>
-                        ) : null}
-                        {route.titleFull && (
-                          <p
-                            className="mt-3 text-right font-serif italic text-sm md:text-base"
-                            style={{ color: theme.accent }}
-                          >
-                            —— {route.titleFull}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Three-year timeline as pasted snippets */}
-                    <div className="mb-6 flex flex-col gap-3">
-                      {[
-                        { label: "第一年", text: route.year1 },
-                        { label: "第二年", text: route.year2 },
-                        { label: "第三年", text: route.year3 },
-                      ].map((y, yi) => (
-                        <div
-                          key={yi}
-                          className="relative bg-paper p-3 shadow-sm"
-                          style={{
-                            boxShadow: "2px 3px 0 rgba(23,23,23,0.06)",
-                            transform: `rotate(${yi % 2 === 0 ? 0.3 : -0.3}deg)`,
-                          }}
-                        >
-                          <span
-                            className="mb-1 block text-xs font-medium uppercase tracking-wide"
-                            style={{ color: theme.accent }}
-                          >
-                            {y.label}
-                          </span>
-                          <p className="text-sm leading-snug text-ink-muted">
-                            {y.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Attractions / tradeoffs as collage tags */}
-                    {(route.attractions.length > 0 || route.costsAndTradeoffs.length > 0) && (
-                      <div className="mb-6 flex flex-col gap-3">
-                        {route.attractions.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {route.attractions.slice(0, 3).map((a, ai) => (
-                              <span
-                                key={ai}
-                                className="border border-ink/10 bg-paper px-2 py-1 text-xs text-ink"
-                                style={{ transform: `rotate(${ai % 2 === 0 ? 0.8 : -0.8}deg)` }}
-                              >
-                                + {a}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {route.costsAndTradeoffs.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {route.costsAndTradeoffs.slice(0, 3).map((c, ci) => (
-                              <span
-                                key={ci}
-                                className="border border-ink/10 bg-paper-raised px-2 py-1 text-xs text-ink-muted"
-                                style={{ transform: `rotate(${ci % 2 === 0 ? -0.6 : 0.6}deg)` }}
-                              >
-                                · {c}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {/* CTA */}
                     <button

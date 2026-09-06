@@ -13,6 +13,21 @@ import type { ParallelLife } from "@/lib/working-memory/types";
 
 type AuthUser = { id: string; email: string };
 
+type ProgressInfo = {
+  waveIndex: number;
+  hasPortrait: boolean;
+  hasFinalPlan: boolean;
+  hasPendingInsight: boolean;
+  hasStreamingInsight: boolean;
+  hasPendingWave: boolean;
+  pendingWaveId: string | null;
+  pendingWaveIndex: number | null;
+  pendingWaveQuestions: unknown[] | null;
+  lastStep: string;
+  lastInsight: unknown;
+  streamingInsight: unknown;
+};
+
 export default function AccountPage() {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -21,7 +36,7 @@ export default function AccountPage() {
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
   const [routes, setRoutes] = useState<Route[] | null>(null);
   const [framing, setFraming] = useState<string | null>(null);
-  const [blueprint, setBlueprint] = useState<{ current_coordinate: string; key_tensions: string[]; recurring_elements: string[] } | null>(null);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,13 +53,21 @@ export default function AccountPage() {
         if (cancelled) return;
         setUser(meData.user);
 
-        // Load portrait and routes in parallel
-        const [portraitRes, finalRes] = await Promise.all([
+        // Load progress, portrait and routes in parallel
+        const [progressRes, portraitRes, finalRes] = await Promise.all([
+          fetch("/api/progress"),
           fetch("/api/portrait"),
           fetch("/api/final"),
         ]);
 
         if (cancelled) return;
+
+        if (progressRes.ok) {
+          const progressData = await progressRes.json();
+          if (progressData.progress) {
+            setProgress(progressData.progress as ProgressInfo);
+          }
+        }
 
         if (portraitRes.ok) {
           const portraitData = await portraitRes.json();
@@ -60,7 +83,6 @@ export default function AccountPage() {
             const lives = finalData.lives as ParallelLife[];
             setRoutes(lives.map((life, i) => toRouteView(life, i)));
             setFraming(finalData.framing ?? null);
-            setBlueprint(finalData.blueprint ?? null);
           }
         }
       } finally {
@@ -87,6 +109,19 @@ export default function AccountPage() {
 
   if (!user) return null;
 
+  // Derive a human-readable progress summary
+  const waveIndex = progress?.waveIndex ?? 0;
+  const hasStarted = waveIndex > 0 || !!progress?.hasPendingWave;
+  const stepLabel = (() => {
+    if (progress?.hasFinalPlan) return "已生成三条路线";
+    if (progress?.hasPortrait) return "已生成人格画像";
+    if (progress?.hasPendingInsight) return "正在查看即时理解";
+    if (progress?.hasStreamingInsight) return "上一波理解生成中断";
+    if (progress?.hasPendingWave) return "正在回答问题";
+    if (waveIndex > 0) return "可以生成画像了";
+    return "尚未开始";
+  })();
+
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-6">
       {/* Header */}
@@ -105,13 +140,32 @@ export default function AccountPage() {
             </div>
             <span className="text-[10px] text-ink-muted">{user.email}</span>
           </div>
-          <div className="p-4">
+          <div className="p-4 flex flex-col gap-3">
+            {hasStarted ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-2xl font-bold text-cobalt tabular-nums">
+                    {waveIndex}
+                  </span>
+                  <span className="text-sm text-ink-muted">/ 8 波</span>
+                  <span className="text-sm text-ink-muted">· {stepLabel}</span>
+                </div>
+                {progress?.hasPortrait && (
+                  <span className="text-xs text-ink-muted">已生成画像</span>
+                )}
+                {progress?.hasFinalPlan && (
+                  <span className="text-xs text-ink-muted">已生成路线</span>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-ink-muted">还没有开始人生试运行。</p>
+            )}
             <button
               type="button"
               onClick={() => router.push("/play")}
-              className="border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+              className="self-start border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
             >
-              开始新的试运行
+              {hasStarted ? "继续试运行" : "开始新的试运行"}
             </button>
           </div>
         </div>
@@ -145,7 +199,6 @@ export default function AccountPage() {
           <RouteCarousel
             routes={routes}
             framing={framing ?? undefined}
-            blueprint={blueprint ?? undefined}
             onNavigate={(routeId) => router.push(`/play/life/${routeId}`)}
           />
         ) : (

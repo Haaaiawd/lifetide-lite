@@ -18,7 +18,7 @@ import type { PersonaPortrait } from "@/lib/portrait/types";
 
 const REQUIRED_CONSENTS = [{ type: "ai", given: true }];
 
-type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "portrait" | "routes" | "waiting" | "portrait_overlay" | "final_overlay";
+type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" | "material" | "stop" | "review" | "portrait" | "routes" | "waiting" | "portrait_overlay" | "final_overlay";
 
 // Shared SSE reader: forwards `partial` events to onPartial, captures `done`
 // data, and — crucially — does not swallow `error` events. An `error` event
@@ -120,7 +120,7 @@ export default function PlayPage() {
   // Wave whose insight synthesis was interrupted mid-stream (resume path) —
   // when set, the insight step shows an exit bar with resubmit/continue.
   const [interruptedWaveId, setInterruptedWaveId] = useState<string | null>(null);
-  const [badgeExpanded, setBadgeExpanded] = useState(false);
+  const [confirmPortrait, setConfirmPortrait] = useState(false);
   const [waitingVariant, setWaitingVariant] = useState<"insight" | "final" | "wave" | "portrait">("insight");
   const [streamingInsight, setStreamingInsight] = useState<{ user_told_me?: string; current_reading?: string; important_unknown?: string } | null>(null);
   const [portrait, setPortrait] = useState<PersonaPortrait | null>(null);
@@ -129,12 +129,6 @@ export default function PlayPage() {
   const [portraitError, setPortraitError] = useState<{ message: string; retry: () => void } | null>(null);
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
   const hasLoadedRef = useRef(false);
-
-  // Reset the floating badge when step/wave changes so it doesn't
-  // reappear in an already-expanded state.
-  useEffect(() => {
-    setBadgeExpanded(false);
-  }, [step, waveIndex, interruptedWaveId]);
 
   // Prefetch: after insight is done, we fire GET /api/wave in the background
   // so the next wave's questions are ready by the time the user clicks continue.
@@ -285,7 +279,10 @@ export default function PlayPage() {
         setStep("consent");
         return;
       }
-      if (!res.ok) throw new Error(`Failed to load wave: ${res.status}`);
+      if (!res.ok) {
+        const problem = await res.json().catch(() => ({}));
+        throw new Error(problem.error ?? `Failed to load wave: ${res.status}`);
+      }
       const data = await res.json();
 
       if (data.stop) {
@@ -297,8 +294,8 @@ export default function PlayPage() {
           type: "bot",
           text: data.can_generate
             ? wIdx >= 8
-              ? `已经聊完 ${wIdx} 波，六维观察已经充分收集。现在可以生成个人画像了。`
-              : `已经聊了 ${wIdx} 波，可以生成个人画像了，也可以继续聊到 8 波让理解更完整。`
+              ? `第 ${wIdx} 波已经结束，访谈到这里停止。现在可以生成个人画像。`
+              : `已经聊了 ${wIdx} 波，可以生成个人画像，也可以继续聊到第 8 波。`
             : "我们再补充一轮，可能会更清楚。",
         });
         setStep("stop");
@@ -351,6 +348,33 @@ export default function PlayPage() {
     startPrefetch();
   };
 
+  async function recoverWaveResult(wId: string) {
+    setStreamError(null);
+    setWaitingVariant("insight");
+    setStep("waiting");
+    try {
+      const progressRes = await fetch("/api/progress", { cache: "no-store" });
+      if (progressRes.ok) {
+        const progressData = await progressRes.json();
+        const progress = progressData.progress as ProgressInfo;
+        const stored = progress.lastInsight;
+        if (stored?.wave_id === wId) {
+          finishInsight({
+            wave_id: wId,
+            wave_index: progress.waveIndex,
+            revision: 0,
+            insight: stored,
+          });
+          return;
+        }
+      }
+      await resubmitWave(wId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "暂时无法同步结果";
+      setStreamError({ message, retry: () => { void recoverWaveResult(wId); } });
+    }
+  }
+
   const submitWave = async (answerState?: Record<string, { value?: string | string[] | number; skipped: boolean }>) => {
     if (!currentQuestion) return;
     setWaitingVariant("insight");
@@ -395,7 +419,7 @@ export default function PlayPage() {
       // Stay on the waiting step and show a visible error bar with retry —
       // bouncing back to "question" left no actionable control and looked
       // like the UI had hung (the Wave 6 deadlock).
-      setStreamError({ message, retry: () => { setStreamError(null); submitWave(); } });
+      setStreamError({ message: `连接中断，先同步已经生成的内容。${message ? `（${message}）` : ""}`, retry: () => { void recoverWaveResult(currentQuestion.wave_id); } });
     }
   };
 
@@ -428,7 +452,7 @@ export default function PlayPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setStreamingInsight(null);
-      setStreamError({ message, retry: () => { setStreamError(null); resubmitWave(wId); } });
+      setStreamError({ message, retry: () => { void recoverWaveResult(wId); } });
     }
   };
 
@@ -544,6 +568,17 @@ export default function PlayPage() {
         return;
       }
 
+      if (waveIndex === 6) {
+        appendItem({
+          id: newId(),
+          type: "bot",
+          text: "第 6 波到这里结束。现在可以生成画像，也可以继续聊到第 8 波。",
+        });
+        setCanGenerate(true);
+        setStep("stop");
+        return;
+      }
+
       await loadWave();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -575,6 +610,21 @@ export default function PlayPage() {
   // Generate persona portrait via SSE, then show portrait card.
   // User clicks "继续生成路线" on the portrait to proceed to final plan.
   // Uses a full-screen overlay with walking animation + streaming text.
+  async function loadStoredPortrait(): Promise<PersonaPortrait | null> {
+    const res = await fetch("/api/portrait", { cache: "no-store" });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`画像同步失败（${res.status}）`);
+    const data = await res.json();
+    return (data.portrait as PersonaPortrait | undefined) ?? null;
+  }
+
+  async function loadStoredFinal(): Promise<FinalPlan | null> {
+    const res = await fetch("/api/final", { cache: "no-store" });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`人生方案同步失败（${res.status}）`);
+    return await res.json() as FinalPlan;
+  }
+
   const portraitAbortRef = useRef<AbortController | null>(null);
   const isGeneratingRef = useRef(false);
   const [portraitComplete, setPortraitComplete] = useState(false);
@@ -596,7 +646,6 @@ export default function PlayPage() {
     const ac = new AbortController();
     portraitAbortRef.current = ac;
 
-    setBadgeExpanded(false);
     setStreamingPortrait(null);
     setPortraitError(null);
     setPortraitComplete(false);
@@ -628,16 +677,40 @@ export default function PlayPage() {
       if (ac.signal.aborted) return;
       const message = err instanceof Error ? err.message : "Unknown error";
       setStreamingPortrait(null);
-      setPortraitError({ message, retry: () => { setPortraitError(null); handleGenerateFinal(); } });
+      try {
+        const stored = await loadStoredPortrait();
+        if (stored) {
+          setPortrait(stored);
+          setStep("portrait");
+          return;
+        }
+      } catch {}
+      setPortraitError({ message, retry: () => { void recoverPortraitResult(); } });
     } finally {
       isGeneratingRef.current = false;
     }
   };
 
+  async function recoverPortraitResult() {
+    setPortraitError(null);
+    try {
+      const stored = await loadStoredPortrait();
+      if (stored) {
+        setPortrait(stored);
+        setStep("portrait");
+        return;
+      }
+      await handleGenerateFinal();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "暂时无法同步画像";
+      setPortraitError({ message, retry: () => { void recoverPortraitResult(); } });
+    }
+  }
+
   // After portrait is shown, user clicks "继续" to generate the final plan.
   // Uses full-screen overlay with walking animation, then shows results.
   const [finalOverlayError, setFinalOverlayError] = useState<string | null>(null);
-  const [streamingFinal, setStreamingFinal] = useState<Array<{ label: string; text: string }> | null>(null);
+  const [streamingFinal, setStreamingFinal] = useState<Array<{ key?: string; label: string; text: string }> | null>(null);
   const [finalComplete, setFinalComplete] = useState(false);
   const finalDoneDataRef = useRef<FinalPlan | null>(null);
   const finalAbortRef = useRef<AbortController | null>(null);
@@ -676,14 +749,13 @@ export default function PlayPage() {
         res,
         (d) => {
           if (ac.signal.aborted) return;
-          const partial = d as { sections?: Array<{ label: string; text: string }> };
+          const partial = d as { sections?: Array<{ key?: string; label: string; text: string }> };
           if (partial.sections) {
-            // Merge by label — partials may resend earlier sections or add
-            // new ones, so update existing entries and append new labels.
             setStreamingFinal((prev) => {
               const next = prev ? [...prev] : [];
               for (const s of partial.sections!) {
-                const idx = next.findIndex((x) => x.label === s.label);
+                const identity = s.key ?? s.label;
+                const idx = next.findIndex((item) => (item.key ?? item.label) === identity);
                 if (idx >= 0) next[idx] = s;
                 else next.push(s);
               }
@@ -700,11 +772,37 @@ export default function PlayPage() {
       if (ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : "Unknown error";
       setStreamingFinal(null);
+      try {
+        const stored = await loadStoredFinal();
+        if (stored) {
+          finalDoneDataRef.current = stored;
+          handleFinalComplete();
+          return;
+        }
+      } catch {}
       setFinalOverlayError(msg);
     } finally {
       isGeneratingRef.current = false;
     }
   };
+
+  async function recoverFinalResult() {
+    setFinalOverlayError(null);
+    try {
+      const stored = await loadStoredFinal();
+      if (stored) {
+        const lives: ParallelLife[] = stored.lives ?? [];
+        setRoutes(lives.map((life, i) => toRouteView(life, i)));
+        setFraming(stored.framing ?? null);
+        setBlueprint(stored.blueprint ?? null);
+        setStep("routes");
+        return;
+      }
+      await handlePortraitContinue();
+    } catch (err) {
+      setFinalOverlayError(err instanceof Error ? err.message : "暂时无法同步人生方案");
+    }
+  }
 
   const handleReset = async () => {
     try {
@@ -1009,7 +1107,6 @@ export default function PlayPage() {
         <RouteCarousel
           routes={routes}
           framing={framing ?? undefined}
-          blueprint={blueprint ?? undefined}
           onNavigate={(routeId) => router.push(`/play/life/${routeId}`)}
         />
         <div className="mx-auto max-w-5xl px-4 pb-12">
@@ -1029,11 +1126,7 @@ export default function PlayPage() {
         onInsightContinue={handleInsightContinue}
         onMaterialSubmit={handleMaterialSubmit}
         onMaterialSkip={handleMaterialSkip}
-        className={`flex-1 min-h-0 ${
-          waveIndex >= 6 && (step === "insight" || step === "question") && !interruptedWaveId
-            ? "pr-8"
-            : ""
-        }`}
+        className="flex-1 min-h-0"
       />
 
       {/* Portrait generation overlay — full screen */}
@@ -1068,7 +1161,7 @@ export default function PlayPage() {
           isComplete={finalComplete}
           onComplete={handleFinalComplete}
           error={finalOverlayError}
-          onRetry={() => { setFinalOverlayError(null); handlePortraitContinue(); }}
+          onRetry={() => { void recoverFinalResult(); }}
           onCancel={() => { finalAbortRef.current?.abort(); setFinalOverlayError(null); setStep("portrait"); }}
         />
       )}
@@ -1084,15 +1177,11 @@ export default function PlayPage() {
                   onClick={streamError.retry}
                   className="border-2 border-red-600 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-sm"
                 >
-                  重试
+                  重新同步结果
                 </button>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="text-sm text-ink-muted underline underline-offset-2 hover:text-cobalt"
-                >
-                  清除会话重新开始
-                </button>
+                <span className="text-sm text-ink-muted">
+                  你的回答已经保存，不需要清除会话。
+                </span>
               </div>
             </div>
           ) : (
@@ -1156,37 +1245,45 @@ export default function PlayPage() {
             {waveIndex >= 8 ? (
               canGenerate ? (
                 <p className="text-center text-ink-muted">
-                  已经聊完 {waveIndex} 波，六维观察已经充分收集。现在可以生成个人画像了。
+                  第 {waveIndex} 波已经结束，访谈到这里停止。你可以生成个人画像，或返回查看刚才的理解。
                 </p>
               ) : (
                 <p className="text-center text-ink-muted">
-                  已经聊完 {waveIndex} 波。虽然观察还不够充分，但仍可尝试生成画像——结果可能不完整。
+                  第 {waveIndex} 波已经结束。现有信息仍有空缺，生成的画像会保留这些不确定之处。
                 </p>
               )
             ) : waveIndex >= 6 ? (
               <p className="text-center text-ink-muted">
-                已经聊了 {waveIndex} 波，六维观察已经比较充分。你可以现在生成个人画像，也可以继续聊到 8 波让理解更完整。
+                第 {waveIndex} 波已经结束。现在可以生成个人画像，也可以继续聊到第 8 波。
               </p>
             ) : (
               <p className="text-center text-ink-muted">
-                已经聊了 {waveIndex} 波。建议聊到 6 波后可以自主结束，8 波会自动进入画像生成。现在也可以提前生成，但理解可能不够完整。
+                已经聊了 {waveIndex} 波。继续聊会留下更多生活证据，也可以先用现有内容生成一版画像。
               </p>
             )}
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={handleGenerateFinal}
+                onClick={() => setConfirmPortrait(true)}
                 className="flex-1 border-2 border-ink bg-cobalt px-4 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
               >
                 生成个人画像
               </button>
-              {waveIndex < 8 && (
+              {waveIndex < 8 ? (
                 <button
                   type="button"
                   onClick={() => loadWave()}
                   className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
                 >
-                  继续下一波（{waveIndex}/8）
+                  继续第 {waveIndex + 1} 波
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep("review")}
+                  className="flex-1 border-2 border-ink bg-white px-4 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm hover:shadow-md"
+                >
+                  返回查看
                 </button>
               )}
             </div>
@@ -1208,49 +1305,55 @@ export default function PlayPage() {
         </motion.div>
       )}
 
-      {/* Floating "生成画像" badge — visible from Wave 6 onwards
-          during insight/question steps, so the user can choose to
-          stop and generate a portrait without first clicking
-          "继续下一波" to reach the stop page.
-          Collapsed by default (only a sliver shows); expands on hover
-          (desktop mouse only) or first tap (mobile). A second tap
-          triggers the action. Uses pointer events with pointerType
-          check so touch devices don't synthesize mouseenter and
-          fire both expand + trigger in a single tap. */}
-      {waveIndex >= 6 && (step === "insight" || step === "question") && !interruptedWaveId && (
-        <button
-          type="button"
-          onPointerEnter={(e) => { if (e.pointerType === "mouse") setBadgeExpanded(true); }}
-          onPointerLeave={(e) => { if (e.pointerType === "mouse") setBadgeExpanded(false); }}
-          onClick={() => {
-            if (!badgeExpanded) {
-              setBadgeExpanded(true);
-              return;
-            }
-            setBadgeExpanded(false);
-            handleGenerateFinal();
-          }}
-          className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center overflow-hidden rounded-l-full border-2 border-r-0 py-3 pl-3 text-sm font-medium shadow-lg transition-all duration-300 ease-out ${
-            badgeExpanded ? "pr-5" : "pr-3"
-          } ${
-            waveIndex >= 8
-              ? "animate-pulse border-ink bg-cobalt text-white"
-              : "border-ink bg-paper text-ink hover:bg-cobalt hover:text-white"
-          }`}
-          style={{ maxWidth: badgeExpanded ? "200px" : "1.75rem" }}
-          title={
-            waveIndex >= 8
-              ? "已聊完 8 波，可以生成画像了"
-              : `已聊 ${waveIndex} 波，可以生成画像，也可继续到 8 波`
-          }
-        >
-          <span
-            className="whitespace-nowrap transition-opacity duration-300"
-            style={{ opacity: badgeExpanded ? 1 : 0 }}
+      {step === "review" && (
+        <div className="shrink-0 border-t-2 border-ink bg-paper p-4">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-4">
+            <p className="text-sm text-ink-muted">访谈已结束，可以继续查看刚才的内容。</p>
+            <button
+              type="button"
+              onClick={() => setConfirmPortrait(true)}
+              className="shrink-0 border-2 border-ink bg-cobalt px-4 py-2 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px]"
+            >
+              生成画像
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmPortrait && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/35 px-5" role="presentation" onClick={() => setConfirmPortrait(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-portrait-title"
+            className="w-full max-w-sm border-2 border-ink bg-paper-raised p-5 shadow-lg"
+            onClick={(event) => event.stopPropagation()}
           >
-            生成画像
-          </span>
-        </button>
+            <h2 id="confirm-portrait-title" className="font-serif text-xl text-ink">现在生成个人画像？</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+              画像会综合你到目前为止的回答。生成后仍能回来查看这些内容。
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmPortrait(false);
+                  void handleGenerateFinal();
+                }}
+                className="flex-1 border-2 border-ink bg-cobalt px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                确认生成
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmPortrait(false)}
+                className="flex-1 border-2 border-ink bg-paper px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-transform active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                再看看
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -377,7 +377,11 @@ export async function GET(request: NextRequest) {
 
   // Resume or advance.
   const stop = evaluateStop(memory, await countSessionQuestions(session.id));
-  if (stop.stop) {
+  // The "sufficient" stop at Wave 6 is a may_stop: the user can choose to
+  // generate a portrait or continue. When the client explicitly requests the
+  // next wave (via prefetch=1, which is always sent by loadWave()), bypass
+  // this stop so "继续第 7 波" can proceed without an infinite loop.
+  if (stop.stop && !(stop.reason === "sufficient" && isPrefetch)) {
     const response = NextResponse.json({
       stop: true,
       can_generate: stop.canGenerate,
@@ -581,7 +585,16 @@ export async function GET(request: NextRequest) {
     prompt_version: "v0-draft",
   };
 
-  const interviewerOutput = await runInterviewer(interviewerInput, memory);
+  let interviewerOutput: Awaited<ReturnType<typeof runInterviewer>>;
+  try {
+    interviewerOutput = await runInterviewer(interviewerInput, memory);
+  } catch (err) {
+    console.error(`[Wave ${nextIndex}] interviewer unavailable:`, err);
+    return NextResponse.json(
+      { error: "这一波的问题生成中断了，请重试。你的访谈进度没有丢失。", retryable: true, wave_index: nextIndex },
+      { status: 503 },
+    );
+  }
 
   await prisma.wave.create({
     data: {
@@ -1127,12 +1140,12 @@ export function evaluateStop(memory: WorkingMemory, answeredQuestions: number): 
     return { stop: true, canGenerate, provisional: false, reason: "question_limit" };
   }
 
-  // At Wave 6, the user may choose to stop and generate a portrait.
-  // The system recommends Wave 8 for full six-dimensional coverage,
-  // but allows early stop at 6 if route intents and evidence are sufficient.
-  // Wave 8 is the hard limit — the interview stops automatically.
+  // Wave 6 may_stop: if there are enough route intents and evidence, the user
+  // can choose to generate a portrait early. The client shows a choice view
+  // (generate vs continue). The prefetch=1 parameter bypasses this stop so
+  // "继续第 7 波" can proceed without an infinite loop.
   if (memory.last_wave_index >= 6 && canGenerate) {
-    return { stop: true, canGenerate: true, provisional: false, reason: "sufficient" };
+    return { stop: true, canGenerate, provisional: false, reason: "sufficient" };
   }
 
   return { stop: false, canGenerate, provisional: false, reason: "continue" };
