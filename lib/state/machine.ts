@@ -305,11 +305,6 @@ export const harnessMachine = setup({
             PROVISIONAL_PREVIEW_REQUESTED: {
               actions: "incrementRevision",
             },
-            ROUTE_PHASE_ENTERED: {
-              target: "#harness.route_intents",
-              guard: "noActiveSafetyFlag",
-              actions: "incrementRevision",
-            },
           },
         },
         awaiting_answers: {
@@ -356,15 +351,15 @@ export const harnessMachine = setup({
               guard: "waveAndDeepDiveWithinLimit",
               actions: "incrementRevision",
             },
-            ROUTE_PHASE_ENTERED: {
-              target: "#harness.route_intents",
-              guard: "noActiveSafetyFlag",
-              actions: "incrementRevision",
-            },
           },
         },
       },
       on: {
+        ROUTE_PHASE_ENTERED: {
+          target: "#harness.route_intents",
+          guard: "noActiveSafetyFlag",
+          actions: "incrementRevision",
+        },
         SAFETY_BOUNDARY_TRIGGERED: {
           target: "safety_stop",
           guard: "safetyTriggered",

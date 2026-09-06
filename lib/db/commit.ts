@@ -285,7 +285,11 @@ export async function commitEvent(
         afterRevision === beforeRevision &&
         JSON.stringify(beforeState) !== JSON.stringify("safety_stop")
       ) {
-        return { ok: false, code: "INVALID_STATE", message: "Event was rejected by state machine guard" };
+        return {
+          ok: false,
+          code: "INVALID_STATE",
+          message: `Event ${envelope.event_type} was rejected by state machine guard (current state: ${JSON.stringify(beforeState)})`,
+        };
       }
 
       const nextRevision = currentRevision + 1;
