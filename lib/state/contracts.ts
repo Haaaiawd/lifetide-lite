@@ -625,7 +625,7 @@ export const ordinaryDaySchema = z.object({
   id: idSchema,
   route_intent_id: idSchema,
   generation_provenance_id: idSchema,
-  moments: z.array(z.string().min(1)).min(4).max(6),
+  moments: z.array(z.string().min(1)).min(10).max(16),
   screens: z.record(radarDimensionSchema, z.string().min(1)),
   epistemic_status: epistemicStatusSchema,
   evidence: z.array(evidenceLinkSchema),
@@ -638,7 +638,7 @@ export const dayNarrativeSceneSchema = z.object({
 export type DayNarrativeScene = z.infer<typeof dayNarrativeSceneSchema>;
 
 export const dayNarrativeSchema = z.object({
-  scenes: z.array(dayNarrativeSceneSchema).min(4).max(8),
+  scenes: z.array(dayNarrativeSceneSchema).min(10).max(16),
 });
 export type DayNarrative = z.infer<typeof dayNarrativeSchema>;
 

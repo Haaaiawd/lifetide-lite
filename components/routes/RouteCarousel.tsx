@@ -250,8 +250,9 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
                       “{route.coreExperience}”
                     </p>
 
-                    {/* Ordinary day as a torn-note block */}
-                    {route.ordinaryDay && (
+                    {/* Ordinary day as a torn-note block with the day's
+                        one-sentence scenes laid out like a quiet timeline */}
+                    {(route.ordinaryDay || route.dayNarrative?.scenes?.length) && (
                       <div
                         className="mb-6 border-l-4 pl-4 pr-2 py-2"
                         style={{
@@ -262,9 +263,36 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
                         <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-ink-muted/70">
                           普通的一天
                         </span>
-                        <p className="text-sm leading-snug text-ink/90 md:text-base">
-                          {route.ordinaryDay}
-                        </p>
+                        {route.ordinaryDay && (
+                          <p className="text-sm leading-snug text-ink/90 md:text-base">
+                            {route.ordinaryDay}
+                          </p>
+                        )}
+                        {route.dayNarrative?.scenes?.length ? (
+                          <ol className="mt-3 flex flex-col gap-2">
+                            {route.dayNarrative.scenes.map((scene, si) => {
+                              const isLast = si === route.dayNarrative.scenes.length - 1;
+                              return (
+                                <li
+                                  key={si}
+                                  className={`flex items-start gap-2 text-sm leading-relaxed md:text-base ${
+                                    isLast
+                                      ? "mt-1 font-serif italic"
+                                      : "text-ink/80"
+                                  }`}
+                                  style={isLast ? { color: theme.accent } : undefined}
+                                >
+                                  <span
+                                    aria-hidden
+                                    className="mt-[0.55em] inline-block h-px w-3 shrink-0"
+                                    style={{ backgroundColor: theme.accent, opacity: isLast ? 0.9 : 0.45 }}
+                                  />
+                                  <span>{scene.text}</span>
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        ) : null}
                       </div>
                     )}
 

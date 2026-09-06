@@ -343,6 +343,20 @@ const FINAL_FAKE_THINKING_LINES = [
 
 const MAX_FAKE_VISIBLE_CHARS = 280;
 
+/**
+ * Redact pseudo-thinking text: keep the typing cadence and stream rhythm but
+ * replace every glyph so the scripted content can never be read. Deterministic
+ * per-index mapping keeps already-rendered characters stable between frames.
+ */
+const HIDDEN_GLYPHS = "▓▒░";
+function obscureText(text: string): string {
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    out += /\S/.test(text[i]) ? HIDDEN_GLYPHS[(i * 7 + 3) % HIDDEN_GLYPHS.length] : text[i];
+  }
+  return out;
+}
+
 function buildFakeStream(lines: string[]): string {
   // Join lines with a single space so the output reads as one continuous
   // thought stream. A trailing space keeps the loop from slamming the first
@@ -364,10 +378,14 @@ function FakeThinkingCard({ variant, reduce }: { variant: "portrait" | "final"; 
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
         <span className="text-xs font-medium uppercase tracking-wide">思考中</span>
       </div>
-      <p className="font-serif text-sm leading-relaxed break-words text-ink md:text-base">
-        {text}
+      <p
+        aria-hidden="true"
+        className="select-none font-serif text-sm leading-relaxed break-words tracking-[0.15em] text-ink/40 md:text-base"
+      >
+        {obscureText(text)}
         {text && <span className="animate-pulse text-cobalt/50">▎</span>}
       </p>
+      <span className="sr-only">正在整理思路</span>
     </motion.div>
   );
 }

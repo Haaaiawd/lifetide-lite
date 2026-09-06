@@ -52,11 +52,11 @@ describe("Fallback plan completeness (revision 5)", () => {
     }
   });
 
-  it("each life has day_narrative with 4-8 scenes", () => {
+  it("each life has day_narrative with 10-16 scenes", () => {
     for (const life of plan.lives) {
       expect(life.day_narrative).toBeDefined();
-      expect(life.day_narrative.scenes.length).toBeGreaterThanOrEqual(4);
-      expect(life.day_narrative.scenes.length).toBeLessThanOrEqual(8);
+      expect(life.day_narrative.scenes.length).toBeGreaterThanOrEqual(10);
+      expect(life.day_narrative.scenes.length).toBeLessThanOrEqual(16);
       for (const scene of life.day_narrative.scenes) {
         expect(scene.text.length).toBeGreaterThan(0);
       }
