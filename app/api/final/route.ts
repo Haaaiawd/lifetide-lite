@@ -413,7 +413,15 @@ export async function POST(request: NextRequest) {
   if (screeningResult.ok) {
     baseRevision = screeningResult.nextRevision;
   } else {
-    console.error("Failed to commit ORDINARY_DAY_SCREENING_STARTED:", screeningResult.message);
+    console.error("Failed to commit ORDINARY_DAY_SCREENING_STARTED:", screeningResult.code, screeningResult.message);
+    sendSSE("error", {
+      error: `无法进入普通一天筛查阶段（${screeningResult.code}: ${screeningResult.message}）`,
+      reason: screeningResult.message,
+      code: screeningResult.code,
+      retryable: screeningResult.code === "PERSISTENCE_ERROR" || screeningResult.code === "REVISION_CONFLICT",
+    });
+    safeClose();
+    return;
   }
 
   const daysProvenanceId = randomUUID();
@@ -481,7 +489,15 @@ export async function POST(request: NextRequest) {
   if (daysResult.ok) {
     baseRevision = daysResult.nextRevision;
   } else {
-    console.error("Failed to commit ORDINARY_DAYS_COMMITTED:", daysResult.message);
+    console.error("Failed to commit ORDINARY_DAYS_COMMITTED:", daysResult.code, daysResult.message);
+    sendSSE("error", {
+      error: `无法保存普通一天（${daysResult.code}: ${daysResult.message}）`,
+      reason: daysResult.message,
+      code: daysResult.code,
+      retryable: daysResult.code === "PERSISTENCE_ERROR" || daysResult.code === "REVISION_CONFLICT",
+    });
+    safeClose();
+    return;
   }
 
   // Strip the runtime prototypes before storing / committing the canonical ParallelLivesPlan.
@@ -503,7 +519,15 @@ export async function POST(request: NextRequest) {
   });
   const livesResult = await commitEvent(session.id, livesEnvelope);
   if (!livesResult.ok) {
-    console.error("Failed to commit PARALLEL_LIVES_COMMITTED:", livesResult.message);
+    console.error("Failed to commit PARALLEL_LIVES_COMMITTED:", livesResult.code, livesResult.message);
+    sendSSE("error", {
+      error: `无法保存三条平行人生（${livesResult.code}: ${livesResult.message}）`,
+      reason: livesResult.message,
+      code: livesResult.code,
+      retryable: livesResult.code === "PERSISTENCE_ERROR" || livesResult.code === "REVISION_CONFLICT",
+    });
+    safeClose();
+    return;
   }
 
   // Persist the raw v3 plan so reload or re-clicks return the same result.
