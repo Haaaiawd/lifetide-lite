@@ -201,14 +201,27 @@ test.describe("Upload boundary", () => {
     await ctx.close();
   });
 
-  test("retry re-parses an existing file", async ({ browser }) => {
+  test("re-uploading after a failed upload succeeds (client-side retry)", async ({ browser }) => {
     const ctx = await browser.newContext();
     const request = ctx.request;
 
-    await request.get(`${baseURL}/api/session`);
+    const sessionRes = await request.get(`${baseURL}/api/session`);
+    const session = await sessionRes.json();
     await giveConsent(request);
 
-    // Upload a JSON file that the parser can handle
+    // The server does not retain raw file bytes, so retry means the client
+    // uploads the file again. A leftover FAILED record must not block it.
+    await prisma.upload.create({
+      data: {
+        sessionId: session.id,
+        fileName: "broken.docx",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        size: 123,
+        status: "failed",
+        error: "corrupt file",
+      },
+    });
+
     const res = await request.post(`${baseURL}/api/uploads`, {
       multipart: {
         file: {
@@ -218,15 +231,11 @@ test.describe("Upload boundary", () => {
         },
       },
     });
+    expect(res.status()).toBe(201);
     const body = await res.json();
-    const uploadId = body.upload.id;
+    expect(body.upload.status).toBe("ready");
 
-    const retry = await request.post(`${baseURL}/api/uploads/${uploadId}/retry`);
-    expect(retry.status()).toBe(200);
-    const retryBody = await retry.json();
-    expect(retryBody.upload.status).toBe("ready");
-
-    const chunks = retryBody.upload.chunks;
+    const chunks = body.upload.chunks;
     expect(chunks.length).toBeGreaterThan(0);
     const joined = chunks.map((c: { text: string }) => c.text).join(" ");
     expect(joined).toContain("type: INTJ");

@@ -160,23 +160,34 @@ export function buildWaveFromProposal(
     asks_for_concrete_example: boolean;
     allows_skip: true;
     allows_free_text: true;
-  } => ({
-    id: `q-${index}-${i}`,
-    wave_id: waveId,
-    microbatch_id: batchId,
-    generation_provenance_id: missionId,
-    order_in_wave: i + 1,
-    elicitation_unit_id: elicitationUnits[q.elicitation_unit_index ?? i].id,
-    text: q.text,
-    response_kind: q.response_kind,
-    options: q.options?.map((o, j): QuestionOption => ({ id: `opt-${j}`, generation_provenance_id: missionId, label: o.label, description: o.description })),
-    sensitivity: q.sensitivity,
-    why_this_matters: q.why_this_matters ?? "",
-    decision_target: q.decision_target,
-    asks_for_concrete_example: q.asks_for_concrete_example,
-    allows_skip: q.allows_skip,
-    allows_free_text: q.allows_free_text,
-  }));
+  } => {
+    const fallbackIndex = Math.min(i, Math.max(0, elicitationUnits.length - 1));
+    const euIndex =
+      typeof q.elicitation_unit_index === "number"
+        ? Math.max(0, Math.min(q.elicitation_unit_index, elicitationUnits.length - 1))
+        : fallbackIndex;
+    const elicitationUnit = elicitationUnits[euIndex] ?? elicitationUnits[0] ?? {
+      id: `eu-fallback-${index}-${i}`,
+    };
+
+    return {
+      id: `q-${index}-${i}`,
+      wave_id: waveId,
+      microbatch_id: batchId,
+      generation_provenance_id: missionId,
+      order_in_wave: i + 1,
+      elicitation_unit_id: elicitationUnit.id,
+      text: q.text,
+      response_kind: q.response_kind,
+      options: q.options?.map((o, j): QuestionOption => ({ id: `opt-${j}`, generation_provenance_id: missionId, label: o.label, description: o.description })),
+      sensitivity: q.sensitivity,
+      why_this_matters: q.why_this_matters ?? "",
+      decision_target: q.decision_target,
+      asks_for_concrete_example: q.asks_for_concrete_example,
+      allows_skip: q.allows_skip,
+      allows_free_text: q.allows_free_text,
+    };
+  });
 
   const microbatch = {
     id: batchId,

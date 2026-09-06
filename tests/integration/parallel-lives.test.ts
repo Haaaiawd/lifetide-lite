@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { postWaveSSE } from "./sse-helpers";
+import { postWaveSSE, postPortraitSSE, postFinalSSE } from "./sse-helpers";
 import type { FinalPlan, WorkingMemory } from "@/lib/working-memory/types";
 
 if ("loadEnvFile" in process) {
@@ -84,12 +84,10 @@ test.describe("Parallel lives and prototype contract", () => {
     await runTwoWaves(request, session.id);
 
     // Generate portrait before final plan (required by API).
-    const portraitRes = await request.post(`${baseURL}/api/portrait`);
-    expect(portraitRes.status()).toBe(200);
+    const { doneData: portrait } = await postPortraitSSE(request, baseURL);
+    expect(portrait.portrait.essence).toBeTruthy();
 
-    const finalRes = await request.post(`${baseURL}/api/final`);
-    expect(finalRes.status()).toBe(200);
-    const plan: FinalPlan = await finalRes.json();
+    const { doneData: plan } = await postFinalSSE(request, baseURL);
 
     expect(plan.schema_version).toBe("parallel-lives.v3.ui");
     expect(plan.session_id).toBe(session.id);
@@ -153,12 +151,15 @@ test.describe("Parallel lives and prototype contract", () => {
     const ctx = await browser.newContext();
     const request = ctx.request;
 
-    await request.get(`${baseURL}/api/session`);
+    const sessionRes = await request.get(`${baseURL}/api/session`);
+    const session = await sessionRes.json();
     await giveConsent(request);
-    await runTwoWaves(request, "");
+    await runTwoWaves(request, session.id);
 
-    const finalRes = await request.post(`${baseURL}/api/final`);
-    const plan: FinalPlan = await finalRes.json();
+    // Generate portrait before final plan (required by API).
+    await postPortraitSSE(request, baseURL);
+
+    const { doneData: plan } = await postFinalSSE(request, baseURL);
 
     const [a, b, c] = plan.lives;
     const summary = (life: typeof a) => `${life.title} ${life.core_experience} ${life.ordinary_day} ${life.year_1}`;
@@ -198,12 +199,10 @@ test.describe("Parallel lives and prototype contract", () => {
     });
 
     // Generate portrait before final plan (required by API).
-    const portraitRes = await request.post(`${baseURL}/api/portrait`);
-    expect(portraitRes.status()).toBe(200);
+    const { doneData: portrait } = await postPortraitSSE(request, baseURL);
+    expect(portrait.portrait.essence).toBeTruthy();
 
-    const finalRes = await request.post(`${baseURL}/api/final`);
-    expect(finalRes.status()).toBe(200);
-    const plan: FinalPlan = await finalRes.json();
+    const { doneData: plan } = await postFinalSSE(request, baseURL);
 
     expect(plan.provisional).toBe(false);
     expect(plan.lives.length).toBe(3);

@@ -8,26 +8,38 @@ if ("loadEnvFile" in process) {
 const prisma = new PrismaClient();
 const baseURL = "http://localhost:3000";
 
-// Helper: create an invite code directly in DB for testing
-async function createTestInviteCode(): Promise<string> {
+// Helper: create an invite code directly in DB for testing.
+// Retries on transient SQLite write contention — the whole integration
+// suite shares one dev.db across parallel workers.
+async function createTestInviteCode(maxUses = 100): Promise<string> {
   const { randomBytes } = await import("node:crypto");
   const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code: string;
-  do {
-    code = Array.from(randomBytes(8)).map((b) => CHARSET[b % CHARSET.length]).join("");
-  } while (await prisma.inviteCode.findUnique({ where: { code } }));
-  await prisma.inviteCode.create({ data: { code, maxUses: 100, note: "test" } });
-  return code;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      let code: string;
+      do {
+        code = Array.from(randomBytes(8)).map((b) => CHARSET[b % CHARSET.length]).join("");
+      } while (await prisma.inviteCode.findUnique({ where: { code } }));
+      await prisma.inviteCode.create({ data: { code, maxUses, note: "test" } });
+      return code;
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
+
+test.describe.configure({ mode: "serial" });
 
 test.describe("Auth: register, login, logout, me", () => {
   test.setTimeout(30000);
   test.afterAll(async () => {
     const users = await prisma.user.findMany({ where: { email: { startsWith: "auth-test-" } } });
-    for (const u of users) {
-      await prisma.session.updateMany({ where: { userId: u.id }, data: { userId: null } });
-      await prisma.user.delete({ where: { id: u.id } });
-    }
+    const ids = users.map((u) => u.id);
+    await prisma.session.updateMany({ where: { userId: { in: ids } }, data: { userId: null } });
+    await prisma.user.deleteMany({ where: { id: { in: ids } } });
     await prisma.inviteCode.deleteMany({ where: { note: "test" } });
     await prisma.$disconnect();
   });
@@ -264,13 +276,7 @@ test.describe("Auth: register, login, logout, me", () => {
   test("invite code with maxUses=1 is exhausted after one use", async ({ browser }) => {
     const email1 = makeEmail();
     const email2 = makeEmail();
-    const { randomBytes } = await import("node:crypto");
-    const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code: string;
-    do {
-      code = Array.from(randomBytes(8)).map((b) => CHARSET[b % CHARSET.length]).join("");
-    } while (await prisma.inviteCode.findUnique({ where: { code } }));
-    await prisma.inviteCode.create({ data: { code, maxUses: 1, note: "test" } });
+    const code = await createTestInviteCode(1);
 
     // First registration — should succeed
     const ctx1 = await browser.newContext();

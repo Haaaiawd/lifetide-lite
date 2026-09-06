@@ -96,13 +96,10 @@ export function UploadPanel() {
   };
 
   const retry = async (id: string) => {
-    const res = await fetch(`/api/uploads/${id}/retry`, { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error || "重试失败");
-      return;
-    }
-    setUploads((prev) => prev.map((u) => (u.id === id ? data.upload ?? u : u)));
+    // The server does not keep the raw file, so retry is a client-side
+    // re-upload: remove the failed record, then open the file picker.
+    await remove(id);
+    fileRef.current?.click();
   };
 
   const remove = async (id: string) => {

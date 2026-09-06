@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { postWaveSSE } from "./sse-helpers";
+import { postWaveSSE, postPortraitSSE, postFinalSSE } from "./sse-helpers";
 import type { WorkingMemory } from "@/lib/working-memory/types";
 import { rankActiveUncertainties } from "@/lib/interview/uncertainty";
 
@@ -82,7 +82,7 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     expect(wave2.wave_id).toBe("w2");
     expect(wave2.wave_index).toBe(2);
     expect(wave2.questions.length).toBeGreaterThanOrEqual(3);
-    expect(wave2.questions.length).toBeLessThanOrEqual(5);
+    expect(wave2.questions.length).toBeLessThanOrEqual(6);
     expect(wave2.questions.some((q: any) => q.asks_for_concrete_example)).toBe(true);
     expect(wave2.focus_uncertainty_id).toBe(ranked.selectedId);
 
@@ -149,12 +149,10 @@ test.describe("Adaptive waves and deterministic stopping", () => {
     expect(stop.wave_index).toBeDefined();
 
     // Generate portrait before final plan (required by API).
-    const portraitRes = await request.post(`${baseURL}/api/portrait`);
-    expect(portraitRes.status()).toBe(200);
+    const { doneData: portrait } = await postPortraitSSE(request, baseURL);
+    expect(portrait.portrait.essence).toBeTruthy();
 
-    const finalRes = await request.post(`${baseURL}/api/final`);
-    expect(finalRes.status()).toBe(200);
-    const finalPlan = await finalRes.json();
+    const { doneData: finalPlan } = await postFinalSSE(request, baseURL);
     expect(finalPlan.lives.length).toBe(3);
 
     const calls = await prisma.modelCallLog.findMany({

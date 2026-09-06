@@ -95,7 +95,7 @@ model Upload {
   size       Int
   status     String        // "queued" | "scanning" | "parsing" | "ready" | "rejected" | "failed" | "deleted"
   error      String?
-  rawBase64  String?       // original file content, base64, for retry / audit
+  rawBase64  String?       // legacy column, never populated — retry is a client-side re-upload
   chunks     UploadChunk[]
   derived    DerivedContent[]
   createdAt  DateTime      @default(now())

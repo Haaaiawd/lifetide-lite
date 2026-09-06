@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { postWaveSSE } from "./sse-helpers";
+import { postWaveSSE, postPortraitSSE, postFinalSSE } from "./sse-helpers";
 
 if ("loadEnvFile" in process) {
   (process as NodeJS.Process & { loadEnvFile(path: string): void }).loadEnvFile(".env");
@@ -77,9 +77,10 @@ test.describe("XState ledger end-to-end", () => {
     expect(stop.can_generate).toBe(true);
     expect(stop.wave_index).toBeDefined();
 
-    const finalRes = await request.post(`${baseURL}/api/final`);
-    expect(finalRes.status()).toBe(200);
-    const plan = await finalRes.json();
+    // Generate portrait before final plan (required by API).
+    await postPortraitSSE(request, baseURL);
+
+    const { doneData: plan } = await postFinalSSE(request, baseURL);
     expect(plan.lives).toHaveLength(3);
 
     // Ledger assertions.
