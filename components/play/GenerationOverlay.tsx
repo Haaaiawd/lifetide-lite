@@ -303,9 +303,13 @@ function ThinkingCard({ text, reduce }: { text: string; reduce: boolean | null }
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-cobalt" />
         <span className="text-xs font-medium uppercase tracking-wide">思考中</span>
       </div>
-      <p className="font-serif text-sm leading-relaxed text-ink md:text-base">
-        <TypewriterText text={text} hideCursor={false} />
+      <p
+        aria-hidden="true"
+        className="select-none font-serif text-sm leading-relaxed tracking-[0.15em] text-ink/40 md:text-base"
+      >
+        {obscureText(text)}<span className="animate-pulse text-cobalt/50">▎</span>
       </p>
+      <span className="sr-only">正在整理思路</span>
     </motion.div>
   );
 }

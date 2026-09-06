@@ -1045,7 +1045,6 @@ export default function PlayPage() {
           streamingSections={
             streamingPortrait
               ? [
-                  ...(streamingPortrait.thinking ? [{ label: "思考中", text: streamingPortrait.thinking }] : []),
                   { label: "一句话", text: streamingPortrait.essence ?? "" },
                   { label: "特质概要", text: streamingPortrait.trait_summary ?? "" },
                 ].filter((s) => s.text)

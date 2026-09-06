@@ -792,7 +792,7 @@ export const analysisSchema = z.object({
 export type Analysis = z.infer<typeof analysisSchema>;
 
 export const parallelLivesPlanSchema = z.object({
-  // Optional reasoning stream — shown live during generation.
+  // Optional provider field retained for backward compatibility; never shown.
   thinking: z.string().optional(),
 
   id: idSchema,

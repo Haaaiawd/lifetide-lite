@@ -52,6 +52,16 @@ describe("Fallback plan completeness (revision 5)", () => {
     }
   });
 
+  it("each life has a short, tension-bearing full appellation", () => {
+    for (const life of plan.lives) {
+      expect(life.title_full).toBeTruthy();
+      expect(life.title_full!.length).toBeGreaterThanOrEqual(6);
+      expect(life.title_full!.length).toBeLessThanOrEqual(10);
+      expect(life.title_full!.split("的")).toHaveLength(2);
+      expect(life.title_full).toContain(life.title);
+    }
+  });
+
   it("each life has day_narrative with 10-16 scenes", () => {
     for (const life of plan.lives) {
       expect(life.day_narrative).toBeDefined();

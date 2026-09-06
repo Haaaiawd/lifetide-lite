@@ -92,8 +92,8 @@ export const fixtureRoutes: Route[] = [
   {
     id: "route-continuation",
     number: "01",
-    title: "深耕者",
-    titleFull: "在熟悉的土壤里慢慢扎根的深耕者",
+    title: "未熄者",
+    titleFull: "安稳藏火的未熄者",
     coreExperience: "在当前轨道上争取更多解释空间，而不是只追求晋升。",
     year1: '第一年：在现有领域内部寻找能回答"我究竟在做什么"的小范围角色。',
     year2: "第二年：根据反馈决定是扩大这个新角色，还是换一组人合作。",
@@ -141,8 +141,8 @@ export const fixtureRoutes: Route[] = [
   {
     id: "route-adjacent",
     number: "02",
-    title: "摆渡人",
-    titleFull: "在此岸与彼岸之间试探水深的摆渡人",
+    title: "借火者",
+    titleFull: "手握退路的借火者",
     coreExperience: "把当前能力迁移到相邻领域，保留收入下限的同时验证新方向。",
     year1: "第一年：把现有能力拆解成可迁移的技能组合，并接触相邻领域。",
     year2: "第二年：用兼职、志愿或课程形式做最小实践，收集真实反馈。",
@@ -189,8 +189,8 @@ export const fixtureRoutes: Route[] = [
   {
     id: "route-release",
     number: "03",
-    title: "拾光人",
-    titleFull: "把散落的微光一点点拾起的拾光人",
+    title: "夜渡者",
+    titleFull: "白日守岸的夜渡者",
     coreExperience: "用低固定成本探索更不一样的可能，换取最大的信息量和自我认识。",
     year1: "第一年：降低生活固定成本，允许自己尝试不同方向。",
     year2: "第二年：锁定一个或两个最有趣的实验，继续验证。",

@@ -24,11 +24,20 @@ const TRAIT_COLORS: Record<TraitDimension, string> = {
 };
 
 const RADAR_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  grounded: { bg: "bg-success-soft", text: "text-success", label: "已 grounded" },
-  signaled: { bg: "bg-cobalt-soft", text: "text-cobalt", label: "signaled" },
-  conflicted: { bg: "bg-danger-soft", text: "text-danger", label: "conflicted" },
-  unseen: { bg: "bg-paper", text: "text-ink-muted", label: "unseen" },
-  declined: { bg: "bg-paper", text: "text-ink-muted", label: "declined" },
+  grounded: { bg: "bg-success-soft", text: "text-success", label: "较充分" },
+  signaled: { bg: "bg-cobalt-soft", text: "text-cobalt", label: "有线索" },
+  conflicted: { bg: "bg-danger-soft", text: "text-danger", label: "有冲突" },
+  unseen: { bg: "bg-paper", text: "text-ink-muted", label: "未涉及" },
+  declined: { bg: "bg-paper", text: "text-ink-muted", label: "不讨论" },
+};
+
+const RADAR_DIMENSION_LABELS: Record<string, string> = {
+  traits: "特质",
+  motivation: "动机",
+  capabilities: "能力",
+  relationships: "关系",
+  environment: "环境",
+  narrative: "叙事",
 };
 
 const CONFIDENCE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -268,7 +277,7 @@ export function PortraitCard({ portrait }: { portrait: PersonaPortrait }) {
                   <div key={cell.dimension} className={`border border-ink/30 p-2 ${style.bg}`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-                        {cell.dimension}
+                        {RADAR_DIMENSION_LABELS[cell.dimension] ?? cell.dimension}
                       </span>
                       <span className={`text-[10px] font-medium ${style.text}`}>
                         {style.label}

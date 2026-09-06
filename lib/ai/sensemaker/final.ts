@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { streamStructured, getProviderConfig } from "@/lib/ai/client";
 import { composePrompt } from "@/lib/ai/prompts/compose";
-import { parallelLivesPlanSchema, analysisFindingSchema } from "@/lib/state/contracts";
+import { parallelLivesPlanSchema, parallelLifeSchema, analysisFindingSchema } from "@/lib/state/contracts";
 import { portraitToContext } from "@/lib/ai/sensemaker/portrait";
 import type { EvidenceLink, SourceVersion, SourceHead, WorkingMemory, SensemakerFinalInput } from "@/lib/working-memory/types";
 import type { RouteIntent, Prototype, ParallelLife, ParallelLivesPlan, PrototypeEmbed, DayNarrative, Analysis, AnalysisFinding, DesignBasis } from "@/lib/state/contracts";
@@ -38,12 +38,17 @@ const coercedProblemFrameSchema = z.object({
   design_question: coerceFinding.nullable(),
 });
 
-// Build a coerced version of the full plan schema by extending the original.
-// We use .extend() to override just the problem_frame field.
+// Build the generation schema: accept compact analysis findings while requiring
+// the new full appellation that remains optional only for stored-plan compatibility.
+const generatedParallelLifeSchema = parallelLifeSchema.extend({
+  title_full: z.string().min(6).max(10),
+});
+
 const coercedPlanSchema = parallelLivesPlanSchema.extend({
   analysis: parallelLivesPlanSchema.shape.analysis.extend({
     problem_frame: coercedProblemFrameSchema,
   }),
+  lives: z.array(generatedParallelLifeSchema).length(3),
 });
 
 const RANKING_TERMS = ["最佳", "最好", "最适合你", "推荐", "首选", "安全选择", "冠军", "plan b", "b 计划", "最安全"];
@@ -142,18 +147,18 @@ export function buildPrototype(
   embedded?: PrototypeEmbed
 ): Prototype {
   const base = embedded ?? {
-    hypothesis: `用三天小步验证「${lifeTitle}」这个方向是否真实适合自己。`,
-    today_action: "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
-    what_to_observe: "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
-    day_1: `接触一个与「${lifeTitle}」相关的真实信息源：人、作品、活动或环境。`,
-    day_2: "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
-    day_3: "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+    hypothesis: `花三天看看，「${lifeTitle}」过起来到底像不像你。`,
+    today_action: "找一个正在过这种生活的人，问他能不能聊二十分钟；只问一天怎么过，别先问成不成功。",
+    what_to_observe: "记住哪一刻你忘了看时间，哪一刻你只想赶快结束。",
+    day_1: `找一个最接近「${lifeTitle}」的人、地方或作品，真正靠近一次。`,
+    day_2: "亲手做一件这条路上每天都会做的小事，哪怕只做半小时。",
+    day_3: "写下还想再来一次的瞬间，以及再也不想忍受的部分。",
     time_ceiling_hours: 3,
     money_ceiling: "0 元或单次公共交通/一杯咖啡",
     reversible_because: "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
-    feedback_source: "自己的能量变化、具体事件和可接触的人。",
-    continue_signal: "想再试一次，或能说出至少一个真实吸引点。",
-    pause_or_exit_note: "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+    feedback_source: "做完以后，你还想不想再来一次，以及那个正在过这种生活的人说了什么。",
+    continue_signal: "三天结束后，你已经在想下一次要做什么。",
+    pause_or_exit_note: "如果每次都只剩硬撑，或者真实日常和想象完全不是一回事，就先停。",
     safety_check: "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。",
   };
   return {
@@ -177,25 +182,25 @@ export function buildPrototypesForPlan(
 function fallbackYearsForTitle(titleHint: string) {
   if (titleHint.includes("延续")) {
     return {
-      year_2: "第二年：在现有轨道内争取更多解释空间，把可迁移能力打磨得更明显。",
-      year_3: "第三年：获得一个能承载当前经验的新角色或项目，同时保留退出空间。",
+      year_2: "第二年：手上的旧事还在做，但别人开始因为另一件事来找你。",
+      year_3: "第三年：那件原本只占一小块时间的事，已经能在生活里站稳脚。",
     };
   }
   if (titleHint.includes("邻近") || titleHint.includes("转向")) {
     return {
-      year_2: "第二年：把已有能力迁移到相邻领域，验证新方向的收入与节奏。",
-      year_3: "第三年：形成一条半自主的新轨道，既有稳定来源也有继续扩展的出口。",
+      year_2: "第二年：你不再从头学起，过去会的东西开始在新地方派上用场。",
+      year_3: "第三年：新生活能付一部分账单，旧生活也还没有被你一把推开。",
     };
   }
   if (titleHint.includes("释放")) {
     return {
-      year_2: "第二年：降低固定成本后，允许自己尝试两到三个差异更大的小实验。",
-      year_3: "第三年：把验证过的元素组合成一段更自由但可持续的生活模式。",
+      year_2: "第二年：花销少了一些，试过的事多了几件，其中有一件总让你想回去。",
+      year_3: "第三年：你没有找到标准答案，只是终于知道哪些日子愿意再过一遍。"
     };
   }
   return {
-    year_2: "第二年：根据第一年反馈，决定是否扩大投入或调整比例。",
-    year_3: "第三年：形成一段更稳定的生活模式，但仍保留退出空间。",
+    year_2: "第二年：做过几次以后，你知道该多留一点时间，还是到这里就够了。",
+    year_3: "第三年：生活有了新的重心，但你仍然可以转身。"
   };
 }
 
@@ -300,18 +305,18 @@ export function buildFallbackAnalysis(memory: WorkingMemory): Analysis {
 
 function buildFallbackPrototype(titleHint: string): PrototypeEmbed {
   return {
-    hypothesis: `用三天小步验证「${titleHint}」这个方向是否真实适合自己。`,
-    today_action: "列出这个方向需要接触的一个真实信息源，并预约一次简短访谈或体验。",
-    what_to_observe: "注意自己的能量变化、完成最小动作后的感受，以及获得的新信息。",
-    day_1: `接触一个与「${titleHint}」相关的真实信息源：人、作品、活动或环境。`,
-    day_2: "做一次最小实践：旁听、阅读关键章节、完成一次模拟任务或记录一段真实场景。",
-    day_3: "写下最明显的吸引点和最不适应的点，并判断是否值得继续。",
+    hypothesis: `花三天看看，「${titleHint}」过起来到底像不像你。`,
+    today_action: "找一个正在过这种生活的人，问他能不能聊二十分钟；只问一天怎么过，别先问成不成功。",
+    what_to_observe: "记住哪一刻你忘了看时间，哪一刻你只想赶快结束。",
+    day_1: `找一个最接近「${titleHint}」的人、地方或作品，真正靠近一次。`,
+    day_2: "亲手做一件这条路上每天都会做的小事，哪怕只做半小时。",
+    day_3: "写下还想再来一次的瞬间，以及再也不想忍受的部分。",
     time_ceiling_hours: 3,
     money_ceiling: "0 元或单次公共交通/一杯咖啡",
     reversible_because: "三天内只做观察与小步接触，不涉及离开、购买或向他人公开承诺，随时可停止。",
-    feedback_source: "自己的能量变化、具体事件和可接触的人。",
-    continue_signal: "想再试一次，或能说出至少一个真实吸引点。",
-    pause_or_exit_note: "感到明显消耗、无法完成最小实践，或发现前提假设不成立时，可随时暂停或退出。",
+    feedback_source: "做完以后，你还想不想再来一次，以及那个正在过这种生活的人说了什么。",
+    continue_signal: "三天结束后，你已经在想下一次要做什么。",
+    pause_or_exit_note: "如果每次都只剩硬撑，或者真实日常和想象完全不是一回事，就先停。",
     safety_check: "不透露真实身份信息给陌生人，不涉及金钱预付，不影响现有健康或照护安排。",
   };
 }
@@ -320,7 +325,8 @@ function buildFallbackLifeFromRouteIntent(
   sessionId: string,
   provenanceId: string,
   intent: RouteIntent,
-  memory: WorkingMemory
+  memory: WorkingMemory,
+  index: number
 ): ParallelLife {
   const years = fallbackYearsForTitle(intent.title_hint);
   const evidence = makeEvidenceLinks(memory, intent, 3);
@@ -332,31 +338,38 @@ function buildFallbackLifeFromRouteIntent(
   const uncertainties: [string, ...string[]] =
     relatedUncertainties.length > 0
       ? (relatedUncertainties.slice(0, 2) as [string, ...string[]])
-      : ["这个方向最大的不确定是什么。"];
+      : ["真正连着过一个月以后，你还会想继续吗？"];
+
+  const appellations = [
+    { title: "未熄者", full: "安稳藏火的未熄者" },
+    { title: "借火者", full: "手握退路的借火者" },
+    { title: "夜渡者", full: "白日守岸的夜渡者" },
+  ];
+  const appellation = appellations[index % appellations.length];
 
   return {
     id: randomUUID(),
     route_intent_id: intent.id,
     generation_provenance_id: provenanceId,
-    design_basis: buildFallbackDesignBasis(intent.title_hint, 0),
-    title: intent.title_hint,
-    title_full: `把「${intent.title_hint}」慢慢过成日常的人`,
-    core_experience: `在${intent.life_shape.daily_rhythm}的节奏里，逐步确认自己真正愿意重复的日常。`,
-    year_1: `第一年：${intent.life_shape.work_or_study}，逐步验证这个方向的真实节奏。`,
+    design_basis: buildFallbackDesignBasis(intent.title_hint, index),
+    title: appellation.title,
+    title_full: appellation.full,
+    core_experience: `你不必马上推翻现在的生活，只是每天会有一段时间，终于轮到那件一直想做的事。`,
+    year_1: `第一年：${intent.life_shape.work_or_study}；最初很生疏，但日历上已经有一块时间真正属于它。`,
     year_2: years.year_2,
     year_3: years.year_3,
-    ordinary_day: `在${intent.life_shape.daily_rhythm}的节奏里，留出一小时给${intent.title_hint}，其余时间属于工作和${intent.life_shape.relationships}。`,
+    ordinary_day: `${intent.life_shape.daily_rhythm}；忙完手上的事，仍给那件想了很久的事留一小时，也没有把${intent.life_shape.relationships}丢在身后。`,
     day_narrative: buildFallbackDayNarrative(intent.title_hint, intent),
     attractions: [
       intent.life_shape.resources,
-      "获得更明确的方向信息",
-      "风险相对可控",
+      "终于知道想象里的日子过起来是什么滋味",
+      "不用先把现在拥有的一切推倒",
     ],
-    costs_and_tradeoffs: [intent.real_cost, "前两年仍然需要在工作和探索之间分配时间", "可能错过更确定的短期机会"],
+    costs_and_tradeoffs: [intent.real_cost, "前两年下班后仍有另一件事等着你，真正休息的晚上会变少", "有人已经往前走时，你可能还在两条路之间来回"],
     evidence_for: evidence,
-    assumptions: ["这个方向的真实节奏与想象中相差不大", "现实约束可以在两年内逐步调整"],
+    assumptions: ["真正过起来以后，它没有比想象中更耗人", "钱、时间和身边人的需要还留得出一点空隙"],
     uncertainties,
-    risks: ["把坚持误当作成长", "探索变成只说不做", "现实约束比预期更硬"],
+    risks: ["已经很累了，还把硬撑当成舍不得放手", "总在谈这条路，却一直没真正过上一天", "钱和时间比现在想的更不够用"],
     prototype: buildFallbackPrototype(intent.title_hint),
     trial_id: randomUUID(),
   };
@@ -369,26 +382,32 @@ function buildGenericFallbackLife(
   memory: WorkingMemory
 ): ParallelLife {
   const evidence = makeEvidenceLinks(memory, undefined, 1);
+  const appellations = [
+    { title: "探路者", full: "迷雾点灯的探路者" },
+    { title: "借火者", full: "手握退路的借火者" },
+    { title: "夜渡者", full: "白日守岸的夜渡者" },
+  ];
+  const appellation = appellations[index % appellations.length];
 
   return {
     id: randomUUID(),
     route_intent_id: randomUUID(),
     generation_provenance_id: provenanceId,
     design_basis: buildFallbackDesignBasis("探索型路线", index),
-    title: "探路的人",
-    title_full: "把散落的线索一条条拾起来的探路的人",
-    core_experience: "用更开放的节奏收集真实信息，先验证方向感再决定投入程度。",
-    year_1: "第一年：降低固定成本，允许自己尝试不同方向。",
-    year_2: "第二年：锁定一个或两个最有趣的实验，继续验证。",
-    year_3: "第三年：把验证过的元素组合成更稳定的生活模式。",
-    ordinary_day: "白天保留轻度收入来源，下午和晚上用于探索、访谈和小型实践。",
+    title: appellation.title,
+    title_full: appellation.full,
+    core_experience: "先不急着决定余生，只把不同的日子真的过一遍。",
+    year_1: "第一年：花销压低一点，给几件一直想试的事腾出整块时间。",
+    year_2: "第二年：大多数尝试已经放下，只有一两件事总让你想回去。",
+    year_3: "第三年：你没有找到标准答案，只是终于知道哪些日子愿意再过一遍。",
+    ordinary_day: "白天做些能付账单的事，下午去见人、动手试，晚上记下哪一刻想继续、哪一刻想逃。",
     day_narrative: buildFallbackDayNarrative("探索"),
-    attractions: ["获得最大信息量", "更早知道自己不想要什么", "减少沉没成本"],
-    costs_and_tradeoffs: ["收入和社会位置的不确定性增加", "身边人可能不理解"],
+    attractions: ["终于有时间把想了很久的事亲手做一次", "更早知道哪些日子根本不想再过", "不用因为已经走了很远，就逼自己继续走"],
+    costs_and_tradeoffs: ["每个月能花的钱会少一些，别人问起近况时也不容易一句说清", "身边人可能觉得你是在绕路"],
     evidence_for: evidence,
-    assumptions: ["探索过程中能维持基本收入和身心健康"],
-    uncertainties: ["资金来源和生活节奏能维持多久"],
-    risks: ["探索变成漂移", "没有定期复盘", "外部压力导致过早放弃"],
+    assumptions: ["手上的钱和身体，都撑得住这段暂时没有答案的日子"],
+    uncertainties: ["这样的收入和作息，你能安心过多久？"],
+    risks: ["每天看似很自由，回头却说不出真正做成了什么", "只顾着试新东西，忘了停下来选一个继续", "旁人的着急比你更早替你做了决定"],
     prototype: buildFallbackPrototype("探索型路线"),
     trial_id: randomUUID(),
   };
@@ -401,7 +420,7 @@ export function buildFallbackParallelLivesPlan(
   provenanceId: string
 ): ParallelLivesPlan {
   const activeIntents = memory.route_intents.filter((r) => r.status === "seed" || r.status === "accepted");
-  const fromIntents = activeIntents.slice(0, 3).map((intent) => buildFallbackLifeFromRouteIntent(sessionId, provenanceId, intent, memory));
+  const fromIntents = activeIntents.slice(0, 3).map((intent, index) => buildFallbackLifeFromRouteIntent(sessionId, provenanceId, intent, memory, index));
 
   const lives: ParallelLife[] = [...fromIntents];
   while (lives.length < 3) {
@@ -425,14 +444,14 @@ export function buildFallbackParallelLivesPlan(
     provisional: false,
     framing: "这是根据你目前回答生成的三种可能，不是预测，也不是建议。",
     blueprint: {
-      current_coordinate: "站在继续积累和开始转向之间，两边都有吸引力但节奏不同。",
-      key_tensions: ["稳定与探索之间的时间分配", "现有能力是否足以支撑新方向"],
-      recurring_elements: ["保留学习的好奇心", "维持与身边人的关系"],
+      current_coordinate: "你还没舍得放下现在拥有的，又不甘心往后的日子只是今天的重复。",
+      key_tensions: ["你想换一种活法，又舍不得这份来之不易的确定", "过去会的东西很多，可你还不知道它们到了新地方算不算数"],
+      recurring_elements: ["总要有点新东西可学", "再往前走，也不想把身边的人落下"],
     },
     analysis: buildFallbackAnalysis(memory),
     lives: lives as [ParallelLife, ParallelLife, ParallelLife],
-    shared_values: ["真实信息优先于过早决定", "允许自己先小步试玩"],
-    real_tradeoff: "没有一条路能同时保留安全感、信息量和速度；重点是你愿意用三年时间验证哪个方向。",
+    shared_values: ["先亲手碰一碰，再决定要不要相信", "不因为换一条路，就把过去全部否定"],
+    real_tradeoff: "想走得快，就得先放掉一点安稳；想什么都不丢，时间会先被耗掉。",
     open_questions: openQuestions,
   };
 }
@@ -465,6 +484,12 @@ function validateParallelLivesPlan(plan: ParallelLivesPlan, memory: WorkingMemor
 
     if (life.uncertainties.length === 0 || life.risks.length === 0) {
       return { valid: false, reason: `Life ${life.id} missing uncertainties or risks` };
+    }
+
+    const fullTitle = life.title_full ?? "";
+    const deCount = [...fullTitle].filter((char) => char === "的").length;
+    if (fullTitle.length < 6 || fullTitle.length > 10 || deCount !== 1 || !fullTitle.includes(life.title)) {
+      return { valid: false, reason: `Life ${life.id} full appellation must be 6-10 characters with one 的 and include title` };
     }
 
     if (life.ordinary_day.length < 10) {
@@ -549,19 +574,17 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
     input.final_user_note || "（无）",
     "",
     "注意：只输出符合 ParallelLivesPlan schema 的纯 JSON 对象。必须为每条生活提供一个 trial_id；不要把完整的 prototype 嵌入生活。",
-    "每条 life.title 必须是诗意代称——给「一种人」的名字，两到六个字（如「深耕者」「拾光人」），不得使用职业名或岗位名；同时提供 title_full 作为这个称呼的完整版（如「醉意朦胧的清醒者」），它会在一天的场景之后作为落款展示。",
+    "每条 life.title 必须是给「一种人」的代称，两到六个字。先找最有力量的动作或处境，再长出称呼，如「借火者」「未熄者」「火中取粟者」；不得使用职业名、岗位名或温吞的抽象美词。title_full 必须包含 title，严格为 6–10 个汉字，只用「四字左右的状态／处境 + 的 + 人物代称」这一层结构，前后形成真实冲突，如「醉意朦胧的清醒者」「手握退路的借火者」；不用逗号，不写完整句，不出现第二个「的」。",
     "每条 life.evidence_for 中的 source_id 和 source_revision 必须严格来自上文 '=== 来源版本 ===' 中列出的活跃来源，使用对应的精确 source_id 和 revision，不要自行递增或假设版本号。",
+    "除字段名外，所有可读内容都要让普通人一遍听懂：写动作、处境和真实代价，不使用核心价值、内在驱力、意义感、资源整合、能力建设、阶段性目标、验证假设等报告腔，也不堆华丽词。",
   ].join("\n");
 }
 
 function makePrompt(input: SensemakerFinalInput): string {
-  return (
-    composePrompt<ParallelLivesPlan>(
-      "sensemaker_futures",
-      buildFinalEnvelope(input),
-      parallelLivesPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
-    ) +
-    "\n\n额外要求：在最终输出前，先在 `thinking` 字段中输出你的思考过程，比如你是如何从用户画像、约束和路线种子中推导出这三条生活的。这个字段会实时展示给用户，帮助他们理解这三条人生是怎么来的。"
+  return composePrompt<ParallelLivesPlan>(
+    "sensemaker_futures",
+    buildFinalEnvelope(input),
+    coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
   );
 }
 

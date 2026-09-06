@@ -75,7 +75,7 @@ export type RadarSnapshot = z.infer<typeof radarSnapshotSchema>;
 // ── Full portrait (model output schema) ──
 
 export const personaPortraitSchema = z.object({
-  // Optional thinking stream — shown to the user as a live reasoning trace.
+  // Optional provider field retained for backward compatibility; never shown.
   thinking: z.string().optional(),
 
   // Layer 1: 5 trait scales + summary paragraph
@@ -161,7 +161,7 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
       { dimension: "emotional_range", level: 2, label: "内敛但非压抑" },
     ],
     trait_summary:
-      `${summaryPrefix}你在独处时恢复能量，社交不算排斥但会消耗。偏好有基本框架的安排，不喜欢被精确到小时。面对新事物时倾向先了解再行动，不会冲动跳入。决策时反复权衡，但一旦定了就不太回头。情感表达偏内敛，不等于不感受，只是习惯自己消化。`,
+      `${summaryPrefix}一个人待着时，你会慢慢缓过来；人多并不难受，只是散场后需要安静一会儿。你喜欢手上有张大致的地图，但不想每一步都被规定。碰到新东西，你通常先站在岸上看清水深，真下了水，反而不太回头。很多话你不是没有，只是习惯留到自己能说清楚再开口。`,
     behavioral_patterns: [
       {
         pattern: "晚上效率明显高于白天，但不会主动调整白天安排来配合这个节奏",
@@ -169,7 +169,7 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
         confidence: "low",
       },
       {
-        pattern: "外部结构明确时随大流，自主空间大时能自我管理——两者之间有张力",
+        pattern: "别人把时间排好时，你很少改动；真把整天交给你，你反而知道先做什么",
         evidence_ref: fixtureRef,
         confidence: "low",
       },
@@ -183,11 +183,11 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
     relationship_mode:
       "和室友关系稳定但停留在日常层面，不主动深聊。对朋友有选择性——少数几个深的，其余维持友好距离。家人关系不坏但不太说心里话。",
     environment_fit:
-      "在当前城市和学校环境里过得还行，但没觉得属于这里。环境给了基本安全感，但缺少让你兴奋的触发点。",
+      "现在的城市和学校能把日子过下去，却很少让你在回去的路上还想着白天做的事。你需要一点秩序，也需要身边有人真的在做让你好奇的东西。",
     self_narrative:
       "你把自己叙述为'还没想好但正在找方向的人'。过去的几次尝试都被你说成'还没真正开始'，好像在等一个足够确定的东西才肯认账。",
     current_identity:
-      "目前定位自己是'在备考的学生'，但这个身份更像是默认状态而不是主动选择。",
+      "现在你最常用'在备考的学生'介绍自己，但听起来更像暂时住在这里，还没有真正把它当成自己的名字。",
     life_theme:
       "反复出现的主题是'准备好了再开始'——但准备的标准一直在提高，开始的时间一直在推迟。",
     said_vs_done: [
@@ -200,7 +200,7 @@ export function makeFixturePortrait(memory?: { source_versions: { source_id: str
     blind_spots: [
       {
         observation: "你很少提到什么让你兴奋——不是没有，可能是没被当成重要信息",
-        why_it_matters: "兴奋感是验证方向是否真实适合你的最直接信号",
+        why_it_matters: "下次真有一件事让你回家后还想继续，也许别急着把它当成一时兴起",
       },
     ],
     radar_snapshot: [

@@ -98,17 +98,15 @@ function buildPortraitEnvelope(memory: WorkingMemory): string {
     "",
     "注意：trait_scales 的 evidence_ref 中 source_id 和 source_revision 必须严格来自上文 '=== 活跃来源 ===' 中列出的活跃来源。",
     "behavioral_patterns 和 psychological_features 的 evidence_ref 同理。",
+    "所有可读字段必须用普通人一遍就能听懂的话：写具体行为和真实矛盾，不使用核心驱力、人格底色、关键张力、呈现出、反映了等分析腔，不堆华丽词。栏目字段保持原 schema，不把字段名写进正文。",
   ].join("\n");
 }
 
 function makePrompt(memory: WorkingMemory): string {
-  return (
-    composePrompt<PersonaPortraitProposal>(
-      "portrait",
-      buildPortraitEnvelope(memory),
-      personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>
-    ) +
-    "\n\n额外要求：在最终输出前，先在 `thinking` 字段中输出你的思考过程，比如你是如何从用户的回答中提取关键模式、矛盾和隐性偏好的。这个字段会实时展示给用户，帮助他们理解这个人格画像是怎么来的。"
+  return composePrompt<PersonaPortraitProposal>(
+    "portrait",
+    buildPortraitEnvelope(memory),
+    personaPortraitSchema as z.ZodType<PersonaPortraitProposal, z.ZodTypeDef, unknown>
   );
 }
 

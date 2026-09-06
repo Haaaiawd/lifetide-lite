@@ -164,47 +164,12 @@ export async function POST(request: NextRequest) {
         try {
           plan = await runSensemakerFinal(input, {
             onPartial: (partial) => {
-              // Send whatever text fields have content — thinking arrives first,
-              // then analysis, then lives.
               const sections: Array<{ label: string; text: string }> = [];
               const p = partial as Record<string, unknown>;
 
-              // Thinking stream — show the model's live reasoning.
-              if (typeof p?.thinking === "string" && p.thinking) {
-                sections.push({ label: "思考中", text: p.thinking });
-              }
-
-              // Analysis fields arrive next
-              const analysis = p?.analysis as Record<string, unknown> | undefined;
-              if (analysis) {
-                const pf = analysis.problem_frame as Record<string, unknown> | undefined;
-                if (typeof pf?.presenting_question === "string" && pf.presenting_question) {
-                  sections.push({ label: "你的问题", text: pf.presenting_question });
-                }
-                const dash = analysis.life_dashboard as Record<string, unknown> | undefined;
-                if (dash) {
-                  for (const [key, val] of Object.entries(dash)) {
-                    const finding = val as Record<string, unknown> | undefined;
-                    if (typeof finding?.summary === "string" && finding.summary) {
-                      const labelMap: Record<string, string> = {
-                        health: "健康", work_learning: "工作学习", play: "娱乐",
-                        relationships: "关系", cross_domain_effects: "跨领域影响",
-                      };
-                      sections.push({ label: labelMap[key] ?? key, text: finding.summary });
-                    }
-                  }
-                }
-                const compass = analysis.compass as Record<string, unknown> | undefined;
-                if (compass) {
-                  const wv = compass.workview as Record<string, unknown> | undefined;
-                  if (typeof wv?.summary === "string" && wv.summary) {
-                    sections.push({ label: "工作观", text: wv.summary });
-                  }
-                  const lv = compass.lifeview as Record<string, unknown> | undefined;
-                  if (typeof lv?.summary === "string" && lv.summary) {
-                    sections.push({ label: "生活观", text: lv.summary });
-                  }
-                }
+              const blueprint = p?.blueprint as Record<string, unknown> | undefined;
+              if (typeof blueprint?.current_coordinate === "string" && blueprint.current_coordinate) {
+                sections.push({ label: "先说一句真话", text: blueprint.current_coordinate });
               }
 
               // Lives arrive last — show title + ordinary_day as they fill in

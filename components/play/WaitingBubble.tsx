@@ -30,6 +30,12 @@ const PORTRAIT_THINKING = [
   "在找反复出现的东西……不是贴标签，是找一个真正能解释你几个行为的模式……",
 ];
 
+const HIDDEN_GLYPHS = "▓▒░";
+
+function maskThinking(text: string): string {
+  return [...text].map((char, i) => /\s/.test(char) ? char : HIDDEN_GLYPHS[(i * 7 + 3) % HIDDEN_GLYPHS.length]).join("");
+}
+
 type StreamingInsight = {
   user_told_me?: string;
   current_reading?: string;
@@ -53,7 +59,7 @@ export function WaitingBubble({
     return <StreamingBubble streamingInsight={streamingInsight} reduce={reduce} />;
   }
 
-  if (streamingPortrait && (streamingPortrait.thinking || streamingPortrait.essence || streamingPortrait.trait_summary)) {
+  if (streamingPortrait && (streamingPortrait.essence || streamingPortrait.trait_summary)) {
     return <StreamingPortraitBubble streamingPortrait={streamingPortrait} reduce={reduce} />;
   }
 
@@ -100,7 +106,6 @@ function StreamingBubble({ streamingInsight, reduce }: { streamingInsight: Strea
 /** Shows real streaming portrait text as it arrives from SSE. */
 function StreamingPortraitBubble({ streamingPortrait, reduce }: { streamingPortrait: { thinking?: string; essence?: string; trait_summary?: string }; reduce: boolean | null }) {
   const sections = [
-    { label: "思考中", text: streamingPortrait.thinking },
     { label: "一句话", text: streamingPortrait.essence },
     { label: "特质概要", text: streamingPortrait.trait_summary },
   ].filter((s) => s.text);
@@ -202,16 +207,12 @@ function ThinkingBubble({ variant, reduce }: { variant: "insight" | "final" | "w
         <PixelIcon name="sparkle" size={12} className="text-cobalt" />
       </span>
       <div className="max-w-[85%] rounded-sm border-2 border-ink bg-paper-raised px-4 py-3 text-base leading-snug shadow-sm">
-        <p className="font-serif text-lg leading-snug">
-          <span className="text-ink">{visibleText}</span>
-          <span
-            className="text-ink-muted"
-            style={{ opacity: 0.3, filter: "blur(0.4px)" }}
-          >
-            {fadeText}
-          </span>
-          <span className="animate-pulse">▎</span>
+        <p aria-hidden="true" className="select-none font-serif text-lg leading-snug tracking-[0.15em]">
+          <span className="text-ink/40">{maskThinking(visibleText)}</span>
+          <span className="text-ink/20">{maskThinking(fadeText)}</span>
+          <span className="animate-pulse text-cobalt/50">▎</span>
         </p>
+        <span className="sr-only">正在整理思路</span>
       </div>
     </motion.div>
   );
