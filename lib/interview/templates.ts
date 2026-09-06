@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { Question } from "@/lib/state/contracts";
 import type { InterviewQuestion } from "@/lib/working-memory/types";
 
-export const WAVE_1_VERSION = "2026.09.01-w1";
+export const WAVE_1_VERSION = "2026.09.02-w1";
 export const WAVE_1_ID = "w1";
 
 export function makeWave1Questions(): InterviewQuestion[] {
@@ -146,12 +146,12 @@ export function makeWave1Questions(): InterviewQuestion[] {
       id: "w1q8",
       wave_id: WAVE_1_ID,
       order: 8,
-      text: `最近在想什么？接下来可能想往哪个方向走？`,
-      why_this_matters: "这题是后面所有对话的起点——你写得越具体，后续越能问到位。可以写最近在纠结的事、一个模糊的方向、或者让你在意的一个选择，尽量多写几句。",
+      text: `最近发生了哪件事，让你开始想「接下来该怎么走」？`,
+      why_this_matters: "从一件真实发生的事开始，后面的问题才不会悬在空中。可以只写两三句话。",
       response_kind: "short_text",
       sensitivity: "normal",
       allows_skip: true,
-      asks_for_concrete_example: false,
+      asks_for_concrete_example: true,
     },
   ];
 }

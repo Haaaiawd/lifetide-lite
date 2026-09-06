@@ -15,7 +15,7 @@ import type {
   InsightCommitted,
   SessionStarted,
 } from "@/lib/state/events";
-import type { Answer, SourceVersion, SourceHead } from "@/lib/state/contracts";
+import type { Answer, EvidenceLink, SourceVersion, SourceHead } from "@/lib/state/contracts";
 import { makeWave1Questions, buildWave1Canonical, WAVE_1_ID, WAVE_1_VERSION } from "@/lib/interview/templates";
 import { runSensemakerWaveStream } from "@/lib/ai/sensemaker/wave";
 import { runInterviewer } from "@/lib/ai/interviewer";
@@ -166,6 +166,40 @@ function seedUncertaintyIfEmpty(
   };
 
   memory.uncertainties.push(uncertainty);
+}
+
+export function refreshInterviewFocus(
+  memory: WorkingMemory,
+  focusUncertaintyId: string | undefined,
+  waveIndex: number,
+  importantUnknown: string,
+  routeImpact: string,
+  evidence: EvidenceLink[],
+): void {
+  const topic = importantUnknown.trim();
+  if (!topic) return;
+
+  const focus = focusUncertaintyId
+    ? memory.uncertainties.find((u) => u.id === focusUncertaintyId && u.status === "active")
+    : selectedUncertainty(memory);
+
+  if (!focus) {
+    seedUncertaintyIfEmpty(memory, waveIndex, topic, evidence);
+    return;
+  }
+
+  const unchanged = focus.topic.trim() === topic;
+  focus.topic = topic;
+  focus.question = deriveShortQuestion(topic);
+  focus.plan_consequence = routeImpact;
+  focus.related_evidence = evidence;
+  focus.factors = {
+    ...focus.factors,
+    evidence_gap: evidence.length > 0 ? 1 : 2,
+    user_salience: 3,
+    repetition_cost: unchanged ? Math.min(3, focus.factors.repetition_cost + 1) as 0 | 1 | 2 | 3 : 0,
+  };
+  focus.priority = recomputeUncertaintyPriority(focus.factors);
 }
 
 export async function GET(request: NextRequest) {
@@ -912,18 +946,17 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        if (!nextMemory.uncertainties.some((u) => u.status === "active")) {
-          // Only seed uncertainty with evidence that points to active sources.
-          const validInsightEvidence = output.insight.evidence.filter((e) =>
-            isActiveSourceRef(nextMemory, e.source_id, e.source_revision)
-          );
-          seedUncertaintyIfEmpty(
-            nextMemory,
-            waveIndex,
-            output.insight.important_unknown,
-            validInsightEvidence.length > 0 ? validInsightEvidence : output.insight.evidence
-          );
-        }
+        const validInsightEvidence = output.insight.evidence.filter((e) =>
+          isActiveSourceRef(nextMemory, e.source_id, e.source_revision)
+        );
+        refreshInterviewFocus(
+          nextMemory,
+          wave.focus_uncertainty_id ?? undefined,
+          waveIndex,
+          output.insight.important_unknown,
+          output.insight.route_impact,
+          validInsightEvidence.length > 0 ? validInsightEvidence : output.insight.evidence,
+        );
 
         const config = getProviderConfig();
         const promptFileHash = wave_id === "w1" ? hashObject("lib/ai/sensemaker/wave1") : hashObject("prompts/sensemaker-wave-v2.md");

@@ -61,13 +61,14 @@ function sourceRef(answer: InterviewAnswer): SourceRef {
 function answerEvidence(
   answer: InterviewAnswer,
   excerpt: string,
-  relevance: string
+  relevance: string,
+  evidenceShape: EvidenceLink["evidence_shape"] = "abstract_statement"
 ): EvidenceLink {
   return {
     source_id: answer.id,
     source_revision: 1,
     epistemic_status: "user_stated",
-    evidence_shape: "concrete_scene",
+    evidence_shape: evidenceShape,
     relevance,
     excerpt,
   };
@@ -126,7 +127,7 @@ export function runWave1Sensemaker(
     links.push(answerEvidence(q7Answer, `当前阶段：${stage}`, "人生阶段"));
   }
   if (q8Answer && hook) {
-    links.push(answerEvidence(q8Answer, `想聊的事：${hook}`, "叙事钩子"));
+    links.push(answerEvidence(q8Answer, `触发事件：${hook}`, "具体触发事件", "concrete_scene"));
   }
 
   // Fallback source so the insight can always cite something.
@@ -135,11 +136,15 @@ export function runWave1Sensemaker(
       source_id: "w1-skipped",
       source_revision: 1,
       epistemic_status: "user_stated",
-      evidence_shape: "concrete_scene",
+      evidence_shape: "abstract_statement",
       relevance: "首波全部跳过，需后续补充",
       excerpt: "首波问题全部跳过，系统暂时只能依据你的主动选择来理解。",
     });
   }
+
+  const primaryEvidence = q8Answer && !q8Answer.skipped
+    ? [...links.filter((link) => link.source_id === q8Answer.id), ...links.filter((link) => link.source_id !== q8Answer.id)]
+    : links;
 
   const operations: MemoryOperation[] = [];
 
@@ -150,7 +155,7 @@ export function runWave1Sensemaker(
   if (intent) parts.push(`来这里想${intent}`);
   if (people) parts.push(`身边的人是「${people}」`);
   if (stage) parts.push(`当前阶段是「${stage}」`);
-  if (hook) parts.push(`最近想聊的是「${hook}」`);
+  if (hook) parts.push(`最近让自己开始重新考虑的是「${hook}」`);
   const claimText = parts.join("，") + "。";
 
   operations.push({
@@ -158,7 +163,7 @@ export function runWave1Sensemaker(
     value: {
       text: truncate(claimText, 280),
       epistemic_status: "working_inference",
-      evidence: links.slice(0, 6),
+      evidence: primaryEvidence.slice(0, 6),
       dimensions: ["narrative"],
     },
   });
@@ -184,7 +189,7 @@ export function runWave1Sensemaker(
           resources: "需后续波次具体化",
         },
         real_cost: cost,
-        evidence: links.slice(0, 3),
+        evidence: primaryEvidence.slice(0, 3),
       },
     });
   }
@@ -239,7 +244,7 @@ export function runWave1Sensemaker(
   if (intent) toldParts.push(`来这里想${intent}。`);
   if (people) toldParts.push(`身边的人是${people}。`);
   if (stage) toldParts.push(`当前阶段${stage}。`);
-  if (hook) toldParts.push(`最近想聊「${hook}」。`);
+  if (hook) toldParts.push(`最近发生的「${hook}」让你开始重新考虑接下来怎么走。`);
   const userToldMe = toldParts.join("");
 
   // Build current_reading: a provisional interpretation or tension, not a
@@ -247,13 +252,13 @@ export function runWave1Sensemaker(
   // verification in later waves — not a diagnosis.
   const readingParts: string[] = [];
   if (hook && intent && stage) {
-    readingParts.push(`一种可能的解读是：你想${intent}，现在${stage}，同时提到「${hook}」——这三者之间可能有一个尚未被说出来的张力。也许「${hook}」不只是兴趣，而是对当前${stage}状态的一种回应；也可能它只是一个模糊方向，还没有和具体行动连接。后续需要验证的是，这是信息不足还是行动受阻。`);
+    readingParts.push(`你想${intent}，现在${stage}，而「${hook}」让这件事从一个念头变成了需要认真面对的问题。这可能是一次偶发的不顺，也可能是某种生活状态已经重复很久；接下来要分清的，是你真正想改变哪一部分。`);
   } else if (hook && intent) {
-    readingParts.push(`你来这里想${intent}，同时提到「${hook}」。一种解读是「${hook}」背后有一个具体的场景或经历推动了你来，但目前还没有证据区分这是主动探索还是被动逃避。后续可以看看这个方向背后有没有已经发生过的具体行为。`);
+    readingParts.push(`你来这里想${intent}，「${hook}」是让这个念头变具体的时刻。目前还不知道它只是一次难熬的经历，还是已经反复出现的生活状态。`);
   } else if (hook && stage) {
-    readingParts.push(`你现在${stage}，提到最近在想「${hook}」。可能的张力在于：「${hook}」是对当前阶段的自然延伸，还是对它的某种不满？目前信息不足以区分这两种可能。`);
+    readingParts.push(`你现在${stage}，「${hook}」让你开始重新看待这个阶段。它可能只是眼前的一次波动，也可能说明现在的生活有一部分已经不再适合你。`);
   } else if (hook) {
-    readingParts.push(`你提到最近在想「${hook}」。这可能是当前最重要的一条线索，但目前还不知道它背后是已经有了具体行动、还只是一个想法。后续需要了解有没有已经发生的具体场景。`);
+    readingParts.push(`「${hook}」让你开始重新考虑接下来怎么走。现在还不知道这是一次偶发的不顺，还是某种生活状态已经重复了很久。`);
   } else if (intent && stage) {
     readingParts.push(`你说想${intent}，现在${stage}。一种可能的解读是：当前${stage}的状态在某种程度上维持着「还没行动」的舒适——想${intent}是真实的，但可能缺少一个触发点或允许自己试错的条件。这只是假设，后续可以验证。`);
   } else if (intent) {
@@ -270,11 +275,11 @@ export function runWave1Sensemaker(
     user_told_me: truncate(userToldMe, 280),
     current_reading: truncate(currentReading, 320),
     important_unknown: hook
-      ? `我暂不知晓的是「${hook}」背后的具体场景和阻碍——是缺乏信息、缺乏兴趣还是缺乏信心，目前还没有证据区分。`
+      ? `我暂不知晓的是「${hook}」只是一次偶发经历，还是某种生活状态已经反复出现，以及你真正想改变的是哪一部分。`
       : "我暂不知晓的是用户最近最关心的选择、卡点或变化的具体内容，需要后续波次补充。",
     radar_deltas: radarDeltas,
     route_impact: "Wave 1 不决定路线，只打开三个非排序框架供后续验证。",
-    evidence: links.slice(0, 6),
+    evidence: primaryEvidence.slice(0, 6),
     status: "proposed",
     language_strength: links.length >= 4 ? "well_supported" : "tentative",
   };
