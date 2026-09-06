@@ -340,6 +340,7 @@ function buildFallbackLifeFromRouteIntent(
     generation_provenance_id: provenanceId,
     design_basis: buildFallbackDesignBasis(intent.title_hint, 0),
     title: intent.title_hint,
+    title_full: `把「${intent.title_hint}」慢慢过成日常的人`,
     core_experience: `在${intent.life_shape.daily_rhythm}的节奏里，逐步确认自己真正愿意重复的日常。`,
     year_1: `第一年：${intent.life_shape.work_or_study}，逐步验证这个方向的真实节奏。`,
     year_2: years.year_2,
@@ -374,7 +375,8 @@ function buildGenericFallbackLife(
     route_intent_id: randomUUID(),
     generation_provenance_id: provenanceId,
     design_basis: buildFallbackDesignBasis("探索型路线", index),
-    title: "探索型路线",
+    title: "探路的人",
+    title_full: "把散落的线索一条条拾起来的探路的人",
     core_experience: "用更开放的节奏收集真实信息，先验证方向感再决定投入程度。",
     year_1: "第一年：降低固定成本，允许自己尝试不同方向。",
     year_2: "第二年：锁定一个或两个最有趣的实验，继续验证。",
@@ -547,6 +549,7 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
     input.final_user_note || "（无）",
     "",
     "注意：只输出符合 ParallelLivesPlan schema 的纯 JSON 对象。必须为每条生活提供一个 trial_id；不要把完整的 prototype 嵌入生活。",
+    "每条 life.title 必须是诗意代称——给「一种人」的名字，两到六个字（如「深耕者」「拾光人」），不得使用职业名或岗位名；同时提供 title_full 作为这个称呼的完整版（如「醉意朦胧的清醒者」），它会在一天的场景之后作为落款展示。",
     "每条 life.evidence_for 中的 source_id 和 source_revision 必须严格来自上文 '=== 来源版本 ===' 中列出的活跃来源，使用对应的精确 source_id 和 revision，不要自行递增或假设版本号。",
   ].join("\n");
 }

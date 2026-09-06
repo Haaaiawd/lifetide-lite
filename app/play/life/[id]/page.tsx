@@ -186,6 +186,15 @@ export default function LifeDetailPage() {
           onProgress={setSceneProgress}
           onComplete={() => setDayFinished(true)}
         />
+
+        {route.titleFull && (
+          <p
+            className="self-end font-serif italic text-sm md:text-base"
+            style={{ color: theme.accent }}
+          >
+            —— {route.titleFull}
+          </p>
+        )}
       </motion.section>
 
       {/* Report button appears after the first full day loop */}

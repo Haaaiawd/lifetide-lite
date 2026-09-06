@@ -9,6 +9,7 @@ export function toRouteView(life: ParallelLife, index: number, trialStatus: Rout
     id: life.id,
     number,
     title: life.title,
+    titleFull: life.title_full ?? life.title,
     coreExperience: life.core_experience,
     year1: life.year_1,
     year2: life.year_2,

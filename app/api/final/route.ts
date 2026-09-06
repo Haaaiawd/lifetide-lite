@@ -214,11 +214,12 @@ export async function POST(request: NextRequest) {
                   if (!l || typeof l !== "object") return;
                   const life = l as Record<string, unknown>;
                   const title = typeof life.title === "string" ? life.title : "";
+                  const label = title ? `路线 ${i + 1} · ${title}` : `路线 ${i + 1}`;
                   const day = typeof life.ordinary_day === "string" ? life.ordinary_day : "";
                   const exp = typeof life.core_experience === "string" ? life.core_experience : "";
                   if (title || day || exp) {
                     sections.push({
-                      label: `路线 ${i + 1}`,
+                      label,
                       text: day || exp,
                     });
                   }

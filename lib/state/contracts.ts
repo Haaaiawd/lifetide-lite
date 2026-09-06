@@ -676,6 +676,10 @@ export const parallelLifeSchema = z.object({
   generation_provenance_id: idSchema,
   design_basis: designBasisSchema,
   title: z.string().min(1),
+  // Poetic full appellation ("一种生活一种人"的完整称呼), shown as a
+  // signature after the ordinary-day narrative. Optional so older stored
+  // plans still validate; UI falls back to title when absent.
+  title_full: z.string().min(1).optional(),
   core_experience: z.string().min(1),
   year_1: z.string().min(1),
   year_2: z.string().min(1),

@@ -293,6 +293,14 @@ export function RouteCarousel({ routes, framing, blueprint, onNavigate }: RouteC
                             })}
                           </ol>
                         ) : null}
+                        {route.titleFull && (
+                          <p
+                            className="mt-3 text-right font-serif italic text-sm md:text-base"
+                            style={{ color: theme.accent }}
+                          >
+                            —— {route.titleFull}
+                          </p>
+                        )}
                       </div>
                     )}
 
