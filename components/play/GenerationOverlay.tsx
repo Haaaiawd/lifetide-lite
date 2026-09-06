@@ -322,6 +322,9 @@ const FAKE_THINKING_LINES = [
   "评估各条路线的可行性……",
   "把零散的线索拼成完整的故事……",
   "权衡每条路线的代价与收获……",
+  "寻找那些被你忽略的细节……",
+  "把过去的经历连成一条暗线……",
+  "试着理解你真正在意的是什么……",
 ];
 
 function FakeThinkingCard({ reduce }: { reduce: boolean | null }) {
@@ -388,17 +391,17 @@ function useFakeThinking(reduce: boolean | null): string {
         setText(msg.slice(0, char));
         char += 1;
         const r = Math.random();
-        let delay = 30 + Math.random() * 50; // quick burst
-        if (r < 0.1) delay = 500 + Math.random() * 700; // stall — "卡顿"
-        else if (r < 0.3) delay = 140 + Math.random() * 200; // slow stretch
+        let delay = 18 + Math.random() * 22; // mostly 18-40ms for fast, natural typing
+        if (r < 0.04) delay = 300 + Math.random() * 500; // rare stall — “卡顿”
+        else if (r < 0.15) delay = 60 + Math.random() * 100; // occasional slow char
         schedule(step, delay);
       } else {
-        // Line complete — hold, then move to the next line.
+        // Almost no hold between lines — start next line after a short pause.
         schedule(() => {
           char = 0;
           line += 1;
           step();
-        }, 900 + Math.random() * 700);
+        }, 120 + Math.random() * 180);
       }
     };
     step();
