@@ -201,6 +201,10 @@ export async function POST(request: NextRequest) {
                 sendSSE("partial", { sections });
               }
             },
+            onRetry: (message, attempt, status) => {
+              console.log(`[final SSE] retry attempt=${attempt} status=${status}`, { message });
+              sendSSE("retry_progress", { message, attempt, status });
+            },
             abortSignal: abortCtrl.signal,
           });
         } catch (err) {

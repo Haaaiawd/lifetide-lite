@@ -495,49 +495,69 @@ export function buildFallbackParallelLivesPlan(
   };
 }
 
-function validateParallelLivesPlan(plan: ParallelLivesPlan, memory: WorkingMemory): { valid: true } | { valid: false; reason: string } {
+// Fixed validation failure categories. The detailed `reason` may contain
+// model-generated content (ids, titles), so it is only ever logged server-side.
+// Prompts and client-facing messages must use the category-derived fixed text
+// below, never the raw reason.
+type ValidationCategory = "structure" | "ranking" | "evidence" | "completeness" | "title_format" | "distinctness";
+
+type PlanValidation = { valid: true } | { valid: false; reason: string; category: ValidationCategory };
+
+// Fixed, safe retry hints per category — no model-generated or user-controlled
+// content is interpolated, so nothing here can break the envelope's `===` / `【】`
+// boundary markers or inject instructions into the prompt.
+const RETRY_HINTS: Record<ValidationCategory, string> = {
+  structure: "输出必须包含且仅包含三条人生（lives 数组长度为 3）。",
+  ranking: "不要对三条人生排序或推荐，删除任何表示优劣、首选、安全的措辞。",
+  evidence: "每条 life.evidence_for 只能引用上文 === 来源版本 === 中列出的活跃来源，使用精确的 source_id 和 revision，不要虚构或递增版本号。",
+  completeness: "补齐所有必填字段：attractions、costs_and_tradeoffs、evidence_for、uncertainties、risks 都不能为空，ordinary_day 要写成完整的一天。",
+  title_format: "title_full 必须为 6–10 个汉字、恰好一个「的」、且包含 title；只用「状态／处境 + 的 + 人物代称」一层结构，不写完整句。",
+  distinctness: "三条人生必须彼此真正不同：标题不能相同，core_experience、ordinary_day、year_1 至少两处措辞明显不同，不要只换一个词或改一个数字。",
+};
+
+function validateParallelLivesPlan(plan: ParallelLivesPlan, memory: WorkingMemory): PlanValidation {
   if (plan.lives.length !== 3) {
-    return { valid: false, reason: `Expected 3 lives, got ${plan.lives.length}` };
+    return { valid: false, category: "structure", reason: `Expected 3 lives, got ${plan.lives.length}` };
   }
 
   const activeSourceRefs = buildActiveSourceRefSet(memory);
 
   for (const life of plan.lives) {
     if (containsRanking(`${life.title} ${life.year_1} ${life.year_3}`)) {
-      return { valid: false, reason: `Ranking language detected in life ${life.id}` };
+      return { valid: false, category: "ranking", reason: `Ranking language detected in life ${life.id}` };
     }
 
     for (const link of life.evidence_for) {
       if (!activeSourceRefs.has(`${link.source_id}@${link.source_revision}`)) {
-        return { valid: false, reason: `Life ${life.id} cites missing/inactive evidence ${link.source_id}@${link.source_revision}` };
+        return { valid: false, category: "evidence", reason: `Life ${life.id} cites missing/inactive evidence ${link.source_id}@${link.source_revision}` };
       }
     }
 
     if (life.attractions.length === 0 || life.costs_and_tradeoffs.length === 0) {
-      return { valid: false, reason: `Life ${life.id} missing attractions or costs_and_tradeoffs` };
+      return { valid: false, category: "completeness", reason: `Life ${life.id} missing attractions or costs_and_tradeoffs` };
     }
 
     if (life.evidence_for.length === 0) {
-      return { valid: false, reason: `Life ${life.id} missing evidence_for` };
+      return { valid: false, category: "evidence", reason: `Life ${life.id} missing evidence_for` };
     }
 
     if (life.uncertainties.length === 0 || life.risks.length === 0) {
-      return { valid: false, reason: `Life ${life.id} missing uncertainties or risks` };
+      return { valid: false, category: "completeness", reason: `Life ${life.id} missing uncertainties or risks` };
     }
 
     const fullTitle = life.title_full ?? "";
     const deCount = [...fullTitle].filter((char) => char === "的").length;
     if (fullTitle.length < 6 || fullTitle.length > 10 || deCount !== 1 || !fullTitle.includes(life.title)) {
-      return { valid: false, reason: `Life ${life.id} full appellation must be 6-10 characters with one 的 and include title` };
+      return { valid: false, category: "title_format", reason: `Life ${life.id} full appellation must be 6-10 characters with one 的 and include title` };
     }
 
     if (life.ordinary_day.length < 10) {
-      return { valid: false, reason: `Life ${life.id} ordinary day too short` };
+      return { valid: false, category: "completeness", reason: `Life ${life.id} ordinary day too short` };
     }
   }
 
   if (planNotDistinct(plan.lives)) {
-    return { valid: false, reason: "Lives are not sufficiently distinct" };
+    return { valid: false, category: "distinctness", reason: "Lives are not sufficiently distinct" };
   }
 
   return { valid: true };
@@ -613,16 +633,20 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
     input.final_user_note || "（无）",
     "",
     "注意：只输出符合 ParallelLivesPlan schema 的纯 JSON 对象。必须为每条生活提供一个 trial_id；不要把完整的 prototype 嵌入生活。",
+    "三条人生必须彼此足够不同：标题不能相同；core_experience、ordinary_day、year_1 三处至少有两处措辞明显不同；不要只换一个词或改一个数字。请从不同的处境、节奏和代价出发，让读者一眼看出这是三条真正不同的路。",
     "每条 life.title 必须是给「一种人」的代称，两到六个字。先找最有力量的动作或处境，再长出称呼，如「借火者」「未熄者」「火中取粟者」；不得使用职业名、岗位名或温吞的抽象美词。title_full 必须包含 title，严格为 6–10 个汉字，只用「四字左右的状态／处境 + 的 + 人物代称」这一层结构，前后形成真实冲突，如「醉意朦胧的清醒者」「手握退路的借火者」；不用逗号，不写完整句，不出现第二个「的」。",
     "每条 life.evidence_for 中的 source_id 和 source_revision 必须严格来自上文 '=== 来源版本 ===' 中列出的活跃来源，使用对应的精确 source_id 和 revision，不要自行递增或假设版本号。",
     "除字段名外，所有可读内容都要让普通人一遍听懂：写动作、处境和真实代价，不使用核心价值、内在驱力、意义感、资源整合、能力建设、阶段性目标、验证假设等报告腔，也不堆华丽词。",
   ].join("\n");
 }
 
-function makePrompt(input: SensemakerFinalInput): string {
+function makePrompt(input: SensemakerFinalInput, lastFailureCategory?: ValidationCategory): string {
+  const retryNote = lastFailureCategory
+    ? `\n\n【自动修正提示】上一版生成未通过校验。${RETRY_HINTS[lastFailureCategory]}请严格重新生成三条人生。\n`
+    : "";
   return composePrompt<ParallelLivesPlan>(
     "sensemaker_futures",
-    buildFinalEnvelope(input),
+    buildFinalEnvelope(input) + retryNote,
     coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
   );
 }
@@ -633,6 +657,7 @@ export type SensemakerFinalOutput = ParallelLivesPlan & {
 
 export type FinalStreamOptions = {
   onPartial?: (partial: Partial<ParallelLivesPlan>) => void;
+  onRetry?: (message: string, attempt: number, status: "retry" | "success") => void;
   abortSignal?: AbortSignal;
 };
 
@@ -648,59 +673,75 @@ export async function runSensemakerFinal(input: SensemakerFinalInput, options?: 
   const config = getProviderConfig();
   const provenanceId = randomUUID();
 
-  let raw: ParallelLivesPlan;
-  try {
-    raw = await streamStructured<ParallelLivesPlan>({
-      purpose: "sensemaker_final",
-      session_id: sessionId,
-      prompt: makePrompt(input),
-      schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
-      max_tokens: 16000,
-      timeout_ms: 0,
-      max_retries: 0,
-      prompt_version: PROMPT_VERSION,
-      enableThinking: true,
-      onPartial: options?.onPartial,
-      abortSignal: options?.abortSignal,
-      fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("Sensemaker final provider call failed:", msg);
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new FinalGenerationError("生成被中断。如果等待过久，请重试。", "aborted");
+  let lastFailureCategory: ValidationCategory | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let raw: ParallelLivesPlan;
+    try {
+      raw = await streamStructured<ParallelLivesPlan>({
+        purpose: "sensemaker_final",
+        session_id: sessionId,
+        prompt: makePrompt(input, lastFailureCategory),
+        schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
+        max_tokens: 16000,
+        timeout_ms: 0,
+        max_retries: 0,
+        prompt_version: PROMPT_VERSION,
+        enableThinking: true,
+        onPartial: options?.onPartial,
+        abortSignal: options?.abortSignal,
+        fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "unknown error";
+      console.error("Sensemaker final provider call failed:", msg);
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new FinalGenerationError("生成被中断。如果等待过久，请重试。", "aborted");
+      }
+      throw new FinalGenerationError(`生成失败：${msg}`, "provider");
     }
-    throw new FinalGenerationError(`生成失败：${msg}`, "provider");
+
+    const plan: ParallelLivesPlan = {
+      ...raw,
+      id: raw.id ?? randomUUID(),
+      session_id: raw.session_id ?? sessionId,
+      generation_provenance_id: raw.generation_provenance_id ?? provenanceId,
+      schema_version: "parallel-lives.v3",
+      provisional: false,
+      blueprint: raw.blueprint,
+      lives: raw.lives.map((life) => ({
+        ...life,
+        id: life.id ?? randomUUID(),
+        generation_provenance_id: life.generation_provenance_id ?? provenanceId,
+        trial_id: life.trial_id ?? randomUUID(),
+      })) as [ParallelLife, ParallelLife, ParallelLife],
+    };
+
+    const coerced = coerceEvidenceToActiveHeads(plan, input.memory);
+    const validation = validateParallelLivesPlan(coerced, input.memory);
+    if (validation.valid) {
+      if (attempt > 0) {
+        options?.onRetry?.("生成内容已通过校验", attempt + 1, "success");
+      }
+      return withPrototypes(coerced, sessionId, config);
+    }
+
+    lastFailureCategory = validation.category;
+    console.error(`Final plan validation failed (attempt ${attempt + 1}/2, category=${validation.category}):`, validation.reason);
+
+    if (attempt === 1) {
+      throw new FinalGenerationError(
+        "生成内容未通过校验。请重试，如果多次失败请联系管理员。",
+        "validation",
+      );
+    }
+
+    // Only announce a retry when another attempt will actually run, and never
+    // leak the raw validation reason (which may embed model output) to clients.
+    options?.onRetry?.("生成内容未通过校验，正在自动调整后重试…", attempt + 1, "retry");
   }
 
-  const plan: ParallelLivesPlan = {
-    ...raw,
-    id: raw.id ?? randomUUID(),
-    session_id: raw.session_id ?? sessionId,
-    generation_provenance_id: raw.generation_provenance_id ?? provenanceId,
-    schema_version: "parallel-lives.v3",
-    provisional: false,
-    blueprint: raw.blueprint,
-    lives: raw.lives.map((life) => ({
-      ...life,
-      id: life.id ?? randomUUID(),
-      generation_provenance_id: life.generation_provenance_id ?? provenanceId,
-      trial_id: life.trial_id ?? randomUUID(),
-    })) as [ParallelLife, ParallelLife, ParallelLife],
-  };
-
-  const coerced = coerceEvidenceToActiveHeads(plan, input.memory);
-
-  const validation = validateParallelLivesPlan(coerced, input.memory);
-  if (!validation.valid) {
-    console.error("Final plan validation failed:", validation.reason);
-    throw new FinalGenerationError(
-      `生成内容未通过校验：${validation.reason}。请重试，如果多次失败请联系管理员。`,
-      "validation",
-    );
-  }
-
-  return withPrototypes(coerced, sessionId, config);
+  // Unreachable, but TypeScript doesn't know that.
+  throw new FinalGenerationError("生成失败：未知错误", "provider");
 }
 
 function withPrototypes(plan: ParallelLivesPlan, sessionId: string, _config: ProviderConfig): SensemakerFinalOutput {

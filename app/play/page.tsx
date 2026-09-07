@@ -26,7 +26,8 @@ type Step = "loading" | "auth" | "resume" | "consent" | "question" | "insight" |
 // visible error bar with a retry button instead of hanging.
 async function readSseStream<TDone>(
   res: Response,
-  onPartial: (data: Record<string, unknown>) => void
+  onPartial: (data: Record<string, unknown>) => void,
+  onRetryProgress?: (data: { message: string; attempt: number; status: "retry" | "success" }) => void
 ): Promise<TDone> {
   if (!res.body) throw new Error("No response body");
   const reader = res.body.getReader();
@@ -66,6 +67,8 @@ async function readSseStream<TDone>(
           doneData = data as TDone;
         } else if (eventType === "error") {
           streamError = typeof data?.error === "string" ? data.error : "Stream error";
+        } else if (eventType === "retry_progress" && onRetryProgress) {
+          onRetryProgress(data as { message: string; attempt: number; status: "retry" | "success" });
         }
       } catch (err) {
         console.error("[readSseStream] failed to parse event", { eventType, err });
@@ -895,6 +898,29 @@ export default function PlayPage() {
               return next;
             });
           }
+        },
+        (progress) => {
+          if (ac.signal.aborted) return;
+          setStreamingFinal((prev) => {
+            // A new attempt is starting — drop the previous attempt's partial
+            // sections so stale cards don't flash while it regenerates.
+            if (progress.status === "retry") {
+              return [{
+                key: `retry-${progress.attempt}`,
+                label: "正在调整",
+                text: progress.message,
+              }];
+            }
+            const next = prev ? [...prev] : [];
+            if (progress.status === "success") {
+              next.push({
+                key: `retry-success-${progress.attempt}`,
+                label: "已通过校验",
+                text: progress.message,
+              });
+            }
+            return next;
+          });
         }
       );
       if (ac.signal.aborted) return;
