@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PixelIcon } from "@/components/art/PixelIcon";
 import { ChoiceCard } from "./ChoiceCard";
 import type { InterviewQuestion } from "@/lib/working-memory/types";
@@ -42,6 +42,7 @@ export type QuestionFrameProps = {
   total: number;
   initialValue?: string | string[] | number;
   onSubmit: (value: string | string[] | number) => void;
+  onAutoSave?: (value: string | string[] | number) => void;
   onSkip: () => void;
   onBack?: () => void;
   variant?: "page" | "card";
@@ -50,7 +51,7 @@ export type QuestionFrameProps = {
 const CUSTOM_ID = "custom";
 const CUSTOM_LABEL = "其他（可输入）";
 
-export function QuestionFrame({ question, index, total, initialValue, onSubmit, onSkip, onBack, variant = "page" }: QuestionFrameProps) {
+export function QuestionFrame({ question, index, total, initialValue, onSubmit, onAutoSave, onSkip, onBack, variant = "page" }: QuestionFrameProps) {
   const isCard = variant === "card";
 
   // Pre-fill from initialValue (used when going back to edit a previous answer)
@@ -110,6 +111,53 @@ export function QuestionFrame({ question, index, total, initialValue, onSubmit, 
     }
     return false;
   };
+
+  const getCurrentValue = (): string | string[] | number | undefined => {
+    if (!canSubmit()) return undefined;
+
+    if (question.response_kind === "short_text") {
+      return text.trim();
+    }
+
+    if (question.response_kind === "single_choice") {
+      return selected[0] === CUSTOM_ID ? customText.trim() : selected[0];
+    }
+
+    if (question.response_kind === "multi_choice") {
+      return selected.map((id) => (id === CUSTOM_ID ? customText.trim() : id));
+    }
+
+    if (question.response_kind === "scale") {
+      return Number(selected[0]);
+    }
+
+    return undefined;
+  };
+
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasMountedRef = useRef(false);
+  const onAutoSaveRef = useRef(onAutoSave);
+  onAutoSaveRef.current = onAutoSave;
+
+  useEffect(() => {
+    // Skip the initial render so prefilled values don't trigger a server roundtrip.
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    const value = getCurrentValue();
+    if (value === undefined) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      onAutoSaveRef.current?.(value);
+    }, 800);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [text, selected, customText, question]);
 
   const handleSelect = (id: string) => {
     if (question.response_kind === "single_choice" || question.response_kind === "scale") {

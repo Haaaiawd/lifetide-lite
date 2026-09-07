@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveSession } from "@/lib/auth/resolve";
 import { hasConsent } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { saveAnswer } from "@/lib/db/save-answer";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { questionId: string; value?: string | string[] | number; skipped?: boolean };
+  let body: { questionId: string; waveId?: string; value?: string | string[] | number; skipped?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -29,20 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "questionId required" }, { status: 400 });
   }
 
-  const storedValue = value === undefined || value === null
-    ? null
-    : Array.isArray(value)
-      ? value.filter((v) => v !== null && v !== undefined && v !== "").join("；")
-      : String(value);
-
-  const answer = await prisma.answer.create({
-    data: {
-      sessionId: session.id,
-      questionId,
-      value: storedValue,
-      skipped: skipped ?? false,
-    },
-  });
+  const answer = await saveAnswer(session.id, questionId, value, skipped ?? false);
 
   return NextResponse.json({ answer }, { status: 201 });
 }

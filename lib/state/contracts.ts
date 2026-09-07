@@ -390,6 +390,7 @@ export const answerSchema = z.object({
   question_id: idSchema.optional(),
   source_ref: sourceRefSchema,
   selected_option_ids: z.array(idSchema).optional(),
+  value: z.union([z.string(), z.number(), z.array(z.string())]).nullable().optional(),
   skipped: z.boolean(),
   created_from: z.enum(["card", "composer"]),
 });
