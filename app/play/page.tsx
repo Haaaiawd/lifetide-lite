@@ -902,14 +902,17 @@ export default function PlayPage() {
         (progress) => {
           if (ac.signal.aborted) return;
           setStreamingFinal((prev) => {
-            const next = prev ? [...prev] : [];
+            // A new attempt is starting — drop the previous attempt's partial
+            // sections so stale cards don't flash while it regenerates.
             if (progress.status === "retry") {
-              next.push({
+              return [{
                 key: `retry-${progress.attempt}`,
                 label: "正在调整",
                 text: progress.message,
-              });
-            } else if (progress.status === "success") {
+              }];
+            }
+            const next = prev ? [...prev] : [];
+            if (progress.status === "success") {
               next.push({
                 key: `retry-success-${progress.attempt}`,
                 label: "已通过校验",
