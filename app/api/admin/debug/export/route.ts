@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/admin";
+import { buildSessionExport } from "@/lib/session/export";
 
 // GET /api/admin/debug/export?session_id=xxx&format=txt|json
 // Admin-only: export full session interaction chain for debugging.
@@ -18,177 +18,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Read all session data from one consistent database snapshot.
-  // A Prisma interactive transaction gives SQLite-level read consistency:
-  // no concurrent writes can interleave between these queries.
-  const {
-    session,
-    waves,
-    answers,
-    workingMemory,
-    uploads,
-    derivedContents,
-    modelCallLogs,
-    waveMissions,
-  } = await prisma.$transaction(async (tx) => {
-    const session = await tx.session.findUnique({
-      where: { id: sessionId },
-      include: { user: true },
-    });
-    if (!session) {
-      return {
-        session: null,
-        waves: [],
-        answers: [],
-        workingMemory: null,
-        uploads: [],
-        derivedContents: [],
-        modelCallLogs: [],
-        waveMissions: [],
-      };
-    }
-    const [
-      waves,
-      answers,
-      workingMemory,
-      uploads,
-      derivedContents,
-      modelCallLogs,
-      waveMissions,
-    ] = await Promise.all([
-      tx.wave.findMany({
-        where: { sessionId },
-        orderBy: { wave_index: "asc" },
-      }),
-      tx.answer.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: "asc" },
-      }),
-      tx.workingMemory.findUnique({ where: { sessionId } }),
-      tx.upload.findMany({
-        where: { sessionId },
-        include: { chunks: { orderBy: { index: "asc" } } },
-        orderBy: { createdAt: "asc" },
-      }),
-      tx.derivedContent.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: "asc" },
-      }),
-      tx.modelCallLog.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: "asc" },
-      }),
-      tx.waveMission.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
-    return {
-      session,
-      waves,
-      answers,
-      workingMemory,
-      uploads,
-      derivedContents,
-      modelCallLogs,
-      waveMissions,
-    };
-  });
-
-  if (!session) {
+  const exportData = await buildSessionExport(sessionId);
+  if (!exportData) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
-
-  // Build structured data
-  const exportData = {
-    meta: {
-      exported_at: new Date().toISOString(),
-      session_id: sessionId,
-      user_id: session.userId ?? null,
-      user_email: session.user?.email ?? null,
-      session_created_at: session.createdAt.toISOString(),
-      session_expires_at: session.expiresAt.toISOString(),
-    },
-    working_memory: workingMemory
-      ? {
-          revision: workingMemory.revision,
-          updated_at: workingMemory.updatedAt.toISOString(),
-          payload: JSON.parse(workingMemory.payload),
-        }
-      : null,
-    waves: waves.map((w) => ({
-      id: w.id,
-      wave_id: w.wave_id,
-      wave_index: w.wave_index,
-      focus_uncertainty_id: w.focus_uncertainty_id,
-      status: w.status,
-      created_at: w.createdAt.toISOString(),
-      updated_at: w.updatedAt.toISOString(),
-      questions: JSON.parse(w.questions),
-    })),
-    answers: answers.map((a) => ({
-      id: a.id,
-      question_id: a.questionId,
-      value: a.value,
-      skipped: a.skipped,
-      created_at: a.createdAt.toISOString(),
-    })),
-    uploads: uploads.map((u) => ({
-      id: u.id,
-      file_name: u.fileName,
-      mime_type: u.mimeType,
-      size: u.size,
-      status: u.status,
-      error: u.error,
-      created_at: u.createdAt.toISOString(),
-      chunks: u.chunks.map((c) => ({
-        id: c.id,
-        index: c.index,
-        source: c.source,
-        text: c.text,
-      })),
-    })),
-    derived_contents: derivedContents.map((d) => ({
-      id: d.id,
-      kind: d.kind,
-      support_status: d.supportStatus,
-      upload_id: d.uploadId,
-      created_at: d.createdAt.toISOString(),
-      payload: JSON.parse(d.payload),
-    })),
-    model_call_logs: modelCallLogs.map((l) => ({
-      id: l.id,
-      purpose: l.purpose,
-      wave_id: l.wave_id,
-      status: l.status,
-      model_config_id: l.model_config_id,
-      prompt_version: l.prompt_version,
-      input_tokens: l.input_tokens,
-      output_tokens: l.output_tokens,
-      latency_ms: l.latency_ms,
-      created_at: l.createdAt.toISOString(),
-    })),
-    wave_missions: waveMissions.map((wm) => ({
-      id: wm.id,
-      wave_id: wm.waveId,
-      decision_to_improve: wm.decisionToImprove,
-      target_dimensions: safeParseJson(wm.targetDimensions),
-      known_source_refs: safeParseJson(wm.knownSourceRefs),
-      important_unknown: wm.importantUnknown,
-      why_now: wm.whyNow,
-      exit_condition: wm.exitCondition,
-      sensitivity_ceiling: wm.sensitivityCeiling,
-      created_at: wm.createdAt.toISOString(),
-    })),
-    errors: modelCallLogs
-      .filter((l) => l.status === "error" || l.status === "fallback")
-      .map((l) => ({
-        purpose: l.purpose,
-        wave_id: l.wave_id,
-        status: l.status,
-        created_at: l.createdAt.toISOString(),
-      })),
-  };
 
   if (format === "txt") {
     const txt = buildTxtExport(exportData);
@@ -212,14 +45,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-function safeParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildTxtExport(data: any): string {
   const lines: string[] = [];
   const m = data.meta;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { PortraitCard } from "@/components/portrait/PortraitCard";
@@ -37,6 +37,47 @@ export default function AccountPage() {
   const [routes, setRoutes] = useState<Route[] | null>(null);
   const [framing, setFraming] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleExport() {
+    window.location.href = "/api/session/export";
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setImportMessage(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await fetch("/api/session/import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setImportMessage(result.error ?? "导入失败");
+        return;
+      }
+      const { waves, answers } = result.imported;
+      setImportMessage(
+        `导入完成：合并了 ${waves.imported} 个波次、${answers.imported} 条回答` +
+          (waves.skipped + answers.skipped > 0
+            ? `，跳过 ${waves.skipped + answers.skipped} 条已有数据`
+            : ""),
+      );
+      window.location.reload();
+    } catch {
+      setImportMessage("导入失败：文件无法解析");
+    } finally {
+      setImporting(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +208,33 @@ export default function AccountPage() {
             >
               {hasStarted ? "继续试运行" : "开始新的试运行"}
             </button>
+            <div className="flex items-center gap-2 border-t-2 border-ink/10 pt-3">
+              <button
+                type="button"
+                onClick={handleExport}
+                className="border-2 border-ink bg-paper px-3 py-1.5 text-xs font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              >
+                导出数据
+              </button>
+              <button
+                type="button"
+                disabled={importing}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-ink bg-paper px-3 py-1.5 text-xs font-medium text-ink shadow-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50"
+              >
+                {importing ? "导入中..." : "导入数据"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              {importMessage && (
+                <span className="text-xs text-ink-muted">{importMessage}</span>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
