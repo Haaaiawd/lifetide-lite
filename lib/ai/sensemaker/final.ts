@@ -613,16 +613,20 @@ function buildFinalEnvelope(input: SensemakerFinalInput): string {
     input.final_user_note || "（无）",
     "",
     "注意：只输出符合 ParallelLivesPlan schema 的纯 JSON 对象。必须为每条生活提供一个 trial_id；不要把完整的 prototype 嵌入生活。",
+    "三条人生必须彼此足够不同：标题不能相同；core_experience、ordinary_day、year_1 三处至少有两处措辞明显不同；不要只换一个词或改一个数字。请从不同的处境、节奏和代价出发，让读者一眼看出这是三条真正不同的路。",
     "每条 life.title 必须是给「一种人」的代称，两到六个字。先找最有力量的动作或处境，再长出称呼，如「借火者」「未熄者」「火中取粟者」；不得使用职业名、岗位名或温吞的抽象美词。title_full 必须包含 title，严格为 6–10 个汉字，只用「四字左右的状态／处境 + 的 + 人物代称」这一层结构，前后形成真实冲突，如「醉意朦胧的清醒者」「手握退路的借火者」；不用逗号，不写完整句，不出现第二个「的」。",
     "每条 life.evidence_for 中的 source_id 和 source_revision 必须严格来自上文 '=== 来源版本 ===' 中列出的活跃来源，使用对应的精确 source_id 和 revision，不要自行递增或假设版本号。",
     "除字段名外，所有可读内容都要让普通人一遍听懂：写动作、处境和真实代价，不使用核心价值、内在驱力、意义感、资源整合、能力建设、阶段性目标、验证假设等报告腔，也不堆华丽词。",
   ].join("\n");
 }
 
-function makePrompt(input: SensemakerFinalInput): string {
+function makePrompt(input: SensemakerFinalInput, lastValidationReason?: string): string {
+  const retryNote = lastValidationReason
+    ? `\n\n【自动修正提示】上一版生成未通过校验，原因：${lastValidationReason}。请严格重新生成三条人生，确保它们彼此足够不同。\n`
+    : "";
   return composePrompt<ParallelLivesPlan>(
     "sensemaker_futures",
-    buildFinalEnvelope(input),
+    buildFinalEnvelope(input) + retryNote,
     coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>
   );
 }
@@ -633,6 +637,7 @@ export type SensemakerFinalOutput = ParallelLivesPlan & {
 
 export type FinalStreamOptions = {
   onPartial?: (partial: Partial<ParallelLivesPlan>) => void;
+  onRetry?: (message: string, attempt: number, status: "retry" | "success") => void;
   abortSignal?: AbortSignal;
 };
 
@@ -648,59 +653,72 @@ export async function runSensemakerFinal(input: SensemakerFinalInput, options?: 
   const config = getProviderConfig();
   const provenanceId = randomUUID();
 
-  let raw: ParallelLivesPlan;
-  try {
-    raw = await streamStructured<ParallelLivesPlan>({
-      purpose: "sensemaker_final",
-      session_id: sessionId,
-      prompt: makePrompt(input),
-      schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
-      max_tokens: 16000,
-      timeout_ms: 0,
-      max_retries: 0,
-      prompt_version: PROMPT_VERSION,
-      enableThinking: true,
-      onPartial: options?.onPartial,
-      abortSignal: options?.abortSignal,
-      fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("Sensemaker final provider call failed:", msg);
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new FinalGenerationError("生成被中断。如果等待过久，请重试。", "aborted");
+  let lastValidationReason: string | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let raw: ParallelLivesPlan;
+    try {
+      raw = await streamStructured<ParallelLivesPlan>({
+        purpose: "sensemaker_final",
+        session_id: sessionId,
+        prompt: makePrompt(input, lastValidationReason),
+        schema: coercedPlanSchema as z.ZodType<ParallelLivesPlan, z.ZodTypeDef, unknown>,
+        max_tokens: 16000,
+        timeout_ms: 0,
+        max_retries: 0,
+        prompt_version: PROMPT_VERSION,
+        enableThinking: true,
+        onPartial: options?.onPartial,
+        abortSignal: options?.abortSignal,
+        fixture: () => Promise.resolve(buildFallbackParallelLivesPlan(sessionId, input.memory, input.provisional, provenanceId)),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "unknown error";
+      console.error("Sensemaker final provider call failed:", msg);
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new FinalGenerationError("生成被中断。如果等待过久，请重试。", "aborted");
+      }
+      throw new FinalGenerationError(`生成失败：${msg}`, "provider");
     }
-    throw new FinalGenerationError(`生成失败：${msg}`, "provider");
+
+    const plan: ParallelLivesPlan = {
+      ...raw,
+      id: raw.id ?? randomUUID(),
+      session_id: raw.session_id ?? sessionId,
+      generation_provenance_id: raw.generation_provenance_id ?? provenanceId,
+      schema_version: "parallel-lives.v3",
+      provisional: false,
+      blueprint: raw.blueprint,
+      lives: raw.lives.map((life) => ({
+        ...life,
+        id: life.id ?? randomUUID(),
+        generation_provenance_id: life.generation_provenance_id ?? provenanceId,
+        trial_id: life.trial_id ?? randomUUID(),
+      })) as [ParallelLife, ParallelLife, ParallelLife],
+    };
+
+    const coerced = coerceEvidenceToActiveHeads(plan, input.memory);
+    const validation = validateParallelLivesPlan(coerced, input.memory);
+    if (validation.valid) {
+      if (attempt > 0) {
+        options?.onRetry?.(`生成内容已通过校验（第 ${attempt + 1} 次尝试）`, attempt + 1, "success");
+      }
+      return withPrototypes(coerced, sessionId, config);
+    }
+
+    lastValidationReason = validation.reason;
+    console.error(`Final plan validation failed (attempt ${attempt + 1}/2):`, validation.reason);
+    options?.onRetry?.(`生成内容校验未通过：${validation.reason}，正在自动调整后重试...`, attempt + 1, "retry");
+
+    if (attempt === 1) {
+      throw new FinalGenerationError(
+        `生成内容未通过校验：${validation.reason}。请重试，如果多次失败请联系管理员。`,
+        "validation",
+      );
+    }
   }
 
-  const plan: ParallelLivesPlan = {
-    ...raw,
-    id: raw.id ?? randomUUID(),
-    session_id: raw.session_id ?? sessionId,
-    generation_provenance_id: raw.generation_provenance_id ?? provenanceId,
-    schema_version: "parallel-lives.v3",
-    provisional: false,
-    blueprint: raw.blueprint,
-    lives: raw.lives.map((life) => ({
-      ...life,
-      id: life.id ?? randomUUID(),
-      generation_provenance_id: life.generation_provenance_id ?? provenanceId,
-      trial_id: life.trial_id ?? randomUUID(),
-    })) as [ParallelLife, ParallelLife, ParallelLife],
-  };
-
-  const coerced = coerceEvidenceToActiveHeads(plan, input.memory);
-
-  const validation = validateParallelLivesPlan(coerced, input.memory);
-  if (!validation.valid) {
-    console.error("Final plan validation failed:", validation.reason);
-    throw new FinalGenerationError(
-      `生成内容未通过校验：${validation.reason}。请重试，如果多次失败请联系管理员。`,
-      "validation",
-    );
-  }
-
-  return withPrototypes(coerced, sessionId, config);
+  // Unreachable, but TypeScript doesn't know that.
+  throw new FinalGenerationError("生成失败：未知错误", "provider");
 }
 
 function withPrototypes(plan: ParallelLivesPlan, sessionId: string, _config: ProviderConfig): SensemakerFinalOutput {
