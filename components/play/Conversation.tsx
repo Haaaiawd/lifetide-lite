@@ -39,6 +39,7 @@ export type ConversationItem =
 type ConversationProps = {
   items: ConversationItem[];
   onQuestionSubmit: (id: string, value: string | string[] | number) => void;
+  onQuestionAutoSave?: (question: InterviewQuestion, value: string | string[] | number) => void;
   onQuestionSkip: (id: string) => void;
   onQuestionBack: () => void;
   onInsightContinue: (
@@ -212,6 +213,7 @@ function InsightSummary({
 function ConversationCard({
   item,
   onQuestionSubmit,
+  onQuestionAutoSave,
   onQuestionSkip,
   onQuestionBack,
   onInsightContinue,
@@ -220,6 +222,7 @@ function ConversationCard({
 }: {
   item: ConversationItem;
   onQuestionSubmit: ConversationProps["onQuestionSubmit"];
+  onQuestionAutoSave: ConversationProps["onQuestionAutoSave"];
   onQuestionSkip: ConversationProps["onQuestionSkip"];
   onQuestionBack: ConversationProps["onQuestionBack"];
   onInsightContinue: ConversationProps["onInsightContinue"];
@@ -270,6 +273,7 @@ function ConversationCard({
                 total={item.total}
                 initialValue={item.answer?.value}
                 onSubmit={(value) => onQuestionSubmit(item.id, value)}
+                onAutoSave={onQuestionAutoSave ? (value) => onQuestionAutoSave(item.question, value) : undefined}
                 onSkip={() => onQuestionSkip(item.id)}
                 onBack={item.question.order > 1 ? onQuestionBack : undefined}
                 variant="card"
@@ -388,6 +392,7 @@ function ConversationCard({
 export function Conversation({
   items,
   onQuestionSubmit,
+  onQuestionAutoSave,
   onQuestionSkip,
   onQuestionBack,
   onInsightContinue,
@@ -429,6 +434,7 @@ export function Conversation({
           <ConversationCard
             item={item}
             onQuestionSubmit={onQuestionSubmit}
+            onQuestionAutoSave={onQuestionAutoSave}
             onQuestionSkip={onQuestionSkip}
             onQuestionBack={onQuestionBack}
             onInsightContinue={onInsightContinue}

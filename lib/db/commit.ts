@@ -4,6 +4,7 @@
 import { randomUUID, createHash } from "node:crypto";
 import { createActor } from "xstate";
 import { prisma } from "./prisma";
+import { normalizeAnswerValue } from "./save-answer";
 import { harnessMachine } from "@/lib/state/machine";
 import type { MachineContext } from "@/lib/state/machine";
 import type { MachineEvent } from "@/lib/state/machine";
@@ -604,16 +605,26 @@ async function persistAnswer(tx: PrismaTx, payload: AnswerSubmitted) {
     update: {},
   });
 
+  const storedValue =
+    answer.value !== undefined && answer.value !== null
+      ? normalizeAnswerValue(answer.value)
+      : answer.selected_option_ids
+        ? JSON.stringify(answer.selected_option_ids)
+        : null;
+
   await tx.answer.upsert({
     where: { id: answer.id },
     create: {
       id: answer.id,
       sessionId,
       questionId: answer.question_id ?? "",
-      value: answer.selected_option_ids ? JSON.stringify(answer.selected_option_ids) : null,
+      value: storedValue,
       skipped: answer.skipped,
     },
-    update: {},
+    update: {
+      value: storedValue,
+      skipped: answer.skipped,
+    },
   });
 }
 

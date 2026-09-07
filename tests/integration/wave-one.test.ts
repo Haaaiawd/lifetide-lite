@@ -54,6 +54,7 @@ test.describe("Wave 1, WorkingMemory and immediate calibration", () => {
       wave_index: 1,
       version: WAVE_1_VERSION,
       questions: makeWave1Questions(),
+      answers: {},
     });
 
     for (const q of data.questions) {

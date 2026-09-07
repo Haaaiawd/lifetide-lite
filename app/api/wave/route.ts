@@ -4,6 +4,7 @@ import { resolveSession } from "@/lib/auth/resolve";
 import { hasConsent } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { buildWaveFromProposal, persistWaveMissionAndArtifacts } from "@/lib/db/persist-wave";
+import { loadWaveAnswers, saveAnswer, parseAnswerValue } from "@/lib/db/save-answer";
 import { commitEvent, loadPublicSnapshot } from "@/lib/db/commit";
 import { hashObject } from "@/lib/utils/hash";
 import { makeEnvelope } from "@/lib/state/envelope";
@@ -366,11 +367,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const wave1Questions = makeWave1Questions();
     const response = NextResponse.json({
       wave_id: WAVE_1_ID,
       wave_index: 1,
       version: WAVE_1_VERSION,
-      questions: makeWave1Questions(),
+      questions: wave1Questions,
+      answers: await loadWaveAnswers(session.id, wave1Questions),
     });
     return response;
   }
@@ -412,6 +415,7 @@ export async function GET(request: NextRequest) {
       version: `${existing.wave_id}-adaptive`,
       focus_uncertainty_id: existing.focus_uncertainty_id,
       questions,
+      answers: await loadWaveAnswers(session.id, questions),
     });
     return response;
   }
@@ -670,6 +674,7 @@ export async function GET(request: NextRequest) {
     focus_uncertainty_id: uncertainty.id,
     focus_reason: interviewerOutput.focus_reason,
     questions: interviewerOutput.questions,
+    answers: await loadWaveAnswers(session.id, interviewerOutput.questions),
   });
   return response;
 }
@@ -721,7 +726,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const now = new Date();
   let createdAnswers: InterviewAnswer[] = [];
 
   if (resubmit) {
@@ -742,18 +746,14 @@ export async function POST(request: NextRequest) {
         id: a.id,
         question_id: q.id,
         wave_id: q.wave_id,
-        value: a.value ?? undefined,
+        value: parseAnswerValue(a.value, q),
         skipped: a.skipped,
         submitted_at: a.createdAt.toISOString(),
       };
     });
   } else {
-  await prisma.$transaction(async (tx) => {
-    // Idempotent retry: a failed synthesis leaves the wave resubmittable, so
-    // drop answers recorded by a previous attempt before inserting new ones.
-    await tx.answer.deleteMany({
-      where: { sessionId: session.id, questionId: { in: questions.map((q) => q.id) } },
-    });
+    // Persist each answer immediately (per-question) and upsert any existing
+    // answer so a refresh or back-and-edit does not create duplicate rows.
     for (const answer of answers) {
       const question = questionById.get(answer.question_id);
       if (!question) {
@@ -762,36 +762,20 @@ export async function POST(request: NextRequest) {
 
       const skipped = answer.skipped ?? false;
       const value = skipped ? null : (answer.value ?? null);
-
-      const created = await tx.answer.create({
-        data: {
-          sessionId: session.id,
-          questionId: question.id,
-          value: value === undefined || value === null
-            ? null
-            : Array.isArray(value)
-              ? value.filter((v) => v !== null && v !== undefined && v !== "").join("；")
-              : String(value),
-          skipped,
-        },
-      });
+      const saved = await saveAnswer(session.id, question.id, value, skipped);
 
       createdAnswers.push({
-        id: created.id,
+        id: saved.id,
         question_id: question.id,
         wave_id: question.wave_id,
         // Preserve the original structured value (array for multi-select,
         // string for text/choice) for the ledger and sensemaker envelope.
-        // The DB stores a joined string for schema compatibility, but the
-        // in-memory representation must stay structured so that:
-        // 1. selected_option_ids in the ledger keeps the choice array
-        // 2. buildWaveEnvelope can resolve option IDs to labels
+        // The DB stores a joined string for schema compatibility.
         value: skipped ? undefined : (answer.value ?? undefined),
         skipped,
-        submitted_at: created.createdAt.toISOString(),
+        submitted_at: saved.createdAt.toISOString(),
       });
     }
-  });
   }
 
   // Commit each answer to the XState ledger. Skipped on resubmit — those
@@ -811,6 +795,7 @@ export async function POST(request: NextRequest) {
       question_id: question.id,
       source_ref: { source_id: sourceId, source_revision: 1 },
       selected_option_ids: Array.isArray(createdAnswer.value) ? createdAnswer.value : undefined,
+      value: createdAnswer.value,
       skipped: createdAnswer.skipped,
       created_from: "card",
     };
@@ -939,7 +924,7 @@ export async function POST(request: NextRequest) {
         // Track which operations were actually applied so the ledger only
         // records what was committed to WorkingMemory.
         let nextMemory: WorkingMemory = memory;
-        let appliedOperations: typeof output.operations = [];
+        const appliedOperations: typeof output.operations = [];
         for (const op of output.operations) {
           try {
             nextMemory = applyMemoryOperations(nextMemory, [op], {
@@ -1063,7 +1048,7 @@ export async function POST(request: NextRequest) {
           id: randomUUID(),
           wave_id,
           generation_provenance_id: endProvenanceId,
-          generated_at: now.toISOString(),
+          generated_at: new Date().toISOString(),
           status: "generated" as const,
         };
 

@@ -128,12 +128,18 @@ export default function PlayPage() {
   const [streamingPortrait, setStreamingPortrait] = useState<{ thinking?: string; essence?: string; trait_summary?: string } | null>(null);
   const [portraitError, setPortraitError] = useState<{ message: string; retry: () => void } | null>(null);
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [draftPrompt, setDraftPrompt] = useState<{ waveId: string; answers: Record<string, { value?: string | string[] | number; skipped: boolean }> } | null>(null);
   const hasLoadedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveAbortRef = useRef<AbortController | null>(null);
+  const draftRestoredRef = useRef(false);
+  const draftAnswersRef = useRef<Record<string, { value?: string | string[] | number; skipped: boolean }>>({});
 
   // Prefetch: after insight is done, we fire GET /api/wave in the background
   // so the next wave's questions are ready by the time the user clicks continue.
   // The promise is stored in a ref; the result is cached in prefetchedWave.
-  const prefetchRef = useRef<Promise<{ questions: InterviewQuestion[]; wave_id: string; wave_index: number; stop?: boolean } | null> | null>(null);
+  const prefetchRef = useRef<Promise<{ questions: InterviewQuestion[]; wave_id: string; wave_index: number; answers?: Record<string, { value?: string | string[] | number; skipped: boolean }>; stop?: boolean } | null> | null>(null);
 
   useEffect(() => {
     if (hasLoadedRef.current) return;
@@ -160,6 +166,13 @@ export default function PlayPage() {
 
         const progress = data.progress as ProgressInfo;
         setProgressInfo(progress);
+        setSessionId(data.sessionId ?? null);
+
+        // Surface a local draft restore prompt when one exists for the pending wave.
+        const draft = data.sessionId ? loadDraft(data.sessionId) : null;
+        if (draft && progress.hasPendingWave && progress.pendingWaveId) {
+          setDraftPrompt({ waveId: progress.pendingWaveId, answers: draft.answers });
+        }
 
         // If user has progress, show resume prompt
         if (progress.lastStep !== "fresh") {
@@ -182,6 +195,74 @@ export default function PlayPage() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
+  function draftKey(sid: string) {
+    return `lifetide:draft:${sid}`;
+  }
+
+  type Draft = {
+    waveId: string;
+    answers: Record<string, { value?: string | string[] | number; skipped: boolean }>;
+    updatedAt: string;
+  };
+
+  function loadDraft(sid: string): Draft | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(draftKey(sid));
+      if (!raw) return null;
+      return JSON.parse(raw) as Draft;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveDraft(sid: string, wave: string, questionId: string, value: string | string[] | number | undefined, skipped = false) {
+    if (typeof window === "undefined" || !sid) return;
+    const existing = loadDraft(sid);
+    const next: Draft = {
+      waveId: wave,
+      answers: {
+        ...(existing?.waveId === wave ? existing.answers : {}),
+        [questionId]: { value, skipped },
+      },
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(draftKey(sid), JSON.stringify(next));
+  }
+
+  function clearDraft(sid: string) {
+    if (typeof window === "undefined" || !sid) return;
+    localStorage.removeItem(draftKey(sid));
+  }
+
+  async function saveAnswerToServer(questionId: string, value: string | string[] | number | undefined, skipped = false, signal?: AbortSignal) {
+    try {
+      const res = await fetch("/api/answer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ questionId, waveId, value, skipped }),
+        signal,
+      });
+      if (!res.ok) {
+        console.error("[saveAnswer] server returned", res.status, await res.text().catch(() => ""));
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      console.error("[saveAnswer] network error", err);
+    }
+  }
+
+  function flushAutoSave() {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    if (autoSaveAbortRef.current) {
+      autoSaveAbortRef.current.abort();
+      autoSaveAbortRef.current = null;
+    }
+  }
+
   const appendItem = (item: ConversationItem) => {
     setItems((prev) => [...prev, item]);
   };
@@ -196,13 +277,35 @@ export default function PlayPage() {
     );
   };
 
-  // Helper: apply wave data to state and render first question
-  const applyWaveData = (data: { questions: InterviewQuestion[]; wave_id: string; wave_index: number }) => {
+  // Helper: apply wave data to state and render the first unanswered question,
+  // prefilling any answers already persisted on the server or restored from draft.
+  const applyWaveData = (data: { questions: InterviewQuestion[]; wave_id: string; wave_index: number; answers?: Record<string, { value?: string | string[] | number; skipped: boolean }> }) => {
+    const serverAnswers = data.answers ?? {};
+    const restoredAnswers = draftRestoredRef.current ? draftAnswersRef.current : {};
+    const mergedAnswers: Record<string, { value?: string | string[] | number; skipped: boolean }> = { ...serverAnswers, ...restoredAnswers };
+
+    // Sync any restored draft values back to the server immediately.
+    if (draftRestoredRef.current && sessionId) {
+      for (const [questionId, answer] of Object.entries(restoredAnswers)) {
+        void saveAnswerToServer(questionId, answer.value, answer.skipped);
+      }
+      draftRestoredRef.current = false;
+      draftAnswersRef.current = {};
+    }
+
+    const answeredIds = new Set(
+      Object.entries(mergedAnswers)
+        .filter(([, a]) => a.value !== undefined || a.skipped)
+        .map(([qid]) => qid)
+    );
+    const firstUnansweredIndex = data.questions.findIndex((q) => !answeredIds.has(q.id));
+    const activeIndex = firstUnansweredIndex === -1 ? Math.max(0, data.questions.length - 1) : firstUnansweredIndex;
+
     setQuestions(data.questions);
     setWaveIndex(data.wave_index);
     setWaveId(data.wave_id);
-    setQuestionIndex(0);
-    setAnswers({});
+    setQuestionIndex(activeIndex);
+    setAnswers(mergedAnswers);
     setInsight(null);
 
     appendItem({
@@ -213,13 +316,17 @@ export default function PlayPage() {
         : `第 ${data.wave_index} 波，来看看几个关键问题。`,
     });
 
-    if (data.questions.length > 0) {
+    for (let i = 0; i <= activeIndex; i++) {
+      const q = data.questions[i];
+      const answer = mergedAnswers[q.id];
+      const isActive = i === activeIndex;
       appendItem({
         id: newId(),
         type: "question",
-        question: data.questions[0],
+        question: q,
         total: data.questions.length,
-        isActive: true,
+        isActive,
+        answer,
       });
     }
 
@@ -235,7 +342,7 @@ export default function PlayPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data || data.stop) return null;
-        return data as { questions: InterviewQuestion[]; wave_id: string; wave_index: number };
+        return data as { questions: InterviewQuestion[]; wave_id: string; wave_index: number; answers?: Record<string, { value?: string | string[] | number; skipped: boolean }> };
       })
       .catch(() => null);
   };
@@ -317,6 +424,8 @@ export default function PlayPage() {
   // Shared success path after a wave's insight stream completes: show the
   // insight card and prefetch the next wave while the user reads.
   const finishInsight = (doneData: { wave_id: string; wave_index: number; revision: number; insight: ImmediateInsight }) => {
+    if (sessionId) clearDraft(sessionId);
+
     const insightView = toInsightView(doneData.insight, doneData.wave_index);
     setInsight(doneData.insight);
     setWaveIndex(doneData.wave_index);
@@ -476,6 +585,11 @@ export default function PlayPage() {
 
   const handleQuestionSubmit = (id: string, value: string | string[] | number) => {
     if (!currentQuestion) return;
+    flushAutoSave();
+    if (sessionId) {
+      saveDraft(sessionId, waveId, currentQuestion.id, value, false);
+      void saveAnswerToServer(currentQuestion.id, value, false);
+    }
     replaceActiveQuestion(id, value, false);
     const nextAnswers = { ...answers, [currentQuestion.id]: { value, skipped: false } };
     setAnswers(nextAnswers);
@@ -484,11 +598,28 @@ export default function PlayPage() {
 
   const handleQuestionSkip = (id: string) => {
     if (!currentQuestion) return;
+    flushAutoSave();
+    if (sessionId) {
+      saveDraft(sessionId, waveId, currentQuestion.id, undefined, true);
+      void saveAnswerToServer(currentQuestion.id, undefined, true);
+    }
     replaceActiveQuestion(id, "", true);
     const nextAnswers = { ...answers, [currentQuestion.id]: { skipped: true } };
     setAnswers(nextAnswers);
     advance(nextAnswers);
   };
+
+  const handleQuestionAutoSave = useCallback((question: InterviewQuestion, value: string | string[] | number) => {
+    if (!sessionId) return;
+    saveDraft(sessionId, waveId, question.id, value, false);
+
+    flushAutoSave();
+    autoSaveTimerRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      autoSaveAbortRef.current = controller;
+      void saveAnswerToServer(question.id, value, false, controller.signal);
+    }, 800);
+  }, [sessionId, waveId]);
 
   const handleQuestionBack = () => {
     if (questionIndex === 0) return;
@@ -684,7 +815,9 @@ export default function PlayPage() {
           setStep("portrait");
           return;
         }
-      } catch {}
+      } catch {
+        // ignore
+      }
       setPortraitError({ message, retry: () => { void recoverPortraitResult(); } });
     } finally {
       isGeneratingRef.current = false;
@@ -779,7 +912,9 @@ export default function PlayPage() {
           handleFinalComplete();
           return;
         }
-      } catch {}
+      } catch {
+        // ignore
+      }
       setFinalOverlayError(msg);
     } finally {
       isGeneratingRef.current = false;
@@ -810,6 +945,7 @@ export default function PlayPage() {
     } catch {
       // ignore
     }
+    if (sessionId) clearDraft(sessionId);
     window.location.reload();
   };
 
@@ -928,28 +1064,10 @@ export default function PlayPage() {
         return;
       }
       // Restore mid-wave question view — a wave was generated but not
-      // yet submitted. Send the user back to answering questions instead
-      // of jumping to the stop page.
+      // yet submitted. Fetch the wave (which includes any saved answers) and
+      // render the first unanswered question, merging a local draft if present.
       if (progressInfo.hasPendingWave && progressInfo.pendingWaveQuestions && progressInfo.pendingWaveId) {
-        const pwIndex = progressInfo.pendingWaveIndex ?? 0;
-        setQuestions(progressInfo.pendingWaveQuestions);
-        setWaveIndex(pwIndex);
-        setWaveId(progressInfo.pendingWaveId);
-        setQuestionIndex(0);
-        setAnswers({});
-        setInsight(null);
-        setItems([
-          { id: newId(), type: "bot", text: pwIndex === 3
-            ? `第 3 波。聊到第 6 波你可以自主结束并生成画像，建议聊到第 8 波自动进入画像——现在还早，慢慢来。`
-            : `第 ${pwIndex} 波，继续回答几个关键问题。` },
-        ]);
-        if (progressInfo.pendingWaveQuestions.length > 0) {
-          setItems((prev) => [
-            ...prev,
-            { id: newId(), type: "question", question: progressInfo.pendingWaveQuestions![0], total: progressInfo.pendingWaveQuestions!.length, isActive: true },
-          ]);
-        }
-        setStep("question");
+        await loadWave();
         return;
       }
       // Otherwise go to stop (can generate portrait)
@@ -971,6 +1089,7 @@ export default function PlayPage() {
       setStep("loading");
       try {
         await fetch("/api/progress/reset", { method: "POST" });
+        if (sessionId) clearDraft(sessionId);
         setProgressInfo(null);
         setPortrait(null);
         setRoutes(null);
@@ -989,7 +1108,7 @@ export default function PlayPage() {
         initial={reduce ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col items-center justify-center gap-6 p-6"
+        className="relative mx-auto flex w-full max-w-2xl min-h-[100dvh] flex-col items-center justify-center gap-6 p-6"
       >
         <div className="border-2 border-ink bg-paper-raised p-6 shadow-md w-full">
           <h1 className="font-serif text-xl mb-2">欢迎回来</h1>
@@ -1016,6 +1135,40 @@ export default function PlayPage() {
             </button>
           </div>
         </div>
+
+        {draftPrompt && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 p-6">
+            <div className="w-full max-w-md border-2 border-ink bg-paper-raised p-6 shadow-md">
+              <h2 className="font-serif text-lg mb-2">检测到有未提交的草稿</h2>
+              <p className="text-sm text-ink-muted mb-4">
+                你上次在第 {draftPrompt.waveId.replace(/^w/, "")} 波的回答已经自动保存到本地，是否要恢复？
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    draftRestoredRef.current = true;
+                    draftAnswersRef.current = draftPrompt.answers;
+                    setDraftPrompt(null);
+                  }}
+                  className="w-full border-2 border-ink bg-cobalt px-5 py-3 text-base font-medium text-white shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+                >
+                  恢复草稿
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sessionId) clearDraft(sessionId);
+                    setDraftPrompt(null);
+                  }}
+                  className="w-full border-2 border-ink bg-white px-5 py-3 text-base font-medium text-ink shadow-md transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-sm"
+                >
+                  放弃，继续之前的进度
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     );
   }
@@ -1121,6 +1274,7 @@ export default function PlayPage() {
       <Conversation
         items={items}
         onQuestionSubmit={handleQuestionSubmit}
+        onQuestionAutoSave={handleQuestionAutoSave}
         onQuestionSkip={handleQuestionSkip}
         onQuestionBack={handleQuestionBack}
         onInsightContinue={handleInsightContinue}
